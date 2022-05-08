@@ -1015,6 +1015,7 @@ static struct {
     jmethodID getModifiers;
     jmethodID getRepeatCount;
     jmethodID getKeyCode;
+    jmethodID getScanCode;
 } gKeyEventClassInfo;
 
 extern "C" void GameActivityKeyEvent_fromJava(JNIEnv *env, jobject keyEvent,
@@ -1046,6 +1047,8 @@ extern "C" void GameActivityKeyEvent_fromJava(JNIEnv *env, jobject keyEvent,
             env->GetMethodID(keyEventClass, "getRepeatCount", "()I");
         gKeyEventClassInfo.getKeyCode =
             env->GetMethodID(keyEventClass, "getKeyCode", "()I");
+        gKeyEventClassInfo.getScanCode =
+            env->GetMethodID(keyEventClass, "getScanCode", "()I");
 
         gKeyEventClassInfoInitialized = true;
     }
@@ -1070,7 +1073,9 @@ extern "C" void GameActivityKeyEvent_fromJava(JNIEnv *env, jobject keyEvent,
         /*repeatCount=*/
         env->CallIntMethod(keyEvent, gKeyEventClassInfo.getRepeatCount),
         /*keyCode=*/
-        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getKeyCode)};
+        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getKeyCode),
+        /*scanCode=*/
+        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getScanCode)};
 }
 
 static bool onTouchEvent_native(JNIEnv *env, jobject javaGameActivity,
