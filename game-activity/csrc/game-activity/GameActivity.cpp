@@ -185,7 +185,7 @@ struct OwnedGameTextInputState {
 #define ALOG_ASSERT(cond, ...) LOG_FATAL_IF(!(cond), ##__VA_ARGS__)
 #endif
 
-#define LOG_TRACE(...)
+#define LOG_TRACE(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
 #ifndef NELEM
 #define NELEM(x) ((int)(sizeof(x) / sizeof((x)[0])))
