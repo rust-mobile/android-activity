@@ -1,4 +1,10 @@
 [workspace]
 members = [
-    "game-activity",
+    "game-activity"
+]
+
+exclude = [
+    "examples/agdk-mainloop",
+    "examples/agdk-winit-wgpu",
+    "examples/agdk-bevy"
 ]
