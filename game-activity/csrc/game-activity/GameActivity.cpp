@@ -1295,9 +1295,13 @@ extern "C" int GameActivity_register(JNIEnv *env) {
                                     NELEM(g_methods));
 }
 
+// XXX: This symbol is renamed with a _C suffix and then re-exported from
+// Rust because Rust/Cargo don't give us a way to directly export symbols
+// from C/C++ code: https://github.com/rust-lang/rfcs/issues/2771
+//
 // Register this method so that GameActiviy_register does not need to be called
 // manually.
-extern "C" jlong Java_com_google_androidgamesdk_GameActivity_loadNativeCode(
+extern "C" jlong Java_com_google_androidgamesdk_GameActivity_loadNativeCode_C(
     JNIEnv *env, jobject javaGameActivity, jstring path, jstring funcName,
     jstring internalDataDir, jstring obbDir, jstring externalDataDir,
     jobject jAssetMgr, jbyteArray savedState) {

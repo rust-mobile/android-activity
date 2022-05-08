@@ -452,10 +452,10 @@ void android_app_clear_motion_events(struct android_input_buffer* inputBuffer);
 void android_app_clear_key_events(struct android_input_buffer* inputBuffer);
 
 /**
- * This is the function that application code must implement, representing
- * the main entry to the app.
+ * This is a springboard into the Rust glue layer that wraps calling the
+ * main entry for the app itself.
  */
-extern void android_main(struct android_app* app);
+extern void _rust_glue_entry(struct android_app* app);
 
 /**
  * Set the filter to use when processing key events.
@@ -479,6 +479,9 @@ void android_app_set_key_event_filter(struct android_app* app,
 void android_app_set_motion_event_filter(struct android_app* app,
                                          android_motion_event_filter filter);
 
+
+void GameActivity_onCreate_C(GameActivity* activity, void* savedState,
+                            size_t savedStateSize);
 #ifdef __cplusplus
 }
 #endif
