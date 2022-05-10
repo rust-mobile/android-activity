@@ -1,0 +1,33 @@
+[package]
+name = "agdk-winit-wgpu"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+winit = { git = "https://github.com/rib/winit", branch = "agdk-game-activity" }
+#winit = { path="../../../winit" }
+wgpu = "0.12.0"
+pollster = "0.2"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+simple_logger = "2"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.11.0"
+game-activity = { path="../../game-activity" }
+
+[features]
+default = []
+desktop = []
+
+[lib]
+name="main"
+crate_type=["cdylib"]
+
+[[bin]]
+path="src/lib.rs"
+name="test-winit-wgpu"
+required-features = [ "desktop" ]
