@@ -37,6 +37,13 @@
 #define NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS 16
 #endif
 
+#if (defined NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES_OVERRIDE)
+#define NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES \
+    NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES_OVERRIDE
+#else
+#define NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES 64
+#endif
+
 #if (defined NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE)
 #define NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS \
     NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE
@@ -128,6 +135,27 @@ struct android_input_buffer {
      * The number of valid motion events in `motionEvents`.
      */
     uint64_t motionEventsCount;
+
+    /**
+     * Pointer to a read-only array of pointers to GameActivityHistoricalPointerAxes.
+     *
+     * Only the first historicalSamplesCount samples are valid.
+     * Refer to event->historicalStart, event->pointerCount and event->historicalCount
+     * to access the specific samples that relate to an event.
+     *
+     * Each slice of samples for one event has a length of
+     * (event->pointerCount and event->historicalCount) and is in pointer-major
+     * order so the historic samples for each pointer are contiguous.
+     * E.g. you would access historic sample index 3 for pointer 2 of an event with:
+     *
+     *   historicalAxisSamples[event->historicalStart + (event->historicalCount * 2) + 3];
+     */
+    GameActivityHistoricalPointerAxes historicalAxisSamples[NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES];
+
+    /**
+     * The number of valid historical samples in `historicalAxisSamples`.
+     */
+    uint64_t historicalSamplesCount;
 
     /**
      * Pointer to a read-only array of pointers to GameActivityKeyEvent.

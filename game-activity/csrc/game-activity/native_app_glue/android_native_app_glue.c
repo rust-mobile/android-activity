@@ -441,7 +441,9 @@ void android_app_set_motion_event_filter(struct android_app* app,
 }
 
 static bool onTouchEvent(GameActivity* activity,
-                         const GameActivityMotionEvent* event) {
+                         const GameActivityMotionEvent* event,
+                         const GameActivityHistoricalPointerAxes* historical,
+                         int historicalLen) {
     struct android_app* android_app = ToApp(activity);
     pthread_mutex_lock(&android_app->mutex);
 
@@ -461,6 +463,20 @@ static bool onTouchEvent(GameActivity* activity,
         memcpy(&inputBuffer->motionEvents[new_ix], event,
                sizeof(GameActivityMotionEvent));
         ++inputBuffer->motionEventsCount;
+
+        if (inputBuffer->historicalSamplesCount + historicalLen <=
+            NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES) {
+
+            int start_ix = inputBuffer->historicalSamplesCount;
+            memcpy(&inputBuffer->historicalAxisSamples[start_ix], historical,
+                    sizeof(historical[0]) * historicalLen);
+            inputBuffer->historicalSamplesCount += event->historicalCount;
+
+            inputBuffer->motionEvents[new_ix].historicalStart = start_ix;
+            inputBuffer->motionEvents[new_ix].historicalCount = historicalLen;
+        } else {
+            inputBuffer->motionEvents[new_ix].historicalCount = 0;
+        }
     }
     pthread_mutex_unlock(&android_app->mutex);
     return true;

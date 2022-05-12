@@ -142,6 +142,11 @@ typedef struct GameActivityPointerAxes {
     float rawY;
 } GameActivityPointerAxes;
 
+typedef struct GameActivityHistoricalPointerAxes {
+    int64_t eventTime;
+    float axisValues[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT];
+} GameActivityHistoricalPointerAxes;
+
 /** \brief Get the current X coordinate of the pointer. */
 inline float GameActivityPointerAxes_getX(
     const GameActivityPointerAxes* pointerInfo) {
@@ -176,6 +181,26 @@ void GameActivityPointerAxes_enableAxis(int32_t axis);
  * If the axis index is out of range, nothing is done.
  */
 void GameActivityPointerAxes_disableAxis(int32_t axis);
+
+/**
+ * \brief Enable the specified axis, so that its value is reported in the
+ * GameActivityHistoricalPointerAxes structures associated with a motion event.
+ *
+ * You must enable any axis that you want to read (no axes are enabled by
+ * default).
+ *
+ * If the axis index is out of range, nothing is done.
+ */
+void GameActivityHistoricalPointerAxes_enableAxis(int32_t axis);
+
+/**
+ * \brief Disable the specified axis. Its value won't be reported in the
+ * GameActivityHistoricalPointerAxes structures associated with motion events
+ * anymore.
+ *
+ * If the axis index is out of range, nothing is done.
+ */
+void GameActivityHistoricalPointerAxes_disableAxis(int32_t axis);
 
 /**
  * \brief Get the value of the requested axis.
@@ -213,6 +238,16 @@ inline float GameActivityPointerAxes_getAxisValue(
 #endif
 
 /**
+ * The maximum number of historic samples associated with a single motion event.
+ */
+#if (defined GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT_OVERRIDE)
+#define GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT \
+    GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT_OVERRIDE
+#else
+#define GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT 8
+#endif
+
+/**
  * \brief Describe a motion event that happened on the GameActivity SurfaceView.
  *
  * This is 1:1 mapping to the information contained in a Java `MotionEvent`
@@ -240,6 +275,13 @@ typedef struct GameActivityMotionEvent {
 
     float precisionX;
     float precisionY;
+
+    int16_t historicalStart;
+
+    // Note the actual buffer of historical data has a length of
+    // pointerCount * historicalCount, since the historical axis
+    // data is per-pointer.
+    int16_t historicalCount;
 } GameActivityMotionEvent;
 
 /**
@@ -381,7 +423,9 @@ typedef struct GameActivityCallbacks {
      * only valid during the callback.
      */
     bool (*onTouchEvent)(GameActivity* activity,
-                         const GameActivityMotionEvent* event);
+                         const GameActivityMotionEvent* event,
+                         const GameActivityHistoricalPointerAxes* historical,
+                         int historicalLen);
 
     /**
      * Callback called for every key down event on the GameActivity SurfaceView.
@@ -419,11 +463,16 @@ typedef struct GameActivityCallbacks {
  * This is done automatically by the GameActivity: see `onTouchEvent` to set
  * a callback to consume the received events.
  * This function can be used if you re-implement events handling in your own
- * activity.
+ * activity. On return, the out_event->historicalStart will be zero, and should
+ * be updated to index into whatever buffer out_historical is copied.
+ * On return the length of out_historical is
+ * (out_event->pointerCount x out_event->historicalCount) and is in a
+ * pointer-major order (i.e. all axis for a pointer are contiguous)
  * Ownership of out_event is maintained by the caller.
  */
-void GameActivityMotionEvent_fromJava(JNIEnv* env, jobject motionEvent,
-                                      GameActivityMotionEvent* out_event);
+int GameActivityMotionEvent_fromJava(JNIEnv* env, jobject motionEvent,
+                                     GameActivityMotionEvent* out_event,
+                                     GameActivityHistoricalPointerAxes *out_historical);
 
 /**
  * \brief Convert a Java `KeyEvent` to a `GameActivityKeyEvent`.

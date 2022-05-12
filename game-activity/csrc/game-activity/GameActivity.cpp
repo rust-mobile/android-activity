@@ -840,6 +840,27 @@ extern "C" void GameActivityPointerAxes_disableAxis(int32_t axis) {
     enabledAxes[axis] = false;
 }
 
+static bool enabledHistoricalAxes[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT] = {
+    // Disable all axes by default (they can be enabled using
+    // `GameActivityPointerAxes_enableHistoricalAxis`).
+    false};
+
+extern "C" void GameActivityHistoricalPointerAxes_enableAxis(int32_t axis) {
+    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
+        return;
+    }
+
+    enabledHistoricalAxes[axis] = true;
+}
+
+extern "C" void GameActivityHistoricalPointerAxes_disableAxis(int32_t axis) {
+    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
+        return;
+    }
+
+    enabledHistoricalAxes[axis] = false;
+}
+
 extern "C" void GameActivity_setImeEditorInfo(GameActivity *activity,
                                               int inputType, int actionId,
                                               int imeOptions) {
@@ -874,10 +895,15 @@ static struct {
     jmethodID getXPrecision;
     jmethodID getYPrecision;
     jmethodID getAxisValue;
+
+    jmethodID getHistorySize;
+    jmethodID getHistoricalEventTime;
+    jmethodID getHistoricalAxisValue;
 } gMotionEventClassInfo;
 
-extern "C" void GameActivityMotionEvent_fromJava(
-    JNIEnv *env, jobject motionEvent, GameActivityMotionEvent *out_event) {
+extern "C" int GameActivityMotionEvent_fromJava(
+    JNIEnv *env, jobject motionEvent, GameActivityMotionEvent *out_event,
+    GameActivityHistoricalPointerAxes *out_historical) {
     static bool gMotionEventClassInfoInitialized = false;
     if (!gMotionEventClassInfoInitialized) {
         int sdkVersion = GetSystemPropAsInt("ro.build.version.sdk");
@@ -928,7 +954,42 @@ extern "C" void GameActivityMotionEvent_fromJava(
         gMotionEventClassInfo.getAxisValue =
             env->GetMethodID(motionEventClass, "getAxisValue", "(II)F");
 
+        gMotionEventClassInfo.getHistorySize =
+            env->GetMethodID(motionEventClass, "getHistorySize", "()I");
+        gMotionEventClassInfo.getHistoricalEventTime =
+            env->GetMethodID(motionEventClass, "getHistoricalEventTime", "(I)J");
+        gMotionEventClassInfo.getHistoricalAxisValue =
+            env->GetMethodID(motionEventClass, "getHistoricalAxisValue", "(III)F");
+
         gMotionEventClassInfoInitialized = true;
+    }
+
+    int historySize =
+        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getHistorySize);
+    historySize =
+        std::min(historySize, GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT);
+
+    int localEnabledHistoricalAxis[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT];
+    int enabledHistoricalAxisCount = 0;
+
+    for (int axisIndex = 0;
+         axisIndex < GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT;
+         ++axisIndex) {
+        if (enabledHistoricalAxes[axisIndex]) {
+            localEnabledHistoricalAxis[enabledHistoricalAxisCount++] = axisIndex;
+        }
+    }
+    out_event->historicalCount = enabledHistoricalAxisCount == 0 ? 0 : historySize;
+    out_event->historicalStart = 0; // Free for caller to use
+
+    // The historical event times aren't unique per-pointer but for simplicity
+    // we output a per-pointer event time, copied from here...
+    int64_t historicalEventTimes[GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT];
+    for (int histIndex = 0; histIndex < historySize; ++histIndex) {
+        historicalEventTimes[histIndex] =
+            env->CallLongMethod(motionEvent,
+                gMotionEventClassInfo.getHistoricalEventTime) *
+                1000000;
     }
 
     int pointerCount =
@@ -958,6 +1019,20 @@ extern "C" void GameActivityMotionEvent_fromJava(
                     env->CallFloatMethod(motionEvent,
                                          gMotionEventClassInfo.getAxisValue,
                                          axisIndex, i);
+            }
+        }
+
+        if (enabledHistoricalAxisCount > 0) {
+            for (int histIndex = 0; histIndex < historySize; ++histIndex) {
+                int pointerHistIndex = historySize * i;
+                out_historical[pointerHistIndex].eventTime = historicalEventTimes[histIndex];
+                for (int c = 0; c < enabledHistoricalAxisCount; ++c) {
+                    int axisIndex = localEnabledHistoricalAxis[c];
+                    out_historical[pointerHistIndex].axisValues[axisIndex] =
+                        env->CallFloatMethod(motionEvent,
+                                             gMotionEventClassInfo.getHistoricalAxisValue,
+                                             axisIndex, i, histIndex);
+                }
             }
         }
     }
@@ -999,6 +1074,8 @@ extern "C" void GameActivityMotionEvent_fromJava(
         env->CallFloatMethod(motionEvent, gMotionEventClassInfo.getXPrecision);
     out_event->precisionY =
         env->CallFloatMethod(motionEvent, gMotionEventClassInfo.getYPrecision);
+
+    return out_event->pointerCount * out_event->historicalCount;
 }
 
 static struct {
@@ -1085,8 +1162,11 @@ static bool onTouchEvent_native(JNIEnv *env, jobject javaGameActivity,
     if (code->callbacks.onTouchEvent == nullptr) return false;
 
     static GameActivityMotionEvent c_event;
-    GameActivityMotionEvent_fromJava(env, motionEvent, &c_event);
-    return code->callbacks.onTouchEvent(code, &c_event);
+    // Note the actual data is written contiguously as numPointers x historySize
+    // entries.
+    static GameActivityHistoricalPointerAxes historical[GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT * GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT];
+    int historicalLen = GameActivityMotionEvent_fromJava(env, motionEvent, &c_event, historical);
+    return code->callbacks.onTouchEvent(code, &c_event, historical, historicalLen);
 }
 
 static bool onKeyUp_native(JNIEnv *env, jobject javaGameActivity, jlong handle,
