@@ -1,0 +1,44 @@
+[package]
+name = "agdk-egui"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+winit = { git = "https://github.com/rib/winit", branch = "agdk-game-activity" }
+#winit = { path="../../../winit" }
+wgpu = "0.12.0"
+pollster = "0.2"
+#egui_winit_platform = "0.14"
+egui_winit_platform = { path = "../../../egui_winit_platform" }
+egui_wgpu_backend = "0.17"
+egui = "0.17"
+chrono = "0.4"
+epi = "0.17"
+egui_demo_lib = "0.17"
+
+[patch.crates-io]
+winit = { git = "https://github.com/rib/winit", branch = "agdk-game-activity" }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+env_logger = "0.9"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.11.0"
+game-activity = { path="../../game-activity" }
+
+[features]
+default = []
+desktop = []
+
+[lib]
+name="main"
+crate_type=["cdylib"]
+
+[[bin]]
+path="src/lib.rs"
+name="egui-test"
+required-features = [ "desktop" ]
