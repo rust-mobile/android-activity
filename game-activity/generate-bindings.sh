@@ -1,5 +1,9 @@
 #!/bin/sh
 
+SYSROOT="${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/
+if ! test -d $SYSROOT; then
+    SYSROOT="${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/windows-x86_64/sysroot/
+fi
 
 while read ARCH && read TARGET ; do
 
@@ -24,7 +28,7 @@ while read ARCH && read TARGET ; do
         --newtype-enum '\w+_(result|status)_t' \
         -- \
         -Icsrc \
-        --sysroot="${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/ --target=$TARGET
+        --sysroot="$SYSROOT" --target=$TARGET
 done << EOF
 arm
 arm-linux-androideabi
