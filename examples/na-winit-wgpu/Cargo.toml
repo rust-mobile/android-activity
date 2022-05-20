@@ -19,8 +19,8 @@ android_logger = "0.11.0"
 game-activity = { path="../../game-activity" }
 
 [patch.crates-io]
-#winit = { git = "https://github.com/rib/winit", branch = "agdk-game-activity" }
-winit = { path="../../../winit" }
+winit = { git = "https://github.com/rib/winit", branch = "agdk-game-activity" }
+#winit = { path="../../../winit" }
 
 [features]
 default = []
