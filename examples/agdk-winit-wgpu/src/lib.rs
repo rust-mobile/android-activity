@@ -323,7 +323,9 @@ fn main() {}
 
 #[cfg(not(target_os="android"))]
 fn main() {
-    simple_logger::SimpleLogger::new().init().unwrap();
+    env_logger::builder().filter_level(log::LevelFilter::Warn) // Default Log Level
+        .parse_default_env()
+        .init();
 
     _main();
 }
