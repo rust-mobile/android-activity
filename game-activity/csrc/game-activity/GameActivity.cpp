@@ -988,7 +988,7 @@ extern "C" int GameActivityMotionEvent_fromJava(
     for (int histIndex = 0; histIndex < historySize; ++histIndex) {
         historicalEventTimes[histIndex] =
             env->CallLongMethod(motionEvent,
-                gMotionEventClassInfo.getHistoricalEventTime) *
+                gMotionEventClassInfo.getHistoricalEventTime, histIndex) *
                 1000000;
     }
 
