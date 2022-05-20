@@ -6,5 +6,5 @@ members = [
 exclude = [
     "examples/agdk-mainloop",
     "examples/agdk-winit-wgpu",
-    "examples/agdk-bevy"
+    "examples/agdk-egui"
 ]
