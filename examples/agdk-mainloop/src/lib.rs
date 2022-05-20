@@ -68,14 +68,9 @@ extern "C" fn android_main() {
                     redraw_pending = false;
 
                     // Handle input
-                    if let Some(buf) = app.swap_input_buffers() {
-                        for motion in buf.motion_events_iter() {
-                            trace!("Motion Event: {motion:?}")
-                        }
-                        for key in buf.key_events_iter() {
-                            trace!("Key Event: {key:?}")
-                        }
-                    }
+                    app.input_events(|event| {
+                        trace!("Input Event: {event:?}")
+                    })
 
                     // Render...
                 }

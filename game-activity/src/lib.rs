@@ -1,4 +1,4 @@
-use input::Axis;
+use input::{Axis, InputEvent};
 use jni_sys::*;
 use log::{Level, error, trace};
 use ndk::asset::AssetManager;
@@ -493,18 +493,25 @@ impl AndroidApp {
         }
     }
 
-    /// Swap the internal buffers used for reading/writing input events and get
-    /// back a temporary handle to the latest buffer of input events for
-    /// reading / processing.
+    /// Process all currently buffered input events
     ///
     /// Internally input events are captured asynchronously (within the Java
     /// main thread) and double buffered so that the application can safely read
     /// and process one buffer while further input events may continue to be
-    /// accumulated in the other buffer.
+    /// accumulated in the other buffer. Each call to this API will trigger an
+    /// internal buffer swap.
     ///
-    /// Input capture is notably not currently integrated with the application
-    /// Looper (so input won't unblock [`poll_events()`]) since it's assumed that
-    /// input will be batch processed in sync with rendering.
+    /// Input capture is notably not currently integrated with [`poll_events()`]
+    /// or the internal `Looper`, which means it's expected that applications
+    /// explicitly check for events (e.g. as part of preparing a new frame to
+    /// render). I.e. this is a pull model, not a push model; input events aren't
+    /// immediately delivered as they arrive. One benefit of this design is that
+    /// detailed input events can be buffered and processed more efficiently as
+    /// a batch at a time that's most appropriate for your application. One
+    /// disadvantage though is that your application won't be woken up purely
+    /// due to input events and so you need some other external trigger to ensure
+    /// input is checked periodically. This is currently best suited to games
+    /// that render continuously.
     ///
     /// To optimize the capture of pointer data then by default only the X
     /// and Y pointer [Axis] are recorded. Additional axis can be enabled and
@@ -512,20 +519,28 @@ impl AndroidApp {
     ///
     /// # Safety
     /// This API must only be called from the applications main thread
-    pub fn swap_input_buffers<'a>(&self) -> Option<InputBuffer<'a>> {
-        unsafe {
+    pub fn input_events<'b, F>(&self, mut callback: F)
+        where F: FnMut(&InputEvent)
+    {
+        let buf = unsafe {
             let app_ptr = self.ptr.as_ptr();
             let input_buffer = ffi::android_app_swap_input_buffers(app_ptr);
             if input_buffer == ptr::null_mut() {
-                return None;
-            } else {
-                Some(InputBuffer::from_ptr(NonNull::new_unchecked(input_buffer)))
+                return;
             }
+            InputBuffer::from_ptr(NonNull::new_unchecked(input_buffer))
+        };
+
+        for key_event in buf.key_events_iter() {
+            callback(&InputEvent::KeyEvent(key_event));
+        }
+        for motion_event in buf.motion_events_iter() {
+            callback(&InputEvent::MotionEvent(motion_event));
         }
     }
 }
 
-pub struct MotionEventsIterator<'a> {
+struct MotionEventsIterator<'a> {
     pos: usize,
     count: usize,
     buffer: &'a InputBuffer<'a>
@@ -548,7 +563,7 @@ impl<'a> Iterator for MotionEventsIterator<'a> {
     }
 }
 
-pub struct KeyEventsIterator<'a> {
+struct KeyEventsIterator<'a> {
     pos: usize,
     count: usize,
     buffer: &'a InputBuffer<'a>
@@ -571,7 +586,7 @@ impl<'a> Iterator for KeyEventsIterator<'a> {
     }
 }
 
-pub struct InputBuffer<'a> {
+struct InputBuffer<'a> {
     ptr: NonNull<ffi::android_input_buffer>,
     _lifetime: PhantomData<&'a ffi::android_input_buffer>
 }

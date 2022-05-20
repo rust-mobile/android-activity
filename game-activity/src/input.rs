@@ -19,8 +19,14 @@ use crate::ffi::{GameActivityMotionEvent, GameActivityKeyEvent};
 
 use bitflags::bitflags;
 
-// Note: try to keep this wrapper API similar to the AInputEvent API if possible
+// Note: try to keep this wrapper API compatible with the AInputEvent API if possible
 
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub enum InputEvent {
+    MotionEvent(MotionEvent),
+    KeyEvent(KeyEvent)
+}
 
 /// An enum representing the source of an [`MotionEvent`] or [`KeyEvent`]
 ///
@@ -979,7 +985,7 @@ impl ExactSizeIterator for HistoricalPointersIter<'_> {
 ///
 /// For general discussion of key events in Android, see [the relevant
 /// javadoc](https://developer.android.com/reference/android/view/KeyEvent).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KeyEvent {
     ga_event: GameActivityKeyEvent
 }
