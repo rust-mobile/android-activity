@@ -64,7 +64,16 @@ fn _main() {
     });
 
     let mut state = State::new(&event_loop);
-    let mut painter = Painter::new(wgpu::PowerPreference::LowPower, wgpu::PresentMode::Fifo, 1);
+    let mut painter = Painter::new(
+        wgpu::Backends::all(),
+        wgpu::PowerPreference::LowPower,
+        wgpu::DeviceDescriptor {
+            label: None,
+            features: wgpu::Features::default(),
+            limits: wgpu::Limits::default()
+        },
+        wgpu::PresentMode::Fifo,
+        1);
     let mut window: Option<winit::window::Window> = None;
     let mut egui_demo_windows = egui_demo_lib::DemoWindows::default();
 

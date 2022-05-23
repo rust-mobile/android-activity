@@ -19,12 +19,18 @@ egui_demo_lib = "0.18"
 [patch.crates-io]
 winit = { git = "https://github.com/rib/winit", branch = "agdk-game-activity" }
 #winit = { path="../../../winit" }
-egui = { git = "https://github.com/rib/egui", branch = "android-deferred-winit-wgpu" }
-egui-winit = { git = "https://github.com/rib/egui", branch = "android-deferred-winit-wgpu" }
-egui-wgpu = { git = "https://github.com/rib/egui", branch = "android-deferred-winit-wgpu" }
+
+egui = { git = "https://github.com/emilk/egui" }
+egui-wgpu = { git = "https://github.com/emilk/egui" }
+egui-winit = { git = "https://github.com/emilk/egui" }
+egui_extras = { git = "https://github.com/emilk/egui" }
+egui_demo_lib = { git = "https://github.com/emilk/egui" }
+
 #egui = { path = "../../../egui/egui" }
 #egui-wgpu = { path = "../../../egui/egui-wgpu" }
 #egui-winit = { path = "../../../egui/egui-winit" }
+#egui_extras = { path = "../../../egui/egui_extras" }
+#egui_demo_lib = { path = "../../../egui/egui_demo_lib" }
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.9"
