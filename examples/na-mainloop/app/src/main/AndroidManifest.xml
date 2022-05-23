@@ -8,9 +8,10 @@
         android:label="NativeActivity Mainloop"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.RustTemplate">
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         <activity
             android:name="android.app.NativeActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
