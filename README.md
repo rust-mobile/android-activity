@@ -65,6 +65,7 @@ extern "C" fn android_main() {
 rustup target add aarch64-linux-android
 cargo install cargo-apk
 cargo apk run
+adb logcat example:V *:S
 ```
 
 # Game Activity
