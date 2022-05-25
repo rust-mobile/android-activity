@@ -10,9 +10,6 @@ log = "0.4"
 android_logger = "0.11.0"
 native-activity = { path="../../native-activity" }
 
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-
 [lib]
 #name="na_mainloop"
 crate_type=["cdylib"]
