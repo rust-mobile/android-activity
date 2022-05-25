@@ -399,7 +399,6 @@ static void onSaveInstanceState(GameActivity* activity,
     LOGV("SaveInstanceState: %p", activity);
 
     struct android_app* android_app = ToApp(activity);
-    void* savedState = NULL;
     pthread_mutex_lock(&android_app->mutex);
     android_app->stateSaved = 0;
     android_app_write_cmd(android_app, APP_CMD_SAVE_STATE);
