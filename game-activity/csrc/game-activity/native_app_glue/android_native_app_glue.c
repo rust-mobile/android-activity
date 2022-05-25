@@ -28,6 +28,16 @@
     ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
 #define LOGE(...) \
     ((void)__android_log_print(ANDROID_LOG_ERROR, "threaded_app", __VA_ARGS__))
+#define LOGW(...) \
+    ((void)__android_log_print(ANDROID_LOG_WARN, "threaded_app", __VA_ARGS__))
+#define LOGW_ONCE(...)                                        \
+    do {                                                       \
+        static bool alogw_once##__FILE__##__LINE__##__ = true; \
+        if (alogw_once##__FILE__##__LINE__##__) {              \
+            alogw_once##__FILE__##__LINE__##__ = false;        \
+            LOGW(__VA_ARGS__);                                \
+        }                                                      \
+    } while (0)
 
 /* For debug builds, always enable the debug traces in this library */
 #ifndef NDEBUG
@@ -477,6 +487,11 @@ static bool onTouchEvent(GameActivity* activity,
         } else {
             inputBuffer->motionEvents[new_ix].historicalCount = 0;
         }
+    } else {
+        LOGW_ONCE("Motion event will be dropped because the number of unconsumed motion"
+             " events exceeded NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS (%d). Consider setting"
+             " NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS_OVERRIDE to a larger value",
+             NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS);
     }
     pthread_mutex_unlock(&android_app->mutex);
     return true;
@@ -533,6 +548,11 @@ static bool onKey(GameActivity* activity, const GameActivityKeyEvent* event) {
         memcpy(&inputBuffer->keyEvents[new_ix], event,
                sizeof(GameActivityKeyEvent));
         ++inputBuffer->keyEventsCount;
+    } else {
+        LOGW_ONCE("Key event will be dropped because the number of unconsumed key events exceeded"
+             " NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS (%d). Consider setting"
+             " NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE to a larger value",
+             NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS);
     }
 
     pthread_mutex_unlock(&android_app->mutex);
