@@ -3,7 +3,6 @@ use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::input_queue::InputQueue;
 use ndk::looper::{FdEvent};
-use ndk::native_activity::NativeActivity;
 use ndk::native_window::NativeWindow;
 use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
@@ -302,6 +301,13 @@ impl AndroidApp {
         }
     }
 
+    pub(crate) fn native_activity(&self) -> *const ndk_sys::ANativeActivity {
+        unsafe {
+            let app_ptr = self.ptr.as_ptr();
+            (*app_ptr).activity.cast()
+        }
+    }
+
     /// Calls [`ALooper_pollAll`] on the looper associated with this AndroidApp as well
     /// as processing any events (such as lifecycle events) via the given `callback`.
     ///
@@ -536,6 +542,46 @@ impl AndroidApp {
             }
         }
     }
+
+    /// The user-visible SDK version of the framework
+    ///
+    /// Also referred to as [`Build.VERSION_CODES`](https://developer.android.com/reference/android/os/Build.VERSION_CODES)
+    pub fn sdk_version() -> i32 {
+        let mut prop = android_properties::getprop("ro.build.version.sdk");
+        if let Some(val) = prop.value() {
+            i32::from_str_radix(&val, 10).expect("Failed to parse ro.build.version.sdk property")
+        } else {
+            panic!("Couldn't read ro.build.version.sdk system property");
+        }
+    }
+
+    fn try_get_path_from_ptr(path: *const u8) -> Option<std::path::PathBuf> {
+        if path == ptr::null() { return None; }
+        let cstr = unsafe {
+            let cstr_slice = CStr::from_ptr(path);
+            cstr_slice.to_str().ok()?
+        };
+        if cstr.len() == 0 { return None; }
+        Some(std::path::PathBuf::from(cstr))
+    }
+
+    /// Path to this application's internal data directory
+    pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
+        let na = self.native_activity();
+        unsafe { Self::try_get_path_from_ptr((*na).internalDataPath.cast()) }
+    }
+
+    /// Path to this application's external data directory
+    pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
+        let na = self.native_activity();
+        unsafe { Self::try_get_path_from_ptr((*na).externalDataPath.cast()) }
+    }
+
+    /// Path to the directory containing the application's OBB files (if any).
+    pub fn obb_path(&self) -> Option<std::path::PathBuf> {
+        let na = self.native_activity();
+        unsafe { Self::try_get_path_from_ptr((*na).obbPath.cast()) }
+    }
 }
 
 /// Gets the global [`AndroidApp`] for this process
@@ -621,11 +667,12 @@ pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
         }
     });
 
-    let activity = NonNull::<ndk_sys::ANativeActivity>::new((*app).activity.cast()).unwrap();
-    let activity = NativeActivity::from_ptr(activity);
-    ndk_context::initialize_android_context(activity.vm().cast(), activity.activity().cast());
-
     let app = AndroidApp::from_ptr(NonNull::new(app).unwrap());
+
+    let na = app.native_activity();
+    let jvm = (*na).vm;
+    let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
+    ndk_context::initialize_android_context(jvm.cast(), activity.cast());
 
     ANDROID_APP = Some(app.clone());
 

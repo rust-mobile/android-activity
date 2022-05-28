@@ -538,6 +538,52 @@ impl AndroidApp {
             callback(&InputEvent::MotionEvent(motion_event));
         }
     }
+
+    /// The user-visible SDK version of the framework
+    ///
+    /// Also referred to as [`Build.VERSION_CODES`](https://developer.android.com/reference/android/os/Build.VERSION_CODES)
+    pub fn sdk_version() -> i32 {
+        let mut prop = android_properties::getprop("ro.build.version.sdk");
+        if let Some(val) = prop.value() {
+            i32::from_str_radix(&val, 10).expect("Failed to parse ro.build.version.sdk property")
+        } else {
+            panic!("Couldn't read ro.build.version.sdk system property");
+        }
+    }
+
+    fn try_get_path_from_ptr(path: *const u8) -> Option<std::path::PathBuf> {
+        if path == ptr::null() { return None; }
+        let cstr = unsafe {
+            let cstr_slice = CStr::from_ptr(path);
+            cstr_slice.to_str().ok()?
+        };
+        if cstr.len() == 0 { return None; }
+        Some(std::path::PathBuf::from(cstr))
+    }
+
+    /// Path to this application's internal data directory
+    pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
+        unsafe {
+            let app_ptr = self.ptr.as_ptr();
+            Self::try_get_path_from_ptr((*(*app_ptr).activity).internalDataPath)
+        }
+    }
+
+    /// Path to this application's external data directory
+    pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
+        unsafe {
+            let app_ptr = self.ptr.as_ptr();
+            Self::try_get_path_from_ptr((*(*app_ptr).activity).externalDataPath)
+        }
+    }
+
+    /// Path to the directory containing the application's OBB files (if any).
+    pub fn obb_path(&self) -> Option<std::path::PathBuf> {
+        unsafe {
+            let app_ptr = self.ptr.as_ptr();
+            Self::try_get_path_from_ptr((*(*app_ptr).activity).obbPath)
+        }
+    }
 }
 
 struct MotionEventsIterator<'a> {

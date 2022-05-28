@@ -12,6 +12,7 @@ jni-sys = "0.3"
 ndk = { version = "0.6" }
 ndk-sys = { version = "0.3" }
 ndk-context = { version = "0.1" }
+android-properties = "0.2"
 lazy_static = "1.4.0"
 num_enum = "0.5"
 bitflags = "1.3"
