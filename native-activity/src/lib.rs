@@ -676,7 +676,30 @@ pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
 
     ANDROID_APP = Some(app.clone());
 
+    // Since this is a newly spawned thread then the JVM hasn't been attached
+    // to the thread yet. Attach before calling the applications main function
+    // so they can safely make JNI calls
+    let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
+    if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
+        attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
+    }
+
+    // XXX: If we were in control of the Java Activity subclass then
+    // we could potentially run the android_main function via a Java native method
+    // springboard (e.g. call an Activity subclass method that calls a jni native
+    // method that then just calls android_main()) that would make sure there was
+    // a Java frame at the base of our call stack which would then be recognised
+    // when calling FindClass to lookup a suitable classLoader, instead of
+    // defaulting to the system loader. Without this then it's difficult for native
+    // code to look up non-standard Java classes.
     android_main();
+
+    // Since this is a newly spawned thread then the JVM hasn't been attached
+    // to the thread yet. Attach before calling the applications main function
+    // so they can safely make JNI calls
+    if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
+        detach_current_thread(jvm);
+    }
 
     ANDROID_APP = None;
 
