@@ -5,7 +5,7 @@ use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::looper::{FdEvent};
 use ndk::native_window::NativeWindow;
-use ndk_sys::ALooper_wake;
+use ndk_sys::{ALooper_wake};
 use ndk_sys::{ALooper, ALooper_pollAll};
 use std::ffi::{CStr, CString};
 use std::fs::File;
@@ -16,11 +16,9 @@ use std::os::raw;
 use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::sync::RwLockReadGuard;
 use std::time::Duration;
 use std::{thread, ptr};
 use std::os::unix::prelude::*;
-use lazy_static::lazy_static;
 
 use crate::input::{MotionEvent, KeyEvent};
 
@@ -51,16 +49,6 @@ pub mod input;
 // getter also helps keep simple winit usage portable.
 static mut ANDROID_APP: Option<AndroidApp> = None;
 
-// This is mainly just for convenience for implementing a winit backend
-// although ideally it shouldn't be necessary to have a static global.
-//
-// Removing this would just require moving the `native_window()` getter
-// to be an AndroidApp method and require winit to pass around the
-// app wherever it needs to query the window.
-lazy_static! {
-    static ref NATIVE_WINDOW: RwLock<Option<NativeWindow>> = Default::default();
-}
-
 // Note: unlike in ndk-glue this has signed components (consistent
 // with Android's ARect) which generally allows for representing
 // rectangles with a negative/off-screen origin. Even though this
@@ -74,6 +62,33 @@ pub struct Rect {
     pub top: i32,
     pub right: i32,
     pub bottom: i32,
+}
+
+// XXX: NativeWindow is a ref-counted object but the NativeWindow rust API
+// doesn't currently implement Clone() in terms of acquiring a reference
+// and Drop() in terms of releasing a reference.
+
+/// A reference to a `NativeWindow`, used for rendering
+pub struct NativeWindowRef {
+    inner: NativeWindow
+}
+impl NativeWindowRef {
+    pub fn new(native_window: &NativeWindow) -> Self {
+        unsafe { ndk_sys::ANativeWindow_acquire(native_window.ptr().as_ptr()); }
+        Self { inner: native_window.clone() }
+    }
+}
+impl Drop for NativeWindowRef {
+    fn drop(&mut self) {
+        unsafe { ndk_sys::ANativeWindow_release(self.inner.ptr().as_ptr()) }
+    }
+}
+impl Deref for NativeWindowRef {
+    type Target = NativeWindow;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 // The only time it's safe to update the android_app->savedState pointer is
@@ -272,6 +287,7 @@ impl Deref for AndroidApp {
 pub struct AndroidAppInner {
     ptr: NonNull<ffi::android_app>,
     config: RwLock<Configuration>,
+    native_window: RwLock<Option<NativeWindow>>,
 }
 
 impl AndroidApp {
@@ -290,7 +306,22 @@ impl AndroidApp {
             inner: Arc::new(AndroidAppInner {
                 ptr,
                 config: RwLock::new(config),
+                native_window: Default::default(),
             })
+        }
+    }
+
+    /// Queries the current [`NativeWindow`] for the application.
+    ///
+    /// This will only return `Some(window)` between
+    /// [`AndroidAppMainEvent::InitWindow`] and [`AndroidAppMainEvent::TerminateWindow`]
+    /// events.
+    pub fn native_window<'a>(&self) -> Option<NativeWindowRef> {
+        let guard = self.native_window.read().unwrap();
+        if let Some(ref window) = *guard {
+            Some(NativeWindowRef::new(window))
+        } else {
+            None
         }
     }
 
@@ -387,11 +418,11 @@ impl AndroidApp {
                                     }
                                     MainEvent::InitWindow { .. } => {
                                         let win_ptr = (*app_ptr.as_ptr()).window;
-                                        *NATIVE_WINDOW.write().unwrap() =
+                                        *self.native_window.write().unwrap() =
                                             Some(NativeWindow::from_ptr(NonNull::new(win_ptr).unwrap()));
                                     }
                                     MainEvent::TerminateWindow { .. } => {
-                                        *NATIVE_WINDOW.write().unwrap() = None;
+                                        *self.native_window.write().unwrap() = None;
                                     }
                                     _ => {}
                                 }
@@ -679,15 +710,6 @@ pub fn android_app() -> AndroidApp {
     } else {
         unreachable!()
     }
-}
-
-/// Queries the current [`NativeWindow`] for the application.
-///
-/// This will only return `Some(window)` between
-/// [`AndroidAppMainEvent::InitWindow`] and [`AndroidAppMainEvent::TerminateWindow`]
-/// events.
-pub fn native_window() -> RwLockReadGuard<'static, Option<NativeWindow>> {
-    NATIVE_WINDOW.read().unwrap()
 }
 
 // Rust doesn't give us a clean way to directly export symbols from C/C++
