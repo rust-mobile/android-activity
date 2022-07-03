@@ -1,5 +1,5 @@
 
-use native_activity::{PollEvent, MainEvent};
+use android_activity::{PollEvent, MainEvent, AndroidApp};
 use log::Level;
 use log::{trace, info};
 use std::time::Duration;
@@ -11,8 +11,7 @@ struct AppState {
 }
 
 #[no_mangle]
-extern "C" fn android_main() {
-
+fn android_main(app: AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default().with_min_level(Level::Info)
     );
@@ -21,7 +20,6 @@ extern "C" fn android_main() {
     let mut redraw_pending = true;
     let mut render_state: Option<()> = Default::default();
 
-    let app = native_activity::android_app();
     while !quit {
         app.poll_events(Some(Duration::from_millis(500)) /* timeout */, |event| {
             match event {

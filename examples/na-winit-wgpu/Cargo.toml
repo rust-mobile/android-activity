@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
-winit = { version = "0.26", default-features = false, features = [ "native-activity" ] }
+winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
+#winit = { path="../../../winit" }
 wgpu = "0.12.0"
 pollster = "0.2"
 
@@ -16,7 +17,7 @@ env_logger = "0.9"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
-native-activity = { path="../../native-activity" }
+android-activity = { path="../../android-activity", features = [ "native-activity" ] }
 
 [features]
 default = []

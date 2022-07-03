@@ -2,9 +2,9 @@ use log::Level;
 use winit::event_loop::{EventLoopWindowTarget, EventLoopBuilder, EventLoop};
 
 #[cfg(target_os="android")]
+use android_activity::AndroidApp;
+#[cfg(target_os="android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
-
-use game_activity::AndroidApp;
 
 use winit::{
     event_loop::{ControlFlow},

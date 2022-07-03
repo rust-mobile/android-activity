@@ -9,13 +9,13 @@ use log::trace;
 use wgpu::TextureFormat;
 use wgpu::{Instance, Adapter, Device, ShaderModule, PipelineLayout, RenderPipeline, Queue};
 
-use native_activity::AndroidApp;
-
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget, EventLoopBuilder},
 };
 
+#[cfg(target_os="android")]
+use android_activity::AndroidApp;
 #[cfg(target_os="android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
 

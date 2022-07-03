@@ -1,4 +1,4 @@
-use game_activity::{AndroidApp, PollEvent, MainEvent};
+use android_activity::{AndroidApp, PollEvent, MainEvent};
 use log::info;
 
 #[no_mangle]

@@ -1,4 +1,4 @@
-use native_activity::{PollEvent, MainEvent, AndroidApp};
+use android_activity::{PollEvent, MainEvent, AndroidApp};
 use log::info;
 
 #[no_mangle]

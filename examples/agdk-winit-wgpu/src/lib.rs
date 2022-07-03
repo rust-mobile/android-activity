@@ -6,8 +6,6 @@ use std::sync::{Arc, RwLock};
 use log::Level;
 use log::trace;
 
-use game_activity::AndroidApp;
-
 use wgpu::TextureFormat;
 use wgpu::{Instance, Adapter, Device, ShaderModule, PipelineLayout, RenderPipeline, Queue};
 
@@ -16,6 +14,8 @@ use winit::{
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
 };
 
+#[cfg(target_os="android")]
+use game_activity::AndroidApp;
 #[cfg(target_os="android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
 
@@ -314,7 +314,7 @@ fn _main(event_loop: EventLoop<()>) {
 
 #[cfg(target_os="android")]
 #[no_mangle]
-extern "C" fn android_main(app: AndroidApp) {
+fn android_main(app: AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default().with_min_level(Level::Trace)
     );
@@ -324,9 +324,6 @@ extern "C" fn android_main(app: AndroidApp) {
         .build();
     _main(event_loop);
 }
-// Stop rust-analyzer from complaining that this file doesn't have a main() function...
-#[cfg(target_os="android")]
-fn main() {}
 
 #[cfg(not(target_os="android"))]
 fn main() {

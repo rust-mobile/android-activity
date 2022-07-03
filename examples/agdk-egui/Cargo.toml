@@ -17,7 +17,7 @@ egui-winit = { version = "0.18", default-features = false }
 egui_demo_lib = "0.18"
 
 [patch.crates-io]
-winit = { git = "https://github.com/rib/winit", branch = "agdk-game-activity" }
+winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
 #winit = { path="../../../winit" }
 
 egui = { git = "https://github.com/emilk/egui" }
@@ -37,7 +37,7 @@ env_logger = "0.9"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
-game-activity = { path="../../game-activity" }
+android-activity = { path="../../android-activity", features = [ "game-activity" ] }
 
 [features]
 default = []
