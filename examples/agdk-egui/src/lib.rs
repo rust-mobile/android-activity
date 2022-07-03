@@ -1,5 +1,10 @@
 use log::Level;
-use winit::event_loop::{EventLoopWindowTarget, EventLoopBuilder};
+use winit::event_loop::{EventLoopWindowTarget, EventLoopBuilder, EventLoop};
+
+#[cfg(target_os="android")]
+use winit::platform::android::EventLoopBuilderExtAndroid;
+
+use game_activity::AndroidApp;
 
 use winit::{
     event_loop::{ControlFlow},
@@ -52,9 +57,7 @@ fn create_window<T>(event_loop: &EventLoopWindowTarget<T>, state: &mut State, pa
     window
 }
 
-fn _main() {
-    let event_loop = EventLoopBuilder::with_user_event().build();
-
+fn _main(event_loop: EventLoop<Event>) {
     let ctx = egui::Context::default();
     let repaint_signal = RepaintSignal(std::sync::Arc::new(std::sync::Mutex::new(
         event_loop.create_proxy()
@@ -150,17 +153,16 @@ fn _main() {
 
 #[cfg(target_os="android")]
 #[no_mangle]
-extern "C" fn android_main() {
+fn android_main(app: AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default().with_min_level(Level::Trace)
     );
 
-    _main();
+    let event_loop = EventLoopBuilder::with_user_event()
+        .with_android_app(app)
+        .build();
+    _main(event_loop);
 }
-// Stop rust-analyzer from complaining that this file doesn't have a main() function...
-#[cfg(target_os="android")]
-#[cfg(allow_unused)]
-fn main() {}
 
 #[cfg(not(target_os="android"))]
 fn main() {
@@ -168,5 +170,6 @@ fn main() {
         .parse_default_env()
         .init();
 
-    _main();
+    let event_loop = EventLoopBuilder::with_user_event().build();
+    _main(event_loop);
 }

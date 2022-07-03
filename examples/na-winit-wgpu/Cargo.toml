@@ -16,11 +16,7 @@ env_logger = "0.9"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
-game-activity = { path="../../game-activity" }
-
-[patch.crates-io]
-winit = { git = "https://github.com/rib/winit", branch = "agdk-game-activity" }
-#winit = { path="../../../winit" }
+native-activity = { path="../../native-activity" }
 
 [features]
 default = []

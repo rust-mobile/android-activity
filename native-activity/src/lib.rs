@@ -8,17 +8,16 @@ use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
 use std::ffi::{CStr, CString};
 use std::fs::File;
+use std::hash::Hash;
 use std::io::{BufRead, BufReader};
 use std::ops::Deref;
 use std::os::raw;
 use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::sync::RwLockReadGuard;
 use std::time::Duration;
 use std::{thread, ptr};
 use std::os::unix::prelude::*;
-use lazy_static::lazy_static;
 
 #[cfg(not(any(target_os = "android", feature = "test")))]
 compile_error!("android-ndk-sys only supports compiling for Android");
@@ -34,26 +33,6 @@ pub mod input {
 }
 
 //pub mod input;
-
-// We provide a side-band way to access the global AndroidApp
-// via `android_app()` since there's no FFI safe way of calling
-// an `extern "C" android_main()` with the AndroidApp while it's
-// based on an `Arc<RwLock<>>` (without extra steps to pass an
-// ffi safe handle/pointer).
-//
-// Technically is should actually be safe to pass the app as an
-// argument, regardless of the unspecified layout for FFI, since
-// we can assume that android_main is compiled at the same time
-// by the same compiler as part of the same cdylib, so we could
-// consider removing this static global if there's a good way to
-// squash the compiler warnings.
-//
-// Note: for winit if we removed the `android_app()` getter then
-// apps would have to explicitly pass the AndroidApp via an
-// android specific event loop builder api /
-// PlatformSpecificEventLoopAttributes - so having this global
-// getter also helps keep simple winit usage portable.
-static mut ANDROID_APP: Option<AndroidApp> = None;
 
 pub type InputEvent = ndk::event::InputEvent;
 
@@ -282,6 +261,19 @@ impl AndroidAppWaker {
 #[derive(Debug, Clone)]
 pub struct AndroidApp {
     inner: Arc<AndroidAppInner>
+}
+
+impl PartialEq for AndroidApp {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.inner, &other.inner)
+    }
+}
+impl Eq for AndroidApp {}
+
+impl Hash for AndroidApp {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        Arc::as_ptr(&self.inner).hash(state);
+    }
 }
 
 impl Deref for AndroidApp {
@@ -617,15 +609,6 @@ impl AndroidApp {
     }
 }
 
-/// Gets the global [`AndroidApp`] for this process
-pub fn android_app() -> AndroidApp {
-    if let Some(app) = unsafe { &ANDROID_APP } {
-        return app.clone()
-    } else {
-        unreachable!()
-    }
-}
-
 // Rust doesn't give us a clean way to directly export symbols from C/C++
 // so we rename the C/C++ symbols and re-export this entrypoint from
 // Rust...
@@ -637,8 +620,6 @@ extern "C" {
         savedState: *mut ::std::os::raw::c_void,
         savedStateSize: usize,
     );
-
-    pub fn android_main();
 }
 
 #[no_mangle]
@@ -661,6 +642,10 @@ fn android_log(level: Level, tag: &CStr, msg: &CStr) {
     unsafe {
         ndk_sys::__android_log_write(prio as raw::c_int, tag.as_ptr(), msg.as_ptr());
     }
+}
+
+extern "Rust" {
+    pub fn android_main(app: AndroidApp);
 }
 
 // This is a spring board between android_native_app_glue and the user's
@@ -698,8 +683,6 @@ pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
     let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
     ndk_context::initialize_android_context(jvm.cast(), activity.cast());
 
-    ANDROID_APP = Some(app.clone());
-
     // Since this is a newly spawned thread then the JVM hasn't been attached
     // to the thread yet. Attach before calling the applications main function
     // so they can safely make JNI calls
@@ -716,7 +699,7 @@ pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
     // when calling FindClass to lookup a suitable classLoader, instead of
     // defaulting to the system loader. Without this then it's difficult for native
     // code to look up non-standard Java classes.
-    android_main();
+    android_main(app);
 
     // Since this is a newly spawned thread then the JVM hasn't been attached
     // to the thread yet. Attach before calling the applications main function
@@ -724,8 +707,6 @@ pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
     if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
         detach_current_thread(jvm);
     }
-
-    ANDROID_APP = None;
 
     ndk_context::release_android_context();
 }

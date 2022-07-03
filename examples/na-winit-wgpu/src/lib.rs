@@ -1,17 +1,23 @@
 
-use log::Level;
-use log::trace;
-use wgpu::TextureFormat;
-use wgpu::{Instance, Adapter, Device, ShaderModule, PipelineLayout, RenderPipeline, Queue};
-use winit::event_loop::EventLoopWindowTarget;
-
 use std::ops::Deref;
 use std::borrow::Cow;
 use std::sync::{Arc, RwLock};
+
+use log::Level;
+use log::trace;
+
+use wgpu::TextureFormat;
+use wgpu::{Instance, Adapter, Device, ShaderModule, PipelineLayout, RenderPipeline, Queue};
+
+use native_activity::AndroidApp;
+
 use winit::{
     event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
+    event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget, EventLoopBuilder},
 };
+
+#[cfg(target_os="android")]
+use winit::platform::android::EventLoopBuilderExtAndroid;
 
 struct RenderState {
     device: Device,
@@ -125,7 +131,7 @@ fn configure_surface_swapchain(render_state: &RenderState, surface_state: &Surfa
     let swapchain_format = render_state.target_format;
     let size = surface_state.window.inner_size();
 
-    let mut config = wgpu::SurfaceConfiguration {
+    let config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: swapchain_format,
         width: size.width,
@@ -293,9 +299,7 @@ fn run(event_loop: EventLoop<()>, app: App) {
 }
 
 
-fn _main() {
-    let event_loop = EventLoop::new();
-
+fn _main(event_loop: EventLoop<()>) {
     // We can decide on our graphics API / backend up-front and that
     // doesn't need to be re-considered later
     let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -310,16 +314,16 @@ fn _main() {
 
 #[cfg(target_os="android")]
 #[no_mangle]
-extern "C" fn android_main() {
+fn android_main(app: AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default().with_min_level(Level::Trace)
     );
 
-    _main();
+    let event_loop = EventLoopBuilder::new()
+        .with_android_app(app)
+        .build();
+    _main(event_loop);
 }
-// Stop rust-analyzer from complaining that this file doesn't have a main() function...
-#[cfg(target_os="android")]
-fn main() {}
 
 #[cfg(not(target_os="android"))]
 fn main() {
@@ -327,5 +331,6 @@ fn main() {
         .parse_default_env()
         .init();
 
-    _main();
+    let event_loop = EventLoopBuilder::new().build();
+    _main(event_loop);
 }
