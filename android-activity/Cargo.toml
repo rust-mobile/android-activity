@@ -1,0 +1,41 @@
+[package]
+name = "android-activity"
+version = "0.1.0"
+edition = "2021"
+keywords = ["android", "ndk"]
+readme = "../README.md"
+license = "MIT OR Apache-2.0"
+
+[features]
+# Note: we don't enable any backend by default since features
+# are generally supposed to be additive, while these backends
+# are actually mutually exclusive.
+#
+# In general it's only the final application crate that needs
+# to decide in a backend.
+default=[]
+game-activity = []
+native-activity = []
+
+[dependencies]
+log = "0.4"
+jni-sys = "0.3"
+ndk = { version = "0.6" }
+ndk-sys = { version = "0.3" }
+ndk-context = { version = "0.1" }
+android-properties = "0.2"
+lazy_static = "1.4.0"
+num_enum = "0.5"
+bitflags = "1.3"
+libc = "0.2.84"
+
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"] }
+
+[package.metadata.docs.rs]
+targets = [
+    "aarch64-linux-android",
+    "armv7-linux-androideabi",
+    "i686-linux-android",
+    "x86_64-linux-android",
+]
