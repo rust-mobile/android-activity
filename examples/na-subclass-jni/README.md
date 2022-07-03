@@ -7,14 +7,13 @@ Note: unlike the `na-mainloop` example, this one can't be built via
 
 # Gradle Build
 ```
-rustup target add aarch64-linux-android
+export ANDROID_NDK_HOME="path/to/ndk"
+export ANDROID_HOME="path/to/sdk"
 
+rustup target add aarch64-linux-android
 cargo install cargo-ndk
 
-export ANDROID_NDK_HOME="path/to/ndk"
 cargo ndk -t arm64-v8a -o app/src/main/jniLibs/  build
-
-export ANDROID_HOME="path/to/sdk"
 ./gradlew build
 ./gradlew installDebug
 adb shell am start -n co.realfit.nasubclassjni/.MainActivity

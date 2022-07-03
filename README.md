@@ -1,13 +1,23 @@
-This project includes a number of Android "glue" crates for native Rust development
-(comparable to [`android_native_app_glue.c`][ndk_concepts] which supports C/C++
-applications).
+# Overview
 
-These glue crates provide a way to load a `cdylib` via the `onCreate` method of
+`android-activity` provides a "glue" layer for building native Rust
+applications on Android, supporting multiple [`Activity`] base classes.
+It's comparable to [`android_native_app_glue.c`][ndk_concepts]
+for C/C++ applications.
+
+`android-activity` supports [`NativeActivity`] or [`GameActivity`] from the
+Android Game Development Kit and can be extended to support additional base
+classes.
+
+`android-activity` provides a way to load a `cdylib` via the `onCreate` method of
 your `Activity` class; run an `android_main()` function in a separate thread from the Java
 main thread and marshal events (such as lifecycle events and input events) between
 Java and your native thread.
 
+[`Activity`]: https://developer.android.com/reference/android/app/Activity
+[`NativeActivity`]: https://developer.android.com/reference/android/app/NativeActivity
 [ndk_concepts]: https://developer.android.com/ndk/guides/concepts#naa
+[`GameActivity`]: https://developer.android.com/games/agdk/integrate-game-activity
 
 ### Example
 
@@ -20,7 +30,7 @@ Cargo.toml
 [dependencies]
 log = "0.4"
 android_logger = "0.11"
-native-activity = { git = "https://github.com/rib/agdk-rust/" }
+android-activity = { git = "https://github.com/rib/android-activity/", features = [ "native-activity" ] }
 
 [lib]
 crate_type = ["cdylib"]
@@ -29,15 +39,14 @@ crate_type = ["cdylib"]
 lib.rs
 ```rust
 use log::info;
-use native_activity::{PollEvent, MainEvent};
+use android_activity::{PollEvent, MainEvent};
 
 #[no_mangle]
-extern "C" fn android_main() {
+fn android_main(app: AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default().with_min_level(log::Level::Info)
     );
 
-    let app = native_activity::android_app();
     loop {
         app.poll_events(Some(std::time::Duration::from_millis(500)) /* timeout */, |event| {
             match event {
@@ -71,8 +80,8 @@ adb logcat example:V *:S
 # Game Activity
 
 Originally the aim was to enable support for building Rust applications based on the
-[GameActivity] based class provided by [Google's Android Game Development Kit][agdk]
-which should also facilitate integration with additional AGDK libraries including:
+[GameActivity] class provided by [Google's Android Game Development Kit][agdk]
+which can also facilitate integration with additional AGDK libraries including:
 1. [Game Text Input](https://developer.android.com/games/agdk/add-support-for-text-input): a library
 to help fullscreen native applications utilize the Android soft keyboard.
 2. [Game Controller Library, aka 'Paddleboat'](https://developer.android.com/games/sdk/game-controller):
@@ -98,7 +107,7 @@ This project also supports [`NativeActivity`][NativeActivity] based applications
 NativeActivity is more limited than `GameActivity` and does not derive from `AppCompatActivity` it
 can sometimes still be convenient to build on `NativeActivity` in situations where you are using a
 limited/minimal build system that is not able to compile Java or Kotlin code or fetch from Maven
-repositories. This is because `NativeActivity` is included as part of the Android platform.
+repositories - this is because `NativeActivity` is included as part of the Android platform.
 
 [NativeActivity]: https://developer.android.com/reference/android/app/NativeActivity
 
@@ -106,18 +115,12 @@ repositories. This is because `NativeActivity` is included as part of the Androi
 
 ## Compatibility
 
-Both the [game-activity] glue crate and the [native-activity] glue crate support a common API that allows
-them to be used interchangably, depending on which base class your application decides to use.
+All `Activity` classes are supported via a common API that enables you to write
+`Activity` subclass agnostic code wherever you don't depend on features that are
+specific to a particular subclass.
 
-Although it's expected that the `game-activity` crate will gain features that aren't possible with `native-activity`
-those should be covered by optional features that allow downstream crates, such as Winit to practically be
-able to support alternative glue layers.
-
-The hope is that the core, common API can be supported via any Activity subclass that your
-application needs to use.
-
-[game-activity]: https://github.com/rib/agdk-rust/tree/main/game-activity
-[native-activity]: https://github.com/rib/agdk-rust/tree/main/native-activity
+For example, it makes it possible to have a [Winit backend](https://github.com/rib/winit/tree/agdk-game-activity)
+that supports Android applications running with different `Activity` classes.
 
 ## API Summary
 
@@ -126,48 +129,45 @@ application needs to use.
 The glue crates define a standard entrypoint ABI for your `cdylib` that looks like:
 
 ```rust
+use android_activity::AndroidApp;
+
 #[no_mangle]
-extern "C" fn android_main() {
+fn android_main(app: AndroidApp) {
     ...
 }
 ```
 
-There's currently no high-level macro provided for things like initializing logging or allowing the
-main function to return a `Result<>` since it's expected that different downstream frameworks may
-each have differing oppinions on the details and may want to provide their own macros.
+There's currently no high-level macro provided for things like initializing
+logging or allowing the main function to return a `Result<>` since it's expected
+that different downstream frameworks may each have differing opinions on the
+details and may want to provide their own macros.
 
-### Global `AndroidApp`
 
-The glue layer provides a `'static` `AndroidApp` API to access state about your running application
-and handle synchronized interaction between your native Rust application and the `Activity` running
-on the Java main thread.
+### `AndroidApp`
+
+Your `android_main()` function is passed an `AndroidApp` struct to access state
+about your running application and handle synchronized interaction between your
+native Rust application and the `Activity` running on the Java main thread.
 
 For example, the `AndroidApp` API enables:
 1. Access to Android lifecycle events
 2. Notifications of SurfaceView lifecycle events
 3. Access to input events
 4. Ability to save and restore state each time your process stops and starts
+5. Access application [`Configuration`] state
+6. internal/external/obb filesystem paths
 
-For example:
-```rust
-#[no_mangle]
-extern "C" fn android_main() {
-    let app = game_activity::android_app();
-    ...
-}
-```
+_Note: that some of the `AndroidApp` APIs (such as for polling events) are only
+deemed safe to use from the application's main thread_
 
-_Note: that some of the `AndroidApp` APIs (such as for polling events) are only deemed safe to use
-from the application's main thread_
-
+[`Configuration`]: https://developer.android.com/reference/android/content/res/Configuration
 
 ### Synchronized event callbacks
 
 The `AndroidApp::poll_events()` API is similar to the Winit `EventLoop::run` API in that it
 takes a `FnMut` closure that is called for each outstanding event (such as for lifecycle events).
-This is modeled on the original `android_native_app_glue` design for C/C++ that reserves the
-ability for the glue layer to insert "pre-" and "-post" hooks around the application's event
-callback that can handle any required synchronization with the Java main thread.
+This design ensures the glue layer can transparently handle any required synchronization with
+Java before and after each callback.
 
 For example, when the Java main thread notifies the glue layer that its `SurfaceView` is being
 destroyed the Java thread will then block until it gets an explicit acknowledgement that the
