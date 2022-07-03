@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 keywords = ["android", "ndk"]
 readme = "../README.md"
+homepage = "https://github.com/rib/android-activity"
+repository = "https://github.com/rib/android-activity"
+description = "Glue for building Rust applications on Android with NativeActivity or GameActivity"
 license = "MIT OR Apache-2.0"
 
 [features]
@@ -24,7 +27,6 @@ ndk = { version = "0.6" }
 ndk-sys = { version = "0.3" }
 ndk-context = { version = "0.1" }
 android-properties = "0.2"
-lazy_static = "1.4.0"
 num_enum = "0.5"
 bitflags = "1.3"
 libc = "0.2.84"
