@@ -1,7 +1,6 @@
 [workspace]
 members = [
-    "native-activity",
-    "game-activity"
+    "android-activity"
 ]
 
 exclude = [
