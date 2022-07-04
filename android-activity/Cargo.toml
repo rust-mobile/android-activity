@@ -24,8 +24,10 @@ native-activity = []
 [dependencies]
 log = "0.4"
 jni-sys = "0.3"
-ndk = { version = "0.6" }
-ndk-sys = { version = "0.3" }
+# Coordinate the next winit release with android-ndk-rs: https://github.com/rust-windowing/winit/issues/1995
+ndk = { git = "https://github.com/rust-windowing/android-ndk-rs", rev = "7e33384" }
+ndk-sys = { git = "https://github.com/rust-windowing/android-ndk-rs", rev = "7e33384" }
+#ndk-sys = { version = "0.3" }
 ndk-context = { version = "0.1" }
 android-properties = "0.2"
 num_enum = "0.5"
