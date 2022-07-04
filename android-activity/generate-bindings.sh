@@ -8,7 +8,7 @@ fi
 while read ARCH && read TARGET ; do
 
     # --module-raw-line 'use '
-    bindgen game-activity-ffi.h -o src/game-activity/ffi_$ARCH.rs \
+    bindgen game-activity-ffi.h -o src/game_activity/ffi_$ARCH.rs \
         --blocklist-item 'JNI\w+' \
         --blocklist-item 'C?_?JNIEnv' \
         --blocklist-item '_?JavaVM' \
@@ -30,7 +30,7 @@ while read ARCH && read TARGET ; do
         -Igame-activity-csrc \
         --sysroot="$SYSROOT" --target=$TARGET
 
-     bindgen native-activity-ffi.h -o src/native-activity/ffi_$ARCH.rs \
+     bindgen native-activity-ffi.h -o src/native_activity/ffi_$ARCH.rs \
         --blocklist-item 'JNI\w+' \
         --blocklist-item 'C?_?JNIEnv' \
         --blocklist-item '_?JavaVM' \

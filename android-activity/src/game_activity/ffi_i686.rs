@@ -22,9 +22,9 @@ pub const __ANDROID_API_P__: u32 = 28;
 pub const __ANDROID_API_Q__: u32 = 29;
 pub const __ANDROID_API_R__: u32 = 30;
 pub const __NDK_MAJOR__: u32 = 21;
-pub const __NDK_MINOR__: u32 = 3;
+pub const __NDK_MINOR__: u32 = 1;
 pub const __NDK_BETA__: u32 = 0;
-pub const __NDK_BUILD__: u32 = 6528147;
+pub const __NDK_BUILD__: u32 = 6352462;
 pub const __NDK_CANARY__: u32 = 0;
 pub const INT8_MIN: i32 = -128;
 pub const INT8_MAX: u32 = 127;
@@ -191,6 +191,7 @@ pub const false_: u32 = 0;
 pub const __bool_true_false_are_defined: u32 = 1;
 pub const GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT: u32 = 48;
 pub const GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT: u32 = 8;
+pub const GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT: u32 = 8;
 pub const POLLIN: u32 = 1;
 pub const POLLPRI: u32 = 2;
 pub const POLLOUT: u32 = 4;
@@ -601,6 +602,7 @@ pub const PTHREAD_PROCESS_SHARED: u32 = 1;
 pub const PTHREAD_SCOPE_SYSTEM: u32 = 0;
 pub const PTHREAD_SCOPE_PROCESS: u32 = 1;
 pub const NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS: u32 = 16;
+pub const NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES: u32 = 64;
 pub const NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS: u32 = 4;
 pub const NATIVE_APP_GLUE_MAX_INPUT_BUFFERS: u32 = 2;
 extern "C" {
@@ -1409,7 +1411,6 @@ pub struct AInputEvent {
 }
 pub const AINPUT_EVENT_TYPE_KEY: ::std::os::raw::c_uint = 1;
 pub const AINPUT_EVENT_TYPE_MOTION: ::std::os::raw::c_uint = 2;
-pub const AINPUT_EVENT_TYPE_FOCUS: ::std::os::raw::c_uint = 3;
 pub type _bindgen_ty_8 = ::std::os::raw::c_uint;
 pub const AKEY_EVENT_ACTION_DOWN: ::std::os::raw::c_uint = 0;
 pub const AKEY_EVENT_ACTION_UP: ::std::os::raw::c_uint = 1;
@@ -1510,7 +1511,6 @@ pub const AMOTION_EVENT_TOOL_TYPE_FINGER: ::std::os::raw::c_uint = 1;
 pub const AMOTION_EVENT_TOOL_TYPE_STYLUS: ::std::os::raw::c_uint = 2;
 pub const AMOTION_EVENT_TOOL_TYPE_MOUSE: ::std::os::raw::c_uint = 3;
 pub const AMOTION_EVENT_TOOL_TYPE_ERASER: ::std::os::raw::c_uint = 4;
-pub const AMOTION_EVENT_TOOL_TYPE_PALM: ::std::os::raw::c_uint = 5;
 pub type _bindgen_ty_16 = ::std::os::raw::c_uint;
 pub const AINPUT_SOURCE_CLASS_MASK: ::std::os::raw::c_uint = 255;
 pub const AINPUT_SOURCE_CLASS_NONE: ::std::os::raw::c_uint = 0;
@@ -1891,11 +1891,6 @@ pub const ADataSpace_ADATASPACE_SRGB: ADataSpace = 142671872;
 pub const ADataSpace_ADATASPACE_SCRGB: ADataSpace = 411107328;
 pub const ADataSpace_ADATASPACE_DISPLAY_P3: ADataSpace = 143261696;
 pub const ADataSpace_ADATASPACE_BT2020_PQ: ADataSpace = 163971072;
-pub const ADataSpace_ADATASPACE_ADOBE_RGB: ADataSpace = 151715840;
-pub const ADataSpace_ADATASPACE_BT2020: ADataSpace = 147193856;
-pub const ADataSpace_ADATASPACE_BT709: ADataSpace = 281083904;
-pub const ADataSpace_ADATASPACE_DCI_P3: ADataSpace = 155844608;
-pub const ADataSpace_ADATASPACE_SRGB_LINEAR: ADataSpace = 138477568;
 pub type ADataSpace = ::std::os::raw::c_uint;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -3020,6 +3015,54 @@ fn bindgen_test_layout_GameActivityPointerAxes() {
         )
     );
 }
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct GameActivityHistoricalPointerAxes {
+    pub eventTime: i64,
+    pub axisValues: [f32; 48usize],
+}
+#[test]
+fn bindgen_test_layout_GameActivityHistoricalPointerAxes() {
+    assert_eq!(
+        ::std::mem::size_of::<GameActivityHistoricalPointerAxes>(),
+        200usize,
+        concat!("Size of: ", stringify!(GameActivityHistoricalPointerAxes))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<GameActivityHistoricalPointerAxes>(),
+        4usize,
+        concat!(
+            "Alignment of ",
+            stringify!(GameActivityHistoricalPointerAxes)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<GameActivityHistoricalPointerAxes>())).eventTime as *const _
+                as usize
+        },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(GameActivityHistoricalPointerAxes),
+            "::",
+            stringify!(eventTime)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<GameActivityHistoricalPointerAxes>())).axisValues as *const _
+                as usize
+        },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(GameActivityHistoricalPointerAxes),
+            "::",
+            stringify!(axisValues)
+        )
+    );
+}
 extern "C" {
     #[doc = " \\brief Enable the specified axis, so that its value is reported in the"]
     #[doc = " GameActivityPointerAxes structures stored in a motion event."]
@@ -3040,6 +3083,24 @@ extern "C" {
     #[doc = ""]
     #[doc = " If the axis index is out of range, nothing is done."]
     pub fn GameActivityPointerAxes_disableAxis(axis: i32);
+}
+extern "C" {
+    #[doc = " \\brief Enable the specified axis, so that its value is reported in the"]
+    #[doc = " GameActivityHistoricalPointerAxes structures associated with a motion event."]
+    #[doc = ""]
+    #[doc = " You must enable any axis that you want to read (no axes are enabled by"]
+    #[doc = " default)."]
+    #[doc = ""]
+    #[doc = " If the axis index is out of range, nothing is done."]
+    pub fn GameActivityHistoricalPointerAxes_enableAxis(axis: i32);
+}
+extern "C" {
+    #[doc = " \\brief Disable the specified axis. Its value won't be reported in the"]
+    #[doc = " GameActivityHistoricalPointerAxes structures associated with motion events"]
+    #[doc = " anymore."]
+    #[doc = ""]
+    #[doc = " If the axis index is out of range, nothing is done."]
+    pub fn GameActivityHistoricalPointerAxes_disableAxis(axis: i32);
 }
 #[doc = " \\brief Describe a motion event that happened on the GameActivity SurfaceView."]
 #[doc = ""]
@@ -3063,12 +3124,14 @@ pub struct GameActivityMotionEvent {
     pub pointers: [GameActivityPointerAxes; 8usize],
     pub precisionX: f32,
     pub precisionY: f32,
+    pub historicalStart: i16,
+    pub historicalCount: i16,
 }
 #[test]
 fn bindgen_test_layout_GameActivityMotionEvent() {
     assert_eq!(
         ::std::mem::size_of::<GameActivityMotionEvent>(),
-        1696usize,
+        1700usize,
         concat!("Size of: ", stringify!(GameActivityMotionEvent))
     );
     assert_eq!(
@@ -3248,6 +3311,30 @@ fn bindgen_test_layout_GameActivityMotionEvent() {
             stringify!(GameActivityMotionEvent),
             "::",
             stringify!(precisionY)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<GameActivityMotionEvent>())).historicalStart as *const _ as usize
+        },
+        1696usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(GameActivityMotionEvent),
+            "::",
+            stringify!(historicalStart)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<GameActivityMotionEvent>())).historicalCount as *const _ as usize
+        },
+        1698usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(GameActivityMotionEvent),
+            "::",
+            stringify!(historicalCount)
         )
     );
 }
@@ -3489,6 +3576,8 @@ pub struct GameActivityCallbacks {
         unsafe extern "C" fn(
             activity: *mut GameActivity,
             event: *const GameActivityMotionEvent,
+            historical: *const GameActivityHistoricalPointerAxes,
+            historicalLen: ::std::os::raw::c_int,
         ) -> bool,
     >,
     #[doc = " Callback called for every key down event on the GameActivity SurfaceView."]
@@ -3749,13 +3838,18 @@ extern "C" {
     #[doc = " This is done automatically by the GameActivity: see `onTouchEvent` to set"]
     #[doc = " a callback to consume the received events."]
     #[doc = " This function can be used if you re-implement events handling in your own"]
-    #[doc = " activity."]
+    #[doc = " activity. On return, the out_event->historicalStart will be zero, and should"]
+    #[doc = " be updated to index into whatever buffer out_historical is copied."]
+    #[doc = " On return the length of out_historical is"]
+    #[doc = " (out_event->pointerCount x out_event->historicalCount) and is in a"]
+    #[doc = " pointer-major order (i.e. all axis for a pointer are contiguous)"]
     #[doc = " Ownership of out_event is maintained by the caller."]
     pub fn GameActivityMotionEvent_fromJava(
         env: *mut JNIEnv,
         motionEvent: jobject,
         out_event: *mut GameActivityMotionEvent,
-    );
+        out_historical: *mut GameActivityHistoricalPointerAxes,
+    ) -> ::std::os::raw::c_int;
 }
 extern "C" {
     #[doc = " \\brief Convert a Java `KeyEvent` to a `GameActivityKeyEvent`."]
@@ -10128,6 +10222,21 @@ pub struct android_input_buffer {
     pub motionEvents: [GameActivityMotionEvent; 16usize],
     #[doc = " The number of valid motion events in `motionEvents`."]
     pub motionEventsCount: u64,
+    #[doc = " Pointer to a read-only array of pointers to GameActivityHistoricalPointerAxes."]
+    #[doc = ""]
+    #[doc = " Only the first historicalSamplesCount samples are valid."]
+    #[doc = " Refer to event->historicalStart, event->pointerCount and event->historicalCount"]
+    #[doc = " to access the specific samples that relate to an event."]
+    #[doc = ""]
+    #[doc = " Each slice of samples for one event has a length of"]
+    #[doc = " (event->pointerCount and event->historicalCount) and is in pointer-major"]
+    #[doc = " order so the historic samples for each pointer are contiguous."]
+    #[doc = " E.g. you would access historic sample index 3 for pointer 2 of an event with:"]
+    #[doc = ""]
+    #[doc = "   historicalAxisSamples[event->historicalStart + (event->historicalCount * 2) + 3];"]
+    pub historicalAxisSamples: [GameActivityHistoricalPointerAxes; 64usize],
+    #[doc = " The number of valid historical samples in `historicalAxisSamples`."]
+    pub historicalSamplesCount: u64,
     #[doc = " Pointer to a read-only array of pointers to GameActivityKeyEvent."]
     #[doc = " Only the first keyEventsCount events are valid."]
     pub keyEvents: [GameActivityKeyEvent; 4usize],
@@ -10138,7 +10247,7 @@ pub struct android_input_buffer {
 fn bindgen_test_layout_android_input_buffer() {
     assert_eq!(
         ::std::mem::size_of::<android_input_buffer>(),
-        27360usize,
+        40232usize,
         concat!("Size of: ", stringify!(android_input_buffer))
     );
     assert_eq!(
@@ -10162,7 +10271,7 @@ fn bindgen_test_layout_android_input_buffer() {
         unsafe {
             &(*(::std::ptr::null::<android_input_buffer>())).motionEventsCount as *const _ as usize
         },
-        27136usize,
+        27200usize,
         concat!(
             "Offset of field: ",
             stringify!(android_input_buffer),
@@ -10171,8 +10280,34 @@ fn bindgen_test_layout_android_input_buffer() {
         )
     );
     assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<android_input_buffer>())).historicalAxisSamples as *const _
+                as usize
+        },
+        27208usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(android_input_buffer),
+            "::",
+            stringify!(historicalAxisSamples)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<android_input_buffer>())).historicalSamplesCount as *const _
+                as usize
+        },
+        40008usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(android_input_buffer),
+            "::",
+            stringify!(historicalSamplesCount)
+        )
+    );
+    assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_input_buffer>())).keyEvents as *const _ as usize },
-        27144usize,
+        40016usize,
         concat!(
             "Offset of field: ",
             stringify!(android_input_buffer),
@@ -10184,7 +10319,7 @@ fn bindgen_test_layout_android_input_buffer() {
         unsafe {
             &(*(::std::ptr::null::<android_input_buffer>())).keyEventsCount as *const _ as usize
         },
-        27352usize,
+        40224usize,
         concat!(
             "Offset of field: ",
             stringify!(android_input_buffer),
@@ -10314,7 +10449,7 @@ pub struct android_app {
 fn bindgen_test_layout_android_app() {
     assert_eq!(
         ::std::mem::size_of::<android_app>(),
-        54860usize,
+        80604usize,
         concat!("Size of: ", stringify!(android_app))
     );
     assert_eq!(
@@ -10444,7 +10579,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).currentInputBuffer as *const _ as usize },
-        54776usize,
+        80520usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10454,7 +10589,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).textInputState as *const _ as usize },
-        54780usize,
+        80524usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10464,7 +10599,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).mutex as *const _ as usize },
-        54784usize,
+        80528usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10474,7 +10609,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).cond as *const _ as usize },
-        54788usize,
+        80532usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10484,7 +10619,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).msgread as *const _ as usize },
-        54792usize,
+        80536usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10494,7 +10629,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).msgwrite as *const _ as usize },
-        54796usize,
+        80540usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10504,7 +10639,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).thread as *const _ as usize },
-        54800usize,
+        80544usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10514,7 +10649,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).cmdPollSource as *const _ as usize },
-        54804usize,
+        80548usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10524,7 +10659,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).running as *const _ as usize },
-        54816usize,
+        80560usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10534,7 +10669,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).stateSaved as *const _ as usize },
-        54820usize,
+        80564usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10544,7 +10679,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).destroyed as *const _ as usize },
-        54824usize,
+        80568usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10554,7 +10689,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).redrawNeeded as *const _ as usize },
-        54828usize,
+        80572usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10564,7 +10699,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).pendingWindow as *const _ as usize },
-        54832usize,
+        80576usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10574,7 +10709,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).pendingContentRect as *const _ as usize },
-        54836usize,
+        80580usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10584,7 +10719,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).keyEventFilter as *const _ as usize },
-        54852usize,
+        80596usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10594,7 +10729,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).motionEventFilter as *const _ as usize },
-        54856usize,
+        80600usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -10711,6 +10846,11 @@ extern "C" {
     #[doc = " This method should be called after you have processed the key up events in"]
     #[doc = " your game loop. You should handle events at each iteration of your game loop."]
     pub fn android_app_clear_key_events(inputBuffer: *mut android_input_buffer);
+}
+extern "C" {
+    #[doc = " This is a springboard into the Rust glue layer that wraps calling the"]
+    #[doc = " main entry for the app itself."]
+    pub fn _rust_glue_entry(app: *mut android_app);
 }
 extern "C" {
     #[doc = " Set the filter to use when processing key events."]
