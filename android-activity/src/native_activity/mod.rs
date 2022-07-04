@@ -1,4 +1,4 @@
-#![cfg(feature="native-activity")]
+#![cfg(any(feature="native-activity", doc))]
 
 use std::ffi::{CStr, CString};
 use std::fs::File;

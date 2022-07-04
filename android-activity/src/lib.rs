@@ -15,13 +15,13 @@ compile_error!("android-activity only supports compiling for Android");
 
 #[cfg(all(feature = "game-activity", feature = "native-activity"))]
 compile_error!("The \"game-activity\" and \"native-activity\" features cannot be enabled at the same time");
-#[cfg(not(any(feature = "game-activity", feature = "native-activity")))]
+#[cfg(all(not(any(feature = "game-activity", feature = "native-activity")), not(doc)))]
 compile_error!("Either \"game-activity\" or \"native-activity\" must be enabled as features");
 
 
-#[cfg(feature="native-activity")]
+#[cfg(any(feature="native-activity", doc))]
 mod native_activity;
-#[cfg(feature="native-activity")]
+#[cfg(any(feature="native-activity", doc))]
 use native_activity as activity_impl;
 
 #[cfg(feature="game-activity")]
