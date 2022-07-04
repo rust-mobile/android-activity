@@ -6,6 +6,7 @@ keywords = ["android", "ndk"]
 readme = "../README.md"
 homepage = "https://github.com/rib/android-activity"
 repository = "https://github.com/rib/android-activity"
+documentation = "https://docs.rs/android-activity"
 description = "Glue for building Rust applications on Android with NativeActivity or GameActivity"
 license = "MIT OR Apache-2.0"
 
