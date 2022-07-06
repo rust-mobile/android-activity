@@ -86,20 +86,33 @@ static void print_cur_config(struct android_app* android_app) {
             AConfiguration_getUiModeNight(android_app->config));
 }
 
+void android_app_attach_input_queue_looper(struct android_app* android_app) {
+    if (android_app->inputQueue != NULL) {
+            LOGV("Attaching input queue to looper");
+            AInputQueue_attachLooper(android_app->inputQueue,
+                    android_app->looper, LOOPER_ID_INPUT, NULL,
+                    &android_app->inputPollSource);
+    }
+}
+
+void android_app_detach_input_queue_looper(struct android_app* android_app) {
+    if (android_app->inputQueue != NULL) {
+        LOGV("Detaching input queue from looper");
+        AInputQueue_detachLooper(android_app->inputQueue);
+    }
+}
+
 void android_app_pre_exec_cmd(struct android_app* android_app, int8_t cmd) {
     switch (cmd) {
         case APP_CMD_INPUT_CHANGED:
             LOGV("APP_CMD_INPUT_CHANGED\n");
             pthread_mutex_lock(&android_app->mutex);
             if (android_app->inputQueue != NULL) {
-                //AInputQueue_detachLooper(android_app->inputQueue);
+                android_app_detach_input_queue_looper(android_app);
             }
             android_app->inputQueue = android_app->pendingInputQueue;
             if (android_app->inputQueue != NULL) {
-                //LOGV("Attaching input queue to looper");
-                //AInputQueue_attachLooper(android_app->inputQueue,
-                //        android_app->looper, LOOPER_ID_INPUT, NULL,
-                //        &android_app->inputPollSource);
+                android_app_attach_input_queue_looper(android_app);
             }
             pthread_cond_broadcast(&android_app->cond);
             pthread_mutex_unlock(&android_app->mutex);

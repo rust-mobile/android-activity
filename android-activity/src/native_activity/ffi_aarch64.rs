@@ -7149,6 +7149,12 @@ extern "C" {
     pub fn android_app_post_exec_cmd(android_app: *mut android_app, cmd: i8);
 }
 extern "C" {
+    pub fn android_app_attach_input_queue_looper(android_app: *mut android_app);
+}
+extern "C" {
+    pub fn android_app_detach_input_queue_looper(android_app: *mut android_app);
+}
+extern "C" {
     #[doc = " Dummy function that used to be used to prevent the linker from stripping app"]
     #[doc = " glue code. No longer necessary, since __attribute__((visibility(\"default\")))"]
     #[doc = " does this for us."]
