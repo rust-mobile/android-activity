@@ -1,5 +1,8 @@
 #!/bin/sh
 
+if test -z "${ANDROID_NDK_ROOT}"; then
+    export ANDROID_NDK_ROOT=${ANDROID_NDK_HOME}
+fi
 SYSROOT="${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/linux-x86_64/sysroot/
 if ! test -d $SYSROOT; then
     SYSROOT="${ANDROID_NDK_ROOT}"/toolchains/llvm/prebuilt/windows-x86_64/sysroot/
