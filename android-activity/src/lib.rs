@@ -81,11 +81,21 @@ pub type StateLoader<'a> = activity_impl::StateLoader<'a>;
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum MainEvent<'a> {
-    /**
-     * Unused. Reserved for future use when usage of AInputQueue will be
-     * supported.
-     */
-    //InputChanged,
+    /// New input events are available via [`AndroidApp::input_events()`]
+    ///
+    /// _Note: Even if more input is received this event will not be resent
+    /// until [`AndroidApp::input_events()`] has been called, which enables
+    /// applications to batch up input processing without there being lots of
+    /// redundant event loop wake ups._
+    ///
+    /// [`AndroidApp::input_events()`]: AndroidApp::input_events
+    ///
+    /// # Portability
+    ///
+    /// This is currently only supported with `NativeActivity` with the
+    /// "native-activity" feature. Applications using `GameActivity` should
+    /// continue to check for input as part of their rendering updates.
+    InputAvailable,
 
     /// Command from main thread: a new [`NativeWindow`] is ready for use.  Upon
     /// receiving this command, [`native_window()`] will return the new window

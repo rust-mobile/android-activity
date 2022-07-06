@@ -268,19 +268,13 @@ impl AndroidAppInner {
                         }
                         ffi::LOOPER_ID_INPUT => {
                             trace!("ALooper_pollAll returned ID_INPUT");
-                            // For now we don't forward notifications of input events specifically, we just
-                            // forward the notifications as a wake up, and assume the application main loop
-                            // will unconditionally check events for each iteration of it's event loop
-                            //
-                            // (Specifically notifying when input events are received would be inconsistent
-                            // with the current design of GameActivity input handling which we want to stay
-                            // compatible with))
-                            //
-                            // XXX: Actually it was a bad idea to emit a Wake for input since applications
-                            // are likely to _not_ consider that on its own a cause to redraw and it could
-                            // end up spamming enough wake ups to interfere with other events that would
-                            // trigger a redraw + input handling
-                            //callback(PollEvent::Wake);
+
+                            // To avoid spamming the application with event loop iterations notifying them of
+                            // input events then we only send one `InputAvailable` per iteration of input
+                            // handling. We re-attache the looper when the application calls
+                            // `AndroidApp::input_events()`
+                            ffi::android_app_detach_input_queue_looper(app_ptr.as_ptr());
+                            callback(PollEvent::InputAvailable)
                         }
                         _ => {
                             let events = FdEvent::from_bits(events as u32)
@@ -341,6 +335,10 @@ impl AndroidAppInner {
     pub fn input_events<'b, F>(&self, mut callback: F)
         where F: FnMut(&input::InputEvent)
     {
+        // Reattach the input queue to the looper so future input will again deliver an
+        // `InputAvailable` event.
+        ffi::android_app_attach_input_queue_looper(app_ptr.as_ptr());
+
         let queue = unsafe {
             let app_ptr = self.ptr.as_ptr();
             if (*app_ptr).inputQueue == ptr::null_mut() {
