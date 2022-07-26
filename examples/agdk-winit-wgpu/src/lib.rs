@@ -15,7 +15,7 @@ use winit::{
 };
 
 #[cfg(target_os="android")]
-use game_activity::AndroidApp;
+use android_activity::AndroidApp;
 #[cfg(target_os="android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
 
