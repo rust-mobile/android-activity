@@ -9,7 +9,7 @@ resolver = "2"
 [dependencies]
 log = "0.4"
 winit = "0.26"
-wgpu = "0.12.0"
+wgpu = "0.13.0"
 pollster = "0.2"
 egui = "0.18"
 egui-wgpu = { version = "0.18", features = [ "winit" ] }

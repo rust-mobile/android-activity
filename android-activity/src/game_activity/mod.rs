@@ -4,7 +4,7 @@ use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
-use std::os::raw;
+use std::os::raw::{self, c_char};
 use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -72,7 +72,7 @@ impl<'a> StateSaver<'a> {
             }
 
             (*app_ptr).savedState = buf;
-            (*app_ptr).savedStateSize = state.len() as u64;
+            (*app_ptr).savedStateSize = state.len() as ffi::size_t;
         }
     }
 }
@@ -328,7 +328,7 @@ impl AndroidAppInner {
         }
     }
 
-    fn try_get_path_from_ptr(path: *const u8) -> Option<std::path::PathBuf> {
+    fn try_get_path_from_ptr(path: *const c_char) -> Option<std::path::PathBuf> {
         if path == ptr::null() { return None; }
         let cstr = unsafe {
             let cstr_slice = CStr::from_ptr(path);

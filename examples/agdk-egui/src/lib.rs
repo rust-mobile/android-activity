@@ -122,7 +122,7 @@ fn _main(event_loop: EventLoop<Event>) {
                         &ctx.tessellate(full_output.shapes),
                         &full_output.textures_delta);
 
-                    if full_output.needs_repaint {
+                    if full_output.repaint_after.is_zero() {
                         window.request_redraw();
                     }
                 }
