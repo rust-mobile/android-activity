@@ -297,10 +297,10 @@ impl AndroidAppInner {
 
                             // To avoid spamming the application with event loop iterations notifying them of
                             // input events then we only send one `InputAvailable` per iteration of input
-                            // handling. We re-attache the looper when the application calls
+                            // handling. We re-attach the looper when the application calls
                             // `AndroidApp::input_events()`
                             ffi::android_app_detach_input_queue_looper(app_ptr.as_ptr());
-                            callback(PollEvent::InputAvailable)
+                            callback(PollEvent::Main(MainEvent::InputAvailable))
                         }
                         _ => {
                             let events = FdEvent::from_bits(events as u32).expect(&format!(
@@ -371,25 +371,29 @@ impl AndroidAppInner {
     where
         F: FnMut(&input::InputEvent),
     {
-        // Reattach the input queue to the looper so future input will again deliver an
-        // `InputAvailable` event.
-        ffi::android_app_attach_input_queue_looper(app_ptr.as_ptr());
-
         let queue = unsafe {
             let app_ptr = self.ptr.as_ptr();
             if (*app_ptr).inputQueue == ptr::null_mut() {
                 return;
             }
+
+            // Reattach the input queue to the looper so future input will again deliver an
+            // `InputAvailable` event.
+            ffi::android_app_attach_input_queue_looper(app_ptr);
+
             let queue = NonNull::new_unchecked((*app_ptr).inputQueue);
             InputQueue::from_ptr(queue)
         };
 
-        info!("collect_events: START");
-        while let Some(event) = queue.get_event() {
-            info!("Got input event {event:?}");
+        // Note: we basically ignore errors from get_event() currently. Looking
+        // at the source code for Android's InputQueue, the only error that
+        // can be returned here is 'WOULD_BLOCK', which we want to just treat as
+        // meaning the queue is empty.
+        //
+        // ref: https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/jni/android_view_InputQueue.cpp
+        //
+        while let Ok(Some(event)) = queue.get_event() {
             if let Some(event) = queue.pre_dispatch(event) {
-                trace!("Pre dispatched input event {event:?}");
-
                 callback(&event);
 
                 // Always report events as 'handled'. This means we won't get
@@ -398,7 +402,6 @@ impl AndroidAppInner {
                 // implement similar emulation somewhere else in the stack if
                 // necessary, and this will be more consistent with the GameActivity
                 // input handling that doesn't do any kind of emulation.
-                info!("Finishing input event {event:?}");
                 queue.finish_event(event, true);
             }
         }
