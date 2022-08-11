@@ -8,6 +8,7 @@ exclude = [
     "examples/agdk-winit-wgpu",
     "examples/agdk-egui",
     "examples/agdk-oboe",
+    "examples/agdk-cpal",
     "examples/na-mainloop",
     "examples/na-winit-wgpu",
     "examples/na-subclass-jni"

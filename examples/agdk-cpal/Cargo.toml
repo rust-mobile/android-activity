@@ -1,0 +1,21 @@
+[package]
+name = "agdk-cpal"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+android_logger = "0.11.0"
+android-activity = { path="../../android-activity", features = ["game-activity"] }
+cpal = { version = "0.13" }
+atomic_float = "0.1"
+anyhow = "1"
+
+[patch.crates-io]
+cpal = { git = "https://github.com/rib/cpal", branch = "no-ndk-glue-dev-dependency" }
+
+[lib]
+name="main"
+crate_type=["cdylib"]
