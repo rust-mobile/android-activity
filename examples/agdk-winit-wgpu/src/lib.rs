@@ -85,7 +85,7 @@ async fn init_render_state(adapter: &Adapter, target_format: TextureFormat) -> R
 
     trace!("WGPU: loading shader");
     // Load the shaders from disk
-    let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
         source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
     });
@@ -109,7 +109,7 @@ async fn init_render_state(adapter: &Adapter, target_format: TextureFormat) -> R
         fragment: Some(wgpu::FragmentState {
             module: &shader,
             entry_point: "fs_main",
-            targets: &[target_format.into()],
+            targets: &[Some(target_format.into())],
         }),
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: None,
@@ -131,7 +131,7 @@ fn configure_surface_swapchain(render_state: &RenderState, surface_state: &Surfa
     let swapchain_format = render_state.target_format;
     let size = surface_state.window.inner_size();
 
-    let mut config = wgpu::SurfaceConfiguration {
+    let config = wgpu::SurfaceConfiguration {
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: swapchain_format,
         width: size.width,
@@ -170,8 +170,8 @@ async fn ensure_render_state_for_surface(app: &App, new_surface_state: &SurfaceS
     let adapter = app_guard.adapter.as_ref().unwrap();
 
     if app_guard.render_state.is_none() {
-        trace!("WGPU: finding preferred swapchain format");
-        let swapchain_format = new_surface_state.surface.get_preferred_format(&adapter).unwrap();
+        trace!("WGPU: finding supported swapchain format");
+        let swapchain_format = new_surface_state.surface.get_supported_formats(&adapter)[0];
 
         let rs = init_render_state(adapter, swapchain_format).await;
         app_guard.render_state = Some(rs);
@@ -269,14 +269,14 @@ fn run(event_loop: EventLoop<()>, app: App) {
                         {
                             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                                 label: None,
-                                color_attachments: &[wgpu::RenderPassColorAttachment {
+                                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                                     view: &view,
                                     resolve_target: None,
                                     ops: wgpu::Operations {
                                         load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
                                         store: true,
                                     },
-                                }],
+                                })],
                                 depth_stencil_attachment: None,
                             });
                             rpass.set_pipeline(&rs.render_pipeline);

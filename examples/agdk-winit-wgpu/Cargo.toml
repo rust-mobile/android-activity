@@ -9,7 +9,7 @@ edition = "2021"
 log = "0.4"
 winit = { git = "https://github.com/rib/winit", branch = "android-activity-0.27"}
 #winit = { path="../../../winit" }
-wgpu = "0.12.0"
+wgpu = "0.13.0"
 pollster = "0.2"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
