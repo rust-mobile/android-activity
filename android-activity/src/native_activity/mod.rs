@@ -1,17 +1,17 @@
-#![cfg(any(feature="native-activity", doc))]
+#![cfg(any(feature = "native-activity", doc))]
 
 use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::os::raw;
+use std::os::unix::prelude::*;
 use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
-use std::{thread, ptr};
-use std::os::unix::prelude::*;
+use std::{ptr, thread};
 
-use log::{Level, error, info, trace};
+use log::{error, info, trace, Level};
 
 use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
@@ -19,19 +19,17 @@ use ndk_sys::{ALooper, ALooper_pollAll};
 use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::input_queue::InputQueue;
-use ndk::looper::{FdEvent};
+use ndk::looper::FdEvent;
 use ndk::native_window::NativeWindow;
 
-use crate::{MainEvent, Rect, PollEvent, AndroidApp, NativeWindowRef};
-
+use crate::{AndroidApp, MainEvent, NativeWindowRef, PollEvent, Rect};
 
 mod ffi;
 
 pub mod input {
     pub use ndk::event::{
-        InputEvent, Source, MetaState,
-        MotionEvent, Pointer, MotionAction, Axis, ButtonState, EdgeFlags, MotionEventFlags,
-        KeyEvent, KeyAction, Keycode, KeyEventFlags,
+        Axis, ButtonState, EdgeFlags, InputEvent, KeyAction, KeyEvent, KeyEventFlags, Keycode,
+        MetaState, MotionAction, MotionEvent, MotionEventFlags, Pointer, Source,
     };
 }
 
@@ -45,7 +43,6 @@ pub struct StateSaver<'a> {
 
 impl<'a> StateSaver<'a> {
     pub fn store(&self, state: &'a [u8]) {
-
         // android_native_app_glue specifically expects savedState to have been allocated
         // via libc::malloc since it will automatically handle freeing the data once it
         // has been handed over to the Java Activity / main thread.
@@ -89,7 +86,10 @@ impl<'a> StateLoader<'a> {
         unsafe {
             let app_ptr = self.app.ptr.as_ptr();
             if (*app_ptr).savedState != ptr::null_mut() && (*app_ptr).savedStateSize > 0 {
-                let buf: &mut [u8] = std::slice::from_raw_parts_mut((*app_ptr).savedState.cast(), (*app_ptr).savedStateSize as usize);
+                let buf: &mut [u8] = std::slice::from_raw_parts_mut(
+                    (*app_ptr).savedState.cast(),
+                    (*app_ptr).savedStateSize as usize,
+                );
                 let state = buf.to_vec();
                 Some(state)
             } else {
@@ -99,26 +99,26 @@ impl<'a> StateLoader<'a> {
     }
 }
 
-
 #[derive(Clone)]
 pub struct AndroidAppWaker {
     // The looper pointer is owned by the android_app and effectively
     // has a 'static lifetime, and the ALooper_wake C API is thread
     // safe, so this can be cloned safely and is send + sync safe
-    looper: NonNull<ALooper>
+    looper: NonNull<ALooper>,
 }
 unsafe impl Send for AndroidAppWaker {}
 unsafe impl Sync for AndroidAppWaker {}
 
 impl AndroidAppWaker {
     pub fn wake(&self) {
-        unsafe { ALooper_wake(self.looper.as_ptr()); }
+        unsafe {
+            ALooper_wake(self.looper.as_ptr());
+        }
     }
 }
 
 impl AndroidApp {
     pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>) -> AndroidApp {
-
         // Note: we don't use from_ptr since we don't own the android_app.config
         // and need to keep in mind that the Drop handler is going to call
         // AConfiguration_delete()
@@ -131,8 +131,8 @@ impl AndroidApp {
             inner: Arc::new(AndroidAppInner {
                 ptr,
                 config: RwLock::new(config),
-                native_window: Default::default()
-            })
+                native_window: Default::default(),
+            }),
         }
     }
 }
@@ -162,7 +162,8 @@ impl AndroidAppInner {
     }
 
     pub fn poll_events<F>(&self, timeout: Option<Duration>, mut callback: F)
-        where F: FnMut(PollEvent)
+    where
+        F: FnMut(PollEvent),
     {
         trace!("poll_events");
 
@@ -173,9 +174,18 @@ impl AndroidAppInner {
             let mut events: i32 = 0;
             let mut source: *mut core::ffi::c_void = ptr::null_mut();
 
-            let timeout_milliseconds = if let Some(timeout) = timeout { timeout.as_millis() as i32 } else { -1 };
+            let timeout_milliseconds = if let Some(timeout) = timeout {
+                timeout.as_millis() as i32
+            } else {
+                -1
+            };
             info!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
-            let id = ALooper_pollAll(timeout_milliseconds, &mut fd, &mut events, &mut source as *mut *mut core::ffi::c_void);
+            let id = ALooper_pollAll(
+                timeout_milliseconds,
+                &mut fd,
+                &mut events,
+                &mut source as *mut *mut core::ffi::c_void,
+            );
             info!("pollAll id = {id}");
             match id {
                 ffi::ALOOPER_POLL_WAKE => {
@@ -217,22 +227,32 @@ impl AndroidAppInner {
 
                                     ffi::APP_CMD_INIT_WINDOW => Some(MainEvent::InitWindow {}),
                                     ffi::APP_CMD_TERM_WINDOW => Some(MainEvent::TerminateWindow {}),
-                                    ffi::APP_CMD_WINDOW_RESIZED => Some(MainEvent::WindowResized {}),
-                                    ffi::APP_CMD_WINDOW_REDRAW_NEEDED => Some(MainEvent::RedrawNeeded {}),
-                                    ffi::APP_CMD_CONTENT_RECT_CHANGED => Some(MainEvent::ContentRectChanged),
+                                    ffi::APP_CMD_WINDOW_RESIZED => {
+                                        Some(MainEvent::WindowResized {})
+                                    }
+                                    ffi::APP_CMD_WINDOW_REDRAW_NEEDED => {
+                                        Some(MainEvent::RedrawNeeded {})
+                                    }
+                                    ffi::APP_CMD_CONTENT_RECT_CHANGED => {
+                                        Some(MainEvent::ContentRectChanged)
+                                    }
                                     ffi::APP_CMD_GAINED_FOCUS => Some(MainEvent::GainedFocus),
                                     ffi::APP_CMD_LOST_FOCUS => Some(MainEvent::LostFocus),
                                     ffi::APP_CMD_CONFIG_CHANGED => Some(MainEvent::ConfigChanged),
                                     ffi::APP_CMD_LOW_MEMORY => Some(MainEvent::LowMemory),
                                     ffi::APP_CMD_START => Some(MainEvent::Start),
-                                    ffi::APP_CMD_RESUME => Some(MainEvent::Resume { loader: StateLoader { app: &self } }),
-                                    ffi::APP_CMD_SAVE_STATE => Some(MainEvent::SaveState { saver: StateSaver { app: &self } }),
+                                    ffi::APP_CMD_RESUME => Some(MainEvent::Resume {
+                                        loader: StateLoader { app: &self },
+                                    }),
+                                    ffi::APP_CMD_SAVE_STATE => Some(MainEvent::SaveState {
+                                        saver: StateSaver { app: &self },
+                                    }),
                                     ffi::APP_CMD_PAUSE => Some(MainEvent::Pause),
                                     ffi::APP_CMD_STOP => Some(MainEvent::Stop),
                                     ffi::APP_CMD_DESTROY => Some(MainEvent::Destroy),
 
                                     //ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED => MainEvent::InsetsChanged {},
-                                    _ => unreachable!()
+                                    _ => unreachable!(),
                                 };
 
                                 trace!("Calling android_app_pre_exec_cmd({cmd_i})");
@@ -243,12 +263,18 @@ impl AndroidAppInner {
                                     match cmd {
                                         MainEvent::ConfigChanged => {
                                             *self.config.write().unwrap() =
-                                                Configuration::clone_from_ptr(NonNull::new_unchecked((*app_ptr.as_ptr()).config));
+                                                Configuration::clone_from_ptr(
+                                                    NonNull::new_unchecked(
+                                                        (*app_ptr.as_ptr()).config,
+                                                    ),
+                                                );
                                         }
                                         MainEvent::InitWindow { .. } => {
                                             let win_ptr = (*app_ptr.as_ptr()).window;
                                             *self.native_window.write().unwrap() =
-                                                Some(NativeWindow::from_ptr(NonNull::new(win_ptr).unwrap()));
+                                                Some(NativeWindow::from_ptr(
+                                                    NonNull::new(win_ptr).unwrap(),
+                                                ));
                                         }
                                         MainEvent::TerminateWindow { .. } => {
                                             *self.native_window.write().unwrap() = None;
@@ -277,10 +303,17 @@ impl AndroidAppInner {
                             callback(PollEvent::InputAvailable)
                         }
                         _ => {
-                            let events = FdEvent::from_bits(events as u32)
-                                .expect(&format!("Spurious ALooper_pollAll event flags {:#04x}", events as u32));
+                            let events = FdEvent::from_bits(events as u32).expect(&format!(
+                                "Spurious ALooper_pollAll event flags {:#04x}",
+                                events as u32
+                            ));
                             trace!("Custom ALooper event source: id = {id}, fd = {fd}, events = {events:?}, data = {source:?}");
-                            callback(PollEvent::FdEvent{ ident: id, fd: fd as RawFd, events, data: source });
+                            callback(PollEvent::FdEvent {
+                                ident: id,
+                                fd: fd as RawFd,
+                                events,
+                                data: source,
+                            });
                         }
                     }
                 }
@@ -296,7 +329,9 @@ impl AndroidAppInner {
             // From the application's pov we assume the app_ptr and looper pointer
             // have static lifetimes and we can safely assume they are never NULL.
             let app_ptr = self.ptr.as_ptr();
-            AndroidAppWaker { looper: NonNull::new_unchecked((*app_ptr).looper) }
+            AndroidAppWaker {
+                looper: NonNull::new_unchecked((*app_ptr).looper),
+            }
         }
     }
 
@@ -333,7 +368,8 @@ impl AndroidAppInner {
     }
 
     pub fn input_events<'b, F>(&self, mut callback: F)
-        where F: FnMut(&input::InputEvent)
+    where
+        F: FnMut(&input::InputEvent),
     {
         // Reattach the input queue to the looper so future input will again deliver an
         // `InputAvailable` event.
@@ -369,12 +405,16 @@ impl AndroidAppInner {
     }
 
     fn try_get_path_from_ptr(path: *const u8) -> Option<std::path::PathBuf> {
-        if path == ptr::null() { return None; }
+        if path == ptr::null() {
+            return None;
+        }
         let cstr = unsafe {
             let cstr_slice = CStr::from_ptr(path);
             cstr_slice.to_str().ok()?
         };
-        if cstr.len() == 0 { return None; }
+        if cstr.len() == 0 {
+            return None;
+        }
         Some(std::path::PathBuf::from(cstr))
     }
 
@@ -438,7 +478,6 @@ extern "Rust" {
 // by android_native_app_glue.
 #[no_mangle]
 pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
-
     // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
     let mut logpipe: [RawFd; 2] = Default::default();
     libc::pipe(logpipe.as_mut_ptr());

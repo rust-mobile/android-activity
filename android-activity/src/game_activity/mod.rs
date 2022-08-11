@@ -1,36 +1,35 @@
-#![cfg(feature="game-activity")]
+#![cfg(feature = "game-activity")]
 
 use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
 use std::os::raw::{self, c_char};
+use std::os::unix::prelude::*;
 use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
-use std::{thread, ptr};
-use std::os::unix::prelude::*;
+use std::{ptr, thread};
 
-use log::{Level, error, trace};
+use log::{error, trace, Level};
 
 use jni_sys::*;
 
-use ndk_sys::{ALooper_wake};
+use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
 
 use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
-use ndk::looper::{FdEvent};
+use ndk::looper::FdEvent;
 use ndk::native_window::NativeWindow;
 
-use crate::{MainEvent, Rect, PollEvent, AndroidApp, NativeWindowRef};
+use crate::{AndroidApp, MainEvent, NativeWindowRef, PollEvent, Rect};
 
 mod ffi;
 
 pub mod input;
-use input::{MotionEvent, KeyEvent, Axis, InputEvent};
-
+use input::{Axis, InputEvent, KeyEvent, MotionEvent};
 
 // The only time it's safe to update the android_app->savedState pointer is
 // while handling a SaveState event, so this API is only exposed for those
@@ -42,7 +41,6 @@ pub struct StateSaver<'a> {
 
 impl<'a> StateSaver<'a> {
     pub fn store(&self, state: &'a [u8]) {
-
         // android_native_app_glue specifically expects savedState to have been allocated
         // via libc::malloc since it will automatically handle freeing the data once it
         // has been handed over to the Java Activity / main thread.
@@ -86,7 +84,10 @@ impl<'a> StateLoader<'a> {
         unsafe {
             let app_ptr = self.app.ptr.as_ptr();
             if (*app_ptr).savedState != ptr::null_mut() && (*app_ptr).savedStateSize > 0 {
-                let buf: &mut [u8] = std::slice::from_raw_parts_mut((*app_ptr).savedState.cast(), (*app_ptr).savedStateSize as usize);
+                let buf: &mut [u8] = std::slice::from_raw_parts_mut(
+                    (*app_ptr).savedState.cast(),
+                    (*app_ptr).savedStateSize as usize,
+                );
                 let state = buf.to_vec();
                 Some(state)
             } else {
@@ -101,20 +102,21 @@ pub struct AndroidAppWaker {
     // The looper pointer is owned by the android_app and effectively
     // has a 'static lifetime, and the ALooper_wake C API is thread
     // safe, so this can be cloned safely and is send + sync safe
-    looper: NonNull<ALooper>
+    looper: NonNull<ALooper>,
 }
 unsafe impl Send for AndroidAppWaker {}
 unsafe impl Sync for AndroidAppWaker {}
 
 impl AndroidAppWaker {
     pub fn wake(&self) {
-        unsafe { ALooper_wake(self.looper.as_ptr()); }
+        unsafe {
+            ALooper_wake(self.looper.as_ptr());
+        }
     }
 }
 
 impl AndroidApp {
     pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>) -> Self {
-
         // Note: we don't use from_ptr since we don't own the android_app.config
         // and need to keep in mind that the Drop handler is going to call
         // AConfiguration_delete()
@@ -128,7 +130,7 @@ impl AndroidApp {
                 ptr,
                 config: RwLock::new(config),
                 native_window: Default::default(),
-            })
+            }),
         }
     }
 }
@@ -141,7 +143,6 @@ pub struct AndroidAppInner {
 }
 
 impl AndroidAppInner {
-
     pub fn native_window<'a>(&self) -> Option<NativeWindowRef> {
         let guard = self.native_window.read().unwrap();
         if let Some(ref window) = *guard {
@@ -152,7 +153,8 @@ impl AndroidAppInner {
     }
 
     pub fn poll_events<F>(&self, timeout: Option<Duration>, mut callback: F)
-        where F: FnMut(PollEvent)
+    where
+        F: FnMut(PollEvent),
     {
         trace!("poll_events");
 
@@ -163,9 +165,18 @@ impl AndroidAppInner {
             let mut events: i32 = 0;
             let mut source: *mut core::ffi::c_void = ptr::null_mut();
 
-            let timeout_milliseconds = if let Some(timeout) = timeout { timeout.as_millis() as i32 } else { -1 };
+            let timeout_milliseconds = if let Some(timeout) = timeout {
+                timeout.as_millis() as i32
+            } else {
+                -1
+            };
             trace!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
-            let id = ALooper_pollAll(timeout_milliseconds, &mut fd, &mut events, &mut source as *mut *mut core::ffi::c_void);
+            let id = ALooper_pollAll(
+                timeout_milliseconds,
+                &mut fd,
+                &mut events,
+                &mut source as *mut *mut core::ffi::c_void,
+            );
             match id {
                 ffi::ALOOPER_POLL_WAKE => {
                     trace!("ALooper_pollAll returned POLL_WAKE");
@@ -200,23 +211,49 @@ impl AndroidAppInner {
 
                                 let cmd = match cmd_i as u32 {
                                     //NativeAppGlueAppCmd_UNUSED_APP_CMD_INPUT_CHANGED => AndroidAppMainEvent::InputChanged,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_INIT_WINDOW => MainEvent::InitWindow {},
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_TERM_WINDOW => MainEvent::TerminateWindow {},
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_RESIZED => MainEvent::WindowResized {},
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_REDRAW_NEEDED => MainEvent::RedrawNeeded {},
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_CONTENT_RECT_CHANGED => MainEvent::ContentRectChanged,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_GAINED_FOCUS => MainEvent::GainedFocus,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_LOST_FOCUS => MainEvent::LostFocus,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_CONFIG_CHANGED => MainEvent::ConfigChanged,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_LOW_MEMORY => MainEvent::LowMemory,
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_INIT_WINDOW => {
+                                        MainEvent::InitWindow {}
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_TERM_WINDOW => {
+                                        MainEvent::TerminateWindow {}
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_RESIZED => {
+                                        MainEvent::WindowResized {}
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_REDRAW_NEEDED => {
+                                        MainEvent::RedrawNeeded {}
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_CONTENT_RECT_CHANGED => {
+                                        MainEvent::ContentRectChanged
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_GAINED_FOCUS => {
+                                        MainEvent::GainedFocus
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_LOST_FOCUS => {
+                                        MainEvent::LostFocus
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_CONFIG_CHANGED => {
+                                        MainEvent::ConfigChanged
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_LOW_MEMORY => {
+                                        MainEvent::LowMemory
+                                    }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_START => MainEvent::Start,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_RESUME => MainEvent::Resume { loader: StateLoader { app: &self } },
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_SAVE_STATE => MainEvent::SaveState { saver: StateSaver { app: &self } },
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_RESUME => MainEvent::Resume {
+                                        loader: StateLoader { app: &self },
+                                    },
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_SAVE_STATE => {
+                                        MainEvent::SaveState {
+                                            saver: StateSaver { app: &self },
+                                        }
+                                    }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_PAUSE => MainEvent::Pause,
                                     ffi::NativeAppGlueAppCmd_APP_CMD_STOP => MainEvent::Stop,
                                     ffi::NativeAppGlueAppCmd_APP_CMD_DESTROY => MainEvent::Destroy,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED => MainEvent::InsetsChanged {},
-                                    _ => unreachable!()
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED => {
+                                        MainEvent::InsetsChanged {}
+                                    }
+                                    _ => unreachable!(),
                                 };
 
                                 trace!("Read ID_MAIN command {cmd_i} = {cmd:?}");
@@ -226,12 +263,15 @@ impl AndroidAppInner {
                                 match cmd {
                                     MainEvent::ConfigChanged => {
                                         *self.config.write().unwrap() =
-                                            Configuration::clone_from_ptr(NonNull::new_unchecked((*app_ptr.as_ptr()).config));
+                                            Configuration::clone_from_ptr(NonNull::new_unchecked(
+                                                (*app_ptr.as_ptr()).config,
+                                            ));
                                     }
                                     MainEvent::InitWindow { .. } => {
                                         let win_ptr = (*app_ptr.as_ptr()).window;
-                                        *self.native_window.write().unwrap() =
-                                            Some(NativeWindow::from_ptr(NonNull::new(win_ptr).unwrap()));
+                                        *self.native_window.write().unwrap() = Some(
+                                            NativeWindow::from_ptr(NonNull::new(win_ptr).unwrap()),
+                                        );
                                     }
                                     MainEvent::TerminateWindow { .. } => {
                                         *self.native_window.write().unwrap() = None;
@@ -249,10 +289,17 @@ impl AndroidAppInner {
                             }
                         }
                         _ => {
-                            let events = FdEvent::from_bits(events as u32)
-                                .expect(&format!("Spurious ALooper_pollAll event flags {:#04x}", events as u32));
+                            let events = FdEvent::from_bits(events as u32).expect(&format!(
+                                "Spurious ALooper_pollAll event flags {:#04x}",
+                                events as u32
+                            ));
                             trace!("Custom ALooper event source: id = {id}, fd = {fd}, events = {events:?}, data = {source:?}");
-                            callback(PollEvent::FdEvent{ ident: id, fd: fd as RawFd, events, data: source });
+                            callback(PollEvent::FdEvent {
+                                ident: id,
+                                fd: fd as RawFd,
+                                events,
+                                data: source,
+                            });
                         }
                     }
                 }
@@ -264,15 +311,11 @@ impl AndroidAppInner {
     }
 
     pub fn enable_motion_axis(&self, axis: Axis) {
-        unsafe {
-            ffi::GameActivityPointerAxes_enableAxis(axis as i32)
-        }
+        unsafe { ffi::GameActivityPointerAxes_enableAxis(axis as i32) }
     }
 
     pub fn disable_motion_axis(&self, axis: Axis) {
-        unsafe {
-            ffi::GameActivityPointerAxes_disableAxis(axis as i32)
-        }
+        unsafe { ffi::GameActivityPointerAxes_disableAxis(axis as i32) }
     }
 
     pub fn create_waker(&self) -> AndroidAppWaker {
@@ -280,7 +323,9 @@ impl AndroidAppInner {
             // From the application's pov we assume the app_ptr and looper pointer
             // have static lifetimes and we can safely assume they are never NULL.
             let app_ptr = self.ptr.as_ptr();
-            AndroidAppWaker { looper: NonNull::new_unchecked((*app_ptr).looper) }
+            AndroidAppWaker {
+                looper: NonNull::new_unchecked((*app_ptr).looper),
+            }
         }
     }
 
@@ -309,7 +354,8 @@ impl AndroidAppInner {
     }
 
     pub fn input_events<'b, F>(&self, mut callback: F)
-        where F: FnMut(&InputEvent)
+    where
+        F: FnMut(&InputEvent),
     {
         let buf = unsafe {
             let app_ptr = self.ptr.as_ptr();
@@ -329,12 +375,16 @@ impl AndroidAppInner {
     }
 
     fn try_get_path_from_ptr(path: *const c_char) -> Option<std::path::PathBuf> {
-        if path == ptr::null() { return None; }
+        if path == ptr::null() {
+            return None;
+        }
         let cstr = unsafe {
             let cstr_slice = CStr::from_ptr(path);
             cstr_slice.to_str().ok()?
         };
-        if cstr.len() == 0 { return None; }
+        if cstr.len() == 0 {
+            return None;
+        }
         Some(std::path::PathBuf::from(cstr))
     }
 
@@ -363,7 +413,7 @@ impl AndroidAppInner {
 struct MotionEventsIterator<'a> {
     pos: usize,
     count: usize,
-    buffer: &'a InputBuffer<'a>
+    buffer: &'a InputBuffer<'a>,
 }
 
 impl<'a> Iterator for MotionEventsIterator<'a> {
@@ -386,7 +436,7 @@ impl<'a> Iterator for MotionEventsIterator<'a> {
 struct KeyEventsIterator<'a> {
     pos: usize,
     count: usize,
-    buffer: &'a InputBuffer<'a>
+    buffer: &'a InputBuffer<'a>,
 }
 
 impl<'a> Iterator for KeyEventsIterator<'a> {
@@ -408,14 +458,14 @@ impl<'a> Iterator for KeyEventsIterator<'a> {
 
 struct InputBuffer<'a> {
     ptr: NonNull<ffi::android_input_buffer>,
-    _lifetime: PhantomData<&'a ffi::android_input_buffer>
+    _lifetime: PhantomData<&'a ffi::android_input_buffer>,
 }
 
 impl<'a> InputBuffer<'a> {
     pub(crate) fn from_ptr(ptr: NonNull<ffi::android_input_buffer>) -> InputBuffer<'a> {
         Self {
             ptr,
-            _lifetime: PhantomData::default()
+            _lifetime: PhantomData::default(),
         }
     }
 
@@ -425,14 +475,22 @@ impl<'a> InputBuffer<'a> {
     pub fn motion_events_iter<'b>(&'b self) -> MotionEventsIterator<'b> {
         unsafe {
             let count = (*self.ptr.as_ptr()).motionEventsCount as usize;
-            MotionEventsIterator { pos: 0, count, buffer: self }
+            MotionEventsIterator {
+                pos: 0,
+                count,
+                buffer: self,
+            }
         }
     }
 
     pub fn key_events_iter<'b>(&'b self) -> KeyEventsIterator<'b> {
         unsafe {
             let count = (*self.ptr.as_ptr()).keyEventsCount as usize;
-            KeyEventsIterator { pos: 0, count, buffer: self }
+            KeyEventsIterator {
+                pos: 0,
+                count,
+                buffer: self,
+            }
         }
     }
 }
@@ -473,28 +531,35 @@ extern "C" {
 
 #[no_mangle]
 pub unsafe extern "C" fn Java_com_google_androidgamesdk_GameActivity_loadNativeCode(
-        env: *mut JNIEnv,
-        java_game_activity: jobject,
-        path: jstring,
-        func_name: jstring,
-        internal_data_dir: jstring,
-        obb_dir: jstring,
-        external_data_dir: jstring,
-        jasset_mgr: jobject,
-        saved_state: jbyteArray,
-    ) -> jni_sys::jlong
-{
-    Java_com_google_androidgamesdk_GameActivity_loadNativeCode_C(env, java_game_activity, path, func_name,
-        internal_data_dir, obb_dir, external_data_dir, jasset_mgr, saved_state)
+    env: *mut JNIEnv,
+    java_game_activity: jobject,
+    path: jstring,
+    func_name: jstring,
+    internal_data_dir: jstring,
+    obb_dir: jstring,
+    external_data_dir: jstring,
+    jasset_mgr: jobject,
+    saved_state: jbyteArray,
+) -> jni_sys::jlong {
+    Java_com_google_androidgamesdk_GameActivity_loadNativeCode_C(
+        env,
+        java_game_activity,
+        path,
+        func_name,
+        internal_data_dir,
+        obb_dir,
+        external_data_dir,
+        jasset_mgr,
+        saved_state,
+    )
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn GameActivity_onCreate(
-        activity: *mut ffi::GameActivity,
-        saved_state: *mut ::std::os::raw::c_void,
-        saved_state_size: ffi::size_t,
-    )
-{
+    activity: *mut ffi::GameActivity,
+    saved_state: *mut ::std::os::raw::c_void,
+    saved_state_size: ffi::size_t,
+) {
     GameActivity_onCreate_C(activity, saved_state, saved_state_size);
 }
 
@@ -520,7 +585,6 @@ extern "Rust" {
 // by android_native_app_glue.
 #[no_mangle]
 pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
-
     // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
     let mut logpipe: [RawFd; 2] = Default::default();
     libc::pipe(logpipe.as_mut_ptr());

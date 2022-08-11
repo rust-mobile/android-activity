@@ -32,8 +32,8 @@ fn build_glue_for_game_activity() {
 }
 
 fn main() {
-    #[cfg(feature="game-activity")]
+    #[cfg(feature = "game-activity")]
     build_glue_for_game_activity();
-    #[cfg(feature="native-activity")]
+    #[cfg(feature = "native-activity")]
     build_glue_for_native_activity();
 }

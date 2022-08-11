@@ -1,7 +1,7 @@
-use std::time::Duration;
-use std::{os::unix::prelude::RawFd, sync::Arc};
 use std::hash::Hash;
 use std::ops::Deref;
+use std::time::Duration;
+use std::{os::unix::prelude::RawFd, sync::Arc};
 
 use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
@@ -14,19 +14,23 @@ use ndk::native_window::NativeWindow;
 compile_error!("android-activity only supports compiling for Android");
 
 #[cfg(all(feature = "game-activity", feature = "native-activity"))]
-compile_error!("The \"game-activity\" and \"native-activity\" features cannot be enabled at the same time");
-#[cfg(all(not(any(feature = "game-activity", feature = "native-activity")), not(doc)))]
+compile_error!(
+    "The \"game-activity\" and \"native-activity\" features cannot be enabled at the same time"
+);
+#[cfg(all(
+    not(any(feature = "game-activity", feature = "native-activity")),
+    not(doc)
+))]
 compile_error!("Either \"game-activity\" or \"native-activity\" must be enabled as features");
 
-
-#[cfg(any(feature="native-activity", doc))]
+#[cfg(any(feature = "native-activity", doc))]
 mod native_activity;
-#[cfg(any(feature="native-activity", doc))]
+#[cfg(any(feature = "native-activity", doc))]
 use native_activity as activity_impl;
 
-#[cfg(feature="game-activity")]
+#[cfg(feature = "game-activity")]
 mod game_activity;
-#[cfg(feature="game-activity")]
+#[cfg(feature = "game-activity")]
 use game_activity as activity_impl;
 
 pub use activity_impl::input;
@@ -54,12 +58,16 @@ pub struct Rect {
 
 /// A reference to a `NativeWindow`, used for rendering
 pub struct NativeWindowRef {
-    inner: NativeWindow
+    inner: NativeWindow,
 }
 impl NativeWindowRef {
     pub fn new(native_window: &NativeWindow) -> Self {
-        unsafe { ndk_sys::ANativeWindow_acquire(native_window.ptr().as_ptr()); }
-        Self { inner: native_window.clone() }
+        unsafe {
+            ndk_sys::ANativeWindow_acquire(native_window.ptr().as_ptr());
+        }
+        Self {
+            inner: native_window.clone(),
+        }
     }
 }
 impl Drop for NativeWindowRef {
@@ -100,7 +108,7 @@ pub enum MainEvent<'a> {
     /// Command from main thread: a new [`NativeWindow`] is ready for use.  Upon
     /// receiving this command, [`native_window()`] will return the new window
     #[non_exhaustive]
-    InitWindow { },
+    InitWindow {},
 
     /// Command from main thread: the existing [`NativeWindow`] needs to be
     /// terminated.  Upon receiving this command, [`native_window()`] still
@@ -181,9 +189,14 @@ pub enum PollEvent<'a> {
     Main(MainEvent<'a>),
 
     #[non_exhaustive]
-    FdEvent { ident: i32, fd: RawFd, events: FdEvent, data: *mut std::ffi::c_void },
+    FdEvent {
+        ident: i32,
+        fd: RawFd,
+        events: FdEvent,
+        data: *mut std::ffi::c_void,
+    },
 
-    Error
+    Error,
 }
 
 use activity_impl::AndroidAppInner;
@@ -192,7 +205,7 @@ pub use activity_impl::AndroidAppWaker;
 
 #[derive(Debug, Clone)]
 pub struct AndroidApp {
-    pub(crate) inner: Arc<AndroidAppInner>
+    pub(crate) inner: Arc<AndroidAppInner>,
 }
 
 impl PartialEq for AndroidApp {
@@ -239,7 +252,8 @@ impl AndroidApp {
     /// # Safety
     /// This API must only be called from the application's main thread
     pub fn poll_events<F>(&self, timeout: Option<Duration>, callback: F)
-        where F: FnMut(PollEvent)
+    where
+        F: FnMut(PollEvent),
     {
         self.inner.poll_events(timeout, callback);
     }
@@ -289,7 +303,8 @@ impl AndroidApp {
     }
 
     pub fn input_events<'b, F>(&self, callback: F)
-        where F: FnMut(&input::InputEvent)
+    where
+        F: FnMut(&input::InputEvent),
     {
         self.inner.input_events(callback);
     }

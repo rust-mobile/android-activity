@@ -1,14 +1,12 @@
 use log::Level;
-use winit::event_loop::{EventLoopWindowTarget, EventLoopBuilder, EventLoop};
+use winit::event_loop::{EventLoop, EventLoopBuilder, EventLoopWindowTarget};
 
-#[cfg(target_os="android")]
+#[cfg(target_os = "android")]
 use android_activity::AndroidApp;
-#[cfg(target_os="android")]
+#[cfg(target_os = "android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
 
-use winit::{
-    event_loop::{ControlFlow},
-};
+use winit::event_loop::ControlFlow;
 
 use egui_wgpu::winit::Painter;
 use egui_winit::State;
@@ -26,8 +24,11 @@ enum Event {
 #[derive(Clone)]
 struct RepaintSignal(std::sync::Arc<std::sync::Mutex<winit::event_loop::EventLoopProxy<Event>>>);
 
-
-fn create_window<T>(event_loop: &EventLoopWindowTarget<T>, state: &mut State, painter: &mut Painter) -> winit::window::Window {
+fn create_window<T>(
+    event_loop: &EventLoopWindowTarget<T>,
+    state: &mut State,
+    painter: &mut Painter,
+) -> winit::window::Window {
     let window = winit::window::WindowBuilder::new()
         .with_decorations(true)
         .with_resizable(true)
@@ -37,8 +38,8 @@ fn create_window<T>(event_loop: &EventLoopWindowTarget<T>, state: &mut State, pa
             width: INITIAL_WIDTH,
             height: INITIAL_HEIGHT,
         })
-            .build(&event_loop)
-            .unwrap();
+        .build(&event_loop)
+        .unwrap();
 
     unsafe { painter.set_window(Some(&window)) };
 
@@ -60,10 +61,15 @@ fn create_window<T>(event_loop: &EventLoopWindowTarget<T>, state: &mut State, pa
 fn _main(event_loop: EventLoop<Event>) {
     let ctx = egui::Context::default();
     let repaint_signal = RepaintSignal(std::sync::Arc::new(std::sync::Mutex::new(
-        event_loop.create_proxy()
+        event_loop.create_proxy(),
     )));
     ctx.set_request_repaint_callback(move || {
-        repaint_signal.0.lock().unwrap().send_event(Event::RequestRedraw).ok();
+        repaint_signal
+            .0
+            .lock()
+            .unwrap()
+            .send_event(Event::RequestRedraw)
+            .ok();
     });
 
     let mut state = State::new(&event_loop);
@@ -73,90 +79,85 @@ fn _main(event_loop: EventLoop<Event>) {
         wgpu::DeviceDescriptor {
             label: None,
             features: wgpu::Features::default(),
-            limits: wgpu::Limits::default()
+            limits: wgpu::Limits::default(),
         },
         wgpu::PresentMode::Fifo,
-        1);
+        1,
+    );
     let mut window: Option<winit::window::Window> = None;
     let mut egui_demo_windows = egui_demo_lib::DemoWindows::default();
 
     // On most platforms we can immediately create a winit window. On Android we manage
     // window + surface state according to Resumed/Paused events.
-    #[cfg(not(target_os="android"))]
+    #[cfg(not(target_os = "android"))]
     {
         window = Some(create_window(&event_loop, &mut state, &mut painter));
     }
 
-    event_loop.run(move |event, event_loop, control_flow| {
-
-        match event {
-            #[cfg(target_os="android")]
-            Resumed => {
-                match window {
-                    None => {
-                        window = Some(create_window(event_loop, &mut state, &mut painter));
-                    }
-                    Some(ref window) => {
-                        unsafe { painter.set_window(Some(window)) };
-                        window.request_redraw();
-                    }
-                }
+    event_loop.run(move |event, event_loop, control_flow| match event {
+        #[cfg(target_os = "android")]
+        Resumed => match window {
+            None => {
+                window = Some(create_window(event_loop, &mut state, &mut painter));
             }
-
-            #[cfg(target_os="android")]
-            Suspended => {
-                window = None;
+            Some(ref window) => {
+                unsafe { painter.set_window(Some(window)) };
+                window.request_redraw();
             }
+        },
 
-            RedrawRequested(..) => {
-                if let Some(window) = window.as_ref() {
-                    let raw_input = state.take_egui_input(window);
+        #[cfg(target_os = "android")]
+        Suspended => {
+            window = None;
+        }
 
-                    let full_output = ctx.run(raw_input, |ctx| {
-                        egui_demo_windows.ui(ctx);
-                    });
-                    state.handle_platform_output(window, &ctx, full_output.platform_output);
+        RedrawRequested(..) => {
+            if let Some(window) = window.as_ref() {
+                let raw_input = state.take_egui_input(window);
 
-                    painter.paint_and_update_textures(state.pixels_per_point(),
-                        egui::Rgba::default(),
-                        &ctx.tessellate(full_output.shapes),
-                        &full_output.textures_delta);
+                let full_output = ctx.run(raw_input, |ctx| {
+                    egui_demo_windows.ui(ctx);
+                });
+                state.handle_platform_output(window, &ctx, full_output.platform_output);
 
-                    if full_output.repaint_after.is_zero() {
-                        window.request_redraw();
-                    }
-                }
-            }
-            MainEventsCleared | UserEvent(Event::RequestRedraw) => {
-                if let Some(window) = window.as_ref() {
+                painter.paint_and_update_textures(
+                    state.pixels_per_point(),
+                    egui::Rgba::default(),
+                    &ctx.tessellate(full_output.shapes),
+                    &full_output.textures_delta,
+                );
+
+                if full_output.repaint_after.is_zero() {
                     window.request_redraw();
                 }
             }
-            WindowEvent { event, .. } => {
-                if state.on_event(&ctx, &event) == false {
-                    match event {
-                        winit::event::WindowEvent::Resized(size) => {
-                            painter.on_window_resized(size.width, size.height);
-                        }
-                        winit::event::WindowEvent::CloseRequested => {
-                            *control_flow = ControlFlow::Exit;
-                        }
-                        _ => {}
-                    }
-                }
-            },
-            _ => (),
         }
+        MainEventsCleared | UserEvent(Event::RequestRedraw) => {
+            if let Some(window) = window.as_ref() {
+                window.request_redraw();
+            }
+        }
+        WindowEvent { event, .. } => {
+            if state.on_event(&ctx, &event) == false {
+                match event {
+                    winit::event::WindowEvent::Resized(size) => {
+                        painter.on_window_resized(size.width, size.height);
+                    }
+                    winit::event::WindowEvent::CloseRequested => {
+                        *control_flow = ControlFlow::Exit;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        _ => (),
     });
 }
 
-
-#[cfg(target_os="android")]
+#[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    android_logger::init_once(
-        android_logger::Config::default().with_min_level(Level::Trace)
-    );
+    android_logger::init_once(android_logger::Config::default().with_min_level(Level::Trace));
 
     let event_loop = EventLoopBuilder::with_user_event()
         .with_android_app(app)
@@ -164,9 +165,10 @@ fn android_main(app: AndroidApp) {
     _main(event_loop);
 }
 
-#[cfg(not(target_os="android"))]
+#[cfg(not(target_os = "android"))]
 fn main() {
-    env_logger::builder().filter_level(log::LevelFilter::Warn) // Default Log Level
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Warn) // Default Log Level
         .parse_default_env()
         .init();
 

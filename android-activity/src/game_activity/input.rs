@@ -13,9 +13,9 @@
 // The `Class` was also bound differently to `android-ndk-rs` considering how the class is defined
 // by masking bits from the `Source`.
 
+use crate::game_activity::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::{convert::TryInto, ops::Deref};
-use crate::game_activity::ffi::{GameActivityMotionEvent, GameActivityKeyEvent};
 
 use bitflags::bitflags;
 
@@ -25,7 +25,7 @@ use bitflags::bitflags;
 #[non_exhaustive]
 pub enum InputEvent {
     MotionEvent(MotionEvent),
-    KeyEvent(KeyEvent)
+    KeyEvent(KeyEvent),
 }
 
 /// An enum representing the source of an [`MotionEvent`] or [`KeyEvent`]
@@ -83,7 +83,7 @@ pub enum Class {
     Pointer,
     Trackball,
     Position,
-    Joystick
+    Joystick,
 }
 
 impl From<i32> for Class {
@@ -95,7 +95,7 @@ impl From<i32> for Class {
             SourceFlags::TRACKBALL => Class::Trackball,
             SourceFlags::POSITION => Class::Position,
             SourceFlags::JOYSTICK => Class::Joystick,
-            _ => Class::None
+            _ => Class::None,
         }
     }
 }
@@ -183,7 +183,7 @@ impl MetaState {
 /// javadoc](https://developer.android.com/reference/android/view/MotionEvent).
 #[derive(Clone, Debug)]
 pub struct MotionEvent {
-    ga_event: GameActivityMotionEvent
+    ga_event: GameActivityMotionEvent,
 }
 
 impl Deref for MotionEvent {
@@ -433,10 +433,7 @@ impl MotionEvent {
         if index >= self.pointer_count() {
             panic!("Pointer index {} is out of bounds", index);
         }
-        Pointer {
-            event: self,
-            index,
-        }
+        Pointer { event: self, index }
     }
 
     /*
@@ -987,7 +984,7 @@ impl ExactSizeIterator for HistoricalPointersIter<'_> {
 /// javadoc](https://developer.android.com/reference/android/view/KeyEvent).
 #[derive(Debug, Clone)]
 pub struct KeyEvent {
-    ga_event: GameActivityKeyEvent
+    ga_event: GameActivityKeyEvent,
 }
 
 impl Deref for KeyEvent {
@@ -1307,7 +1304,6 @@ pub enum Keycode {
 }
 
 impl KeyEvent {
-
     pub(crate) fn new(ga_event: GameActivityKeyEvent) -> Self {
         Self { ga_event }
     }
@@ -1445,7 +1441,6 @@ impl KeyEventFlags {
 }
 
 impl KeyEvent {
-
     /// Flags associated with this [`KeyEvent`].
     ///
     /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getflags)

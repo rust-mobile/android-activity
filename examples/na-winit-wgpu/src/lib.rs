@@ -1,22 +1,21 @@
-
-use std::ops::Deref;
 use std::borrow::Cow;
+use std::ops::Deref;
 use std::sync::{Arc, RwLock};
 
-use log::Level;
 use log::trace;
+use log::Level;
 
 use wgpu::TextureFormat;
-use wgpu::{Instance, Adapter, Device, ShaderModule, PipelineLayout, RenderPipeline, Queue};
+use wgpu::{Adapter, Device, Instance, PipelineLayout, Queue, RenderPipeline, ShaderModule};
 
 use winit::{
     event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget, EventLoopBuilder},
+    event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopWindowTarget},
 };
 
-#[cfg(target_os="android")]
+#[cfg(target_os = "android")]
 use android_activity::AndroidApp;
-#[cfg(target_os="android")]
+#[cfg(target_os = "android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
 
 struct RenderState {
@@ -30,7 +29,7 @@ struct RenderState {
 
 struct SurfaceState {
     window: winit::window::Window,
-    surface: wgpu::Surface
+    surface: wgpu::Surface,
 }
 
 struct AppInner {
@@ -41,7 +40,7 @@ struct AppInner {
 }
 
 struct App {
-    inner: Arc<RwLock<AppInner>>
+    inner: Arc<RwLock<AppInner>>,
 }
 
 impl App {
@@ -52,7 +51,7 @@ impl App {
                 adapter: None,
                 surface_state: None,
                 render_state: None,
-            }))
+            })),
         }
     }
 }
@@ -62,7 +61,6 @@ impl Deref for App {
         &self.inner
     }
 }
-
 
 async fn init_render_state(adapter: &Adapter, target_format: TextureFormat) -> RenderState {
     trace!("Initializing render state");
@@ -141,7 +139,9 @@ fn configure_surface_swapchain(render_state: &RenderState, surface_state: &Surfa
     };
 
     trace!("WGPU: Configuring surface swapchain: format = {swapchain_format:?}, size = {size:?}");
-    surface_state.surface.configure(&render_state.device, &config);
+    surface_state
+        .surface
+        .configure(&render_state.device, &config);
 }
 
 // We want to defer the initialization of our render state until
@@ -155,7 +155,8 @@ async fn ensure_render_state_for_surface(app: &App, new_surface_state: &SurfaceS
 
     if app_guard.adapter.is_none() {
         trace!("WGPU: requesting a suitable adapter (compatible with our surface)");
-        let adapter = app_guard.instance
+        let adapter = app_guard
+            .instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 force_fallback_adapter: false,
@@ -171,7 +172,10 @@ async fn ensure_render_state_for_surface(app: &App, new_surface_state: &SurfaceS
 
     if app_guard.render_state.is_none() {
         trace!("WGPU: finding preferred swapchain format");
-        let swapchain_format = new_surface_state.surface.get_preferred_format(&adapter).unwrap();
+        let swapchain_format = new_surface_state
+            .surface
+            .get_preferred_format(&adapter)
+            .unwrap();
 
         let rs = init_render_state(adapter, swapchain_format).await;
         app_guard.render_state = Some(rs);
@@ -185,10 +189,7 @@ fn create_surface<T>(app: &App, event_loop: &EventLoopWindowTarget<T>) -> Surfac
     let guard = app.inner.read().unwrap();
     let surface = unsafe { guard.instance.create_surface(&window) };
 
-    SurfaceState {
-        window,
-        surface
-    }
+    SurfaceState { window, surface }
 }
 
 fn resume<T>(app: &App, event_loop: &EventLoopWindowTarget<T>) {
@@ -209,9 +210,7 @@ fn resume<T>(app: &App, event_loop: &EventLoopWindowTarget<T>) {
     surface_state.window.request_redraw();
 }
 
-
 fn run(event_loop: EventLoop<()>, app: App) {
-
     //let mut running = false;
 
     trace!("Running mainloop...");
@@ -225,7 +224,7 @@ fn run(event_loop: EventLoop<()>, app: App) {
                 // Note: that because Winit doesn't currently support lifecycle events consistently
                 // across platforms then we effectively issue a fake 'resume' on non-android
                 // platforms...
-                #[cfg(not(target_os="android"))]
+                #[cfg(not(target_os = "android"))]
                 resume(&app, event_loop)
             }
             Event::Resumed => {
@@ -236,7 +235,7 @@ fn run(event_loop: EventLoop<()>, app: App) {
                 let mut guard = app.write().unwrap();
                 //guard.running = false;
                 guard.render_state = None;
-            },
+            }
             Event::WindowEvent {
                 event: WindowEvent::Resized(_size),
                 ..
@@ -258,27 +257,32 @@ fn run(event_loop: EventLoop<()>, app: App) {
                 let guard = app.read().unwrap();
                 if let Some(ref surface_state) = guard.surface_state {
                     if let Some(ref rs) = guard.render_state {
-                        let frame = surface_state.surface
+                        let frame = surface_state
+                            .surface
                             .get_current_texture()
                             .expect("Failed to acquire next swap chain texture");
                         let view = frame
                             .texture
                             .create_view(&wgpu::TextureViewDescriptor::default());
                         let mut encoder =
-                            rs.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+                            rs.device
+                                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                                    label: None,
+                                });
                         {
-                            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                                label: None,
-                                color_attachments: &[wgpu::RenderPassColorAttachment {
-                                    view: &view,
-                                    resolve_target: None,
-                                    ops: wgpu::Operations {
-                                        load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
-                                        store: true,
-                                    },
-                                }],
-                                depth_stencil_attachment: None,
-                            });
+                            let mut rpass =
+                                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                                    label: None,
+                                    color_attachments: &[wgpu::RenderPassColorAttachment {
+                                        view: &view,
+                                        resolve_target: None,
+                                        ops: wgpu::Operations {
+                                            load: wgpu::LoadOp::Clear(wgpu::Color::GREEN),
+                                            store: true,
+                                        },
+                                    }],
+                                    depth_stencil_attachment: None,
+                                });
                             rpass.set_pipeline(&rs.render_pipeline);
                             rpass.draw(0..3, 0..1);
                         }
@@ -298,7 +302,6 @@ fn run(event_loop: EventLoop<()>, app: App) {
     });
 }
 
-
 fn _main(event_loop: EventLoop<()>) {
     // We can decide on our graphics API / backend up-front and that
     // doesn't need to be re-considered later
@@ -311,23 +314,19 @@ fn _main(event_loop: EventLoop<()>) {
     run(event_loop, app);
 }
 
-
-#[cfg(target_os="android")]
+#[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    android_logger::init_once(
-        android_logger::Config::default().with_min_level(Level::Trace)
-    );
+    android_logger::init_once(android_logger::Config::default().with_min_level(Level::Trace));
 
-    let event_loop = EventLoopBuilder::new()
-        .with_android_app(app)
-        .build();
+    let event_loop = EventLoopBuilder::new().with_android_app(app).build();
     _main(event_loop);
 }
 
-#[cfg(not(target_os="android"))]
+#[cfg(not(target_os = "android"))]
 fn main() {
-    env_logger::builder().filter_level(log::LevelFilter::Warn) // Default Log Level
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Warn) // Default Log Level
         .parse_default_env()
         .init();
 

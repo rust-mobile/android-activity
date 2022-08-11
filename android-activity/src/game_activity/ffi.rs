@@ -15,8 +15,7 @@
 use jni_sys::*;
 use ndk_sys::AAssetManager;
 use ndk_sys::ANativeWindow;
-use ndk_sys::{ALooper, ALooper_callbackFunc, AConfiguration};
-
+use ndk_sys::{AConfiguration, ALooper, ALooper_callbackFunc};
 
 #[cfg(all(
     any(target_os = "android", feature = "test"),
