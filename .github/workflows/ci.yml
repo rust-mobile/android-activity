@@ -1,0 +1,91 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install Rust targets
+        run: >
+          rustup target add
+          aarch64-linux-android
+          armv7-linux-androideabi
+          x86_64-linux-android
+          i686-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Build game-activity
+        working-directory: android-activity
+        run: >
+          cargo ndk
+          -t arm64-v8a
+          -t armeabi-v7a
+          -t x86_64
+          -t x86
+          build --features game-activity
+
+      - name: Build native-activity
+        working-directory: android-activity
+        run: >
+          cargo ndk
+          -t arm64-v8a
+          -t armeabi-v7a
+          -t x86_64
+          -t x86
+          build --features native-activity
+
+      - name: Build agdk-egui example
+        working-directory: examples/agdk-egui
+        run: >
+          cargo ndk
+          -t arm64-v8a
+          -t armeabi-v7a
+          -t x86_64
+          -t x86
+          -o app/src/main/jniLibs/ -- build
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt
+
+      - name: Format
+        run: cargo fmt --all -- --check
+        working-directory: android-activity
+
+      - name: Format agdk-egui example
+        run: cargo fmt --all -- --check
+        working-directory: examples/agdk-egui
