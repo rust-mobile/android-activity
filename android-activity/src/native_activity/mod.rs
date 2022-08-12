@@ -72,7 +72,7 @@ impl<'a> StateSaver<'a> {
             }
 
             (*app_ptr).savedState = buf;
-            (*app_ptr).savedStateSize = state.len() as u64;
+            (*app_ptr).savedStateSize = state.len() as _;
         }
     }
 }
