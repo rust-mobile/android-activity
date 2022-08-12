@@ -272,9 +272,10 @@ impl AndroidAppInner {
                                         // It's important that we use ::clone_from_ptr() here
                                         // because NativeWindow has a Drop implementation that
                                         // will unconditionally _release() the native window
-                                        *self.native_window.write().unwrap() = Some(
-                                            NativeWindow::clone_from_ptr(NonNull::new(win_ptr).unwrap()),
-                                        );
+                                        *self.native_window.write().unwrap() =
+                                            Some(NativeWindow::clone_from_ptr(
+                                                NonNull::new(win_ptr).unwrap(),
+                                            ));
                                     }
                                     MainEvent::TerminateWindow { .. } => {
                                         *self.native_window.write().unwrap() = None;
