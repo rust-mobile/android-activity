@@ -29,6 +29,10 @@ fn build_glue_for_game_activity() {
         .extra_warnings(false)
         .cpp_link_stdlib("c++_static")
         .compile("libnative_app_glue.a");
+
+    // We need to link to both c++_static and c++abi for the static C++ library.
+    // Ideally we'd link directly to libc++.a.
+    println!("cargo:rustc-link-lib=c++abi");
 }
 
 fn main() {
