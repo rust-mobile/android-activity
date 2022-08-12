@@ -412,7 +412,7 @@ impl AndroidAppInner {
             return None;
         }
         let cstr = unsafe {
-            let cstr_slice = CStr::from_ptr(path);
+            let cstr_slice = CStr::from_ptr(path.cast());
             cstr_slice.to_str().ok()?
         };
         if cstr.len() == 0 {
