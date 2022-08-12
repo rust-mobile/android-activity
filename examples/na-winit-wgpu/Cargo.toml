@@ -19,6 +19,11 @@ env_logger = "0.9"
 android_logger = "0.11.0"
 android-activity = { path="../../android-activity", features = [ "native-activity" ] }
 
+# Since Winit also depends on android-activity (via a github url) we need to
+# make sure we only resolve a single implementation.
+[patch.'https://github.com/rib/android-activity']
+android-activity = { path="../../android-activity", features = [ "native-activity" ] }
+
 [features]
 default = []
 desktop = []
