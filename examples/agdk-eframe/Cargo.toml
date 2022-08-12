@@ -1,0 +1,51 @@
+[package]
+name = "agdk-eframe"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+winit = "0.27.2"
+wgpu = "0.13.0"
+pollster = "0.2"
+egui = "0.19"
+eframe = { version = "0.19", features = [ "wgpu" ] }
+egui_demo_lib = "0.19"
+
+[patch.crates-io]
+winit = { git = "https://github.com/rib/winit", branch = "android-activity-0.27" }
+#winit = { path = "../../../winit" }
+egui = { git = "https://github.com/emilk/egui" }
+eframe = { git = "https://github.com/emilk/egui" }
+egui_demo_lib = { git = "https://github.com/emilk/egui" }
+#egui = { path = "../../../egui/crates/egui" }
+#eframe = { path = "../../../egui/crates/eframe" }
+#egui_demo_lib = { path = "../../../egui/crates/egui_demo_lib" }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+env_logger = "0.9"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.11.0"
+android-activity = { git = "https://github.com/rib/android-activity", features = [ "game-activity" ] }
+
+# Since Winit also depends on android-activity (via a github url) we need to
+# make sure we only resolve a single implementation.
+[patch.'https://github.com/rib/android-activity']
+android-activity = { path = "../../android-activity" }
+
+[features]
+default = []
+desktop = []
+
+[lib]
+name="main"
+crate_type=["cdylib"]
+
+[[bin]]
+path="src/lib.rs"
+name="agdk-eframe"
+required-features = [ "desktop" ]
