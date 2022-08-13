@@ -9,12 +9,14 @@ edition = "2021"
 log = "0.4"
 android_logger = "0.11.0"
 android-activity = { path="../../android-activity", features = ["game-activity"] }
-cpal = { version = "0.13" }
+cpal = "0.13"
 atomic_float = "0.1"
 anyhow = "1"
 
+# We currently need to use cpal master which doesn't have ndk-glue as a dependency
+# and is also updated to ndk 0.7
 [patch.crates-io]
-cpal = { git = "https://github.com/rib/cpal", branch = "no-ndk-glue-dev-dependency" }
+cpal = { git = "https://github.com/RustAudio/cpal", commit = "9b7bb339650" }
 
 [lib]
 name="main"
