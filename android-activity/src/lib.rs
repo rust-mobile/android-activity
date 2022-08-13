@@ -35,6 +35,8 @@ use game_activity as activity_impl;
 
 pub use activity_impl::input;
 
+mod util;
+
 // Note: unlike in ndk-glue this has signed components (consistent
 // with Android's ARect) which generally allows for representing
 // rectangles with a negative/off-screen origin. Even though this

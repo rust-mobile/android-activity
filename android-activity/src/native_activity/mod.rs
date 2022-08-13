@@ -22,7 +22,7 @@ use ndk::input_queue::InputQueue;
 use ndk::looper::FdEvent;
 use ndk::native_window::NativeWindow;
 
-use crate::{AndroidApp, MainEvent, NativeWindowRef, PollEvent, Rect};
+use crate::{util, AndroidApp, MainEvent, NativeWindowRef, PollEvent, Rect};
 
 mod ffi;
 
@@ -410,33 +410,19 @@ impl AndroidAppInner {
         }
     }
 
-    fn try_get_path_from_ptr(path: *const u8) -> Option<std::path::PathBuf> {
-        if path == ptr::null() {
-            return None;
-        }
-        let cstr = unsafe {
-            let cstr_slice = CStr::from_ptr(path.cast());
-            cstr_slice.to_str().ok()?
-        };
-        if cstr.len() == 0 {
-            return None;
-        }
-        Some(std::path::PathBuf::from(cstr))
-    }
-
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
         let na = self.native_activity();
-        unsafe { Self::try_get_path_from_ptr((*na).internalDataPath.cast()) }
+        unsafe { util::try_get_path_from_ptr((*na).internalDataPath) }
     }
 
     pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
         let na = self.native_activity();
-        unsafe { Self::try_get_path_from_ptr((*na).externalDataPath.cast()) }
+        unsafe { util::try_get_path_from_ptr((*na).externalDataPath) }
     }
 
     pub fn obb_path(&self) -> Option<std::path::PathBuf> {
         let na = self.native_activity();
-        unsafe { Self::try_get_path_from_ptr((*na).obbPath.cast()) }
+        unsafe { util::try_get_path_from_ptr((*na).obbPath) }
     }
 }
 

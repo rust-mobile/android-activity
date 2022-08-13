@@ -4,7 +4,7 @@ use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
-use std::os::raw::{self, c_char};
+use std::os::raw;
 use std::os::unix::prelude::*;
 use std::ptr::NonNull;
 use std::sync::Arc;
@@ -24,7 +24,7 @@ use ndk::configuration::Configuration;
 use ndk::looper::FdEvent;
 use ndk::native_window::NativeWindow;
 
-use crate::{AndroidApp, MainEvent, NativeWindowRef, PollEvent, Rect};
+use crate::{util, AndroidApp, MainEvent, NativeWindowRef, PollEvent, Rect};
 
 mod ffi;
 
@@ -378,38 +378,24 @@ impl AndroidAppInner {
         }
     }
 
-    fn try_get_path_from_ptr(path: *const c_char) -> Option<std::path::PathBuf> {
-        if path == ptr::null() {
-            return None;
-        }
-        let cstr = unsafe {
-            let cstr_slice = CStr::from_ptr(path.cast());
-            cstr_slice.to_str().ok()?
-        };
-        if cstr.len() == 0 {
-            return None;
-        }
-        Some(std::path::PathBuf::from(cstr))
-    }
-
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
             let app_ptr = self.ptr.as_ptr();
-            Self::try_get_path_from_ptr((*(*app_ptr).activity).internalDataPath)
+            util::try_get_path_from_ptr((*(*app_ptr).activity).internalDataPath)
         }
     }
 
     pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
             let app_ptr = self.ptr.as_ptr();
-            Self::try_get_path_from_ptr((*(*app_ptr).activity).externalDataPath)
+            util::try_get_path_from_ptr((*(*app_ptr).activity).externalDataPath)
         }
     }
 
     pub fn obb_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
             let app_ptr = self.ptr.as_ptr();
-            Self::try_get_path_from_ptr((*(*app_ptr).activity).obbPath)
+            util::try_get_path_from_ptr((*(*app_ptr).activity).obbPath)
         }
     }
 }
