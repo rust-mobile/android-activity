@@ -10651,12 +10651,14 @@ pub struct android_app {
     pub pendingContentRect: ARect,
     pub keyEventFilter: android_key_event_filter,
     pub motionEventFilter: android_motion_event_filter,
+    pub inputAvailableWakeUp: bool,
+    pub inputSwapPending: bool,
 }
 #[test]
 fn bindgen_test_layout_android_app() {
     assert_eq!(
         ::std::mem::size_of::<android_app>(),
-        80604usize,
+        80608usize,
         concat!("Size of: ", stringify!(android_app))
     );
     assert_eq!(
@@ -10944,6 +10946,28 @@ fn bindgen_test_layout_android_app() {
             stringify!(motionEventFilter)
         )
     );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<android_app>())).inputAvailableWakeUp as *const _ as usize
+        },
+        80604usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(android_app),
+            "::",
+            stringify!(inputAvailableWakeUp)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<android_app>())).inputSwapPending as *const _ as usize },
+        80605usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(android_app),
+            "::",
+            stringify!(inputSwapPending)
+        )
+    );
 }
 #[doc = " Looper data ID of commands coming from the app's main thread, which"]
 #[doc = " is returned as an identifier from ALooper_pollOnce().  The data for this"]
@@ -11082,5 +11106,9 @@ extern "C" {
         app: *mut android_app,
         filter: android_motion_event_filter,
     );
+}
+extern "C" {
+    #[doc = " Determines if a looper wake up was due to new input becoming available"]
+    pub fn android_app_input_available_wake_up(app: *mut android_app) -> bool;
 }
 pub type __builtin_va_list = *mut ::std::os::raw::c_char;
