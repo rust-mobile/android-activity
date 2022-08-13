@@ -273,6 +273,26 @@ struct android_app {
   android_key_event_filter keyEventFilter;
   android_motion_event_filter motionEventFilter;
 
+  // When new input is received we set both of these flags and use the looper to
+  // wake up the application mainloop.
+  //
+  // To avoid spamming the mainloop with wake ups from lots of input though we
+  // don't sent a wake up if the inputSwapPending flag is already set. (i.e.
+  // we already expect input to be processed in a finite amount of time due to
+  // our previous wake up)
+  //
+  // When a wake up is received then we will check this flag (clearing it
+  // at the same time). If it was set then an InputAvailable event is sent to
+  // the application - which should lead to all input being processed within
+  // a finite amount of time.
+  //
+  // The next time android_app_swap_input_buffers is called, both flags will be
+  // cleared.
+  //
+  // NB: both of these should only be read with the app mutex held
+  bool inputAvailableWakeUp;
+  bool inputSwapPending;
+
   /** @endcond */
 };
 
@@ -517,6 +537,11 @@ void android_app_set_motion_event_filter(struct android_app* app,
  * can be used for custom user's events.
  */
 void android_app_write_cmd(struct android_app* android_app, int8_t cmd);
+
+/**
+ * Determines if a looper wake up was due to new input becoming available
+ */
+bool android_app_input_available_wake_up(struct android_app* app);
 
 #ifdef __cplusplus
 }
