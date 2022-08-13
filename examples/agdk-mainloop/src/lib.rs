@@ -11,7 +11,7 @@ fn android_main(app: AndroidApp) {
 
     while !quit {
         app.poll_events(
-            Some(std::time::Duration::from_millis(500)), /* timeout */
+            Some(std::time::Duration::from_secs(1)), /* timeout */
             |event| {
                 match event {
                     PollEvent::Wake => {
@@ -47,6 +47,9 @@ fn android_main(app: AndroidApp) {
                                 redraw_pending = true;
                             }
                             MainEvent::RedrawNeeded { .. } => {
+                                redraw_pending = true;
+                            }
+                            MainEvent::InputAvailable { .. } => {
                                 redraw_pending = true;
                             }
                             MainEvent::LowMemory => {}

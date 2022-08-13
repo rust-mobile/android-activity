@@ -180,6 +180,12 @@ impl AndroidAppInner {
             match id {
                 ffi::ALOOPER_POLL_WAKE => {
                     trace!("ALooper_pollAll returned POLL_WAKE");
+
+                    if ffi::android_app_input_available_wake_up(app_ptr.as_ptr()) {
+                        log::debug!("Notifying Input Available");
+                        callback(PollEvent::Main(MainEvent::InputAvailable));
+                    }
+
                     callback(PollEvent::Wake);
                 }
                 ffi::ALOOPER_POLL_CALLBACK => {
