@@ -477,6 +477,29 @@ void android_app_set_motion_event_filter(struct android_app* app,
     pthread_mutex_unlock(&app->mutex);
 }
 
+bool android_app_input_available_wake_up(struct android_app* app) {
+    pthread_mutex_lock(&app->mutex);
+    bool available = app->inputAvailableWakeUp;
+    app->inputAvailableWakeUp = false;
+    pthread_mutex_unlock(&app->mutex);
+    return available;
+}
+
+// NB: should be called with the android_app->mutex held already
+static void notifyInput(struct android_app* android_app) {
+    // Don't spam the mainloop with wake ups if we've already sent one
+    if (android_app->inputSwapPending) {
+        return;
+    }
+
+    if (android_app->looper != NULL) {
+        // for the app thread to know why it received the wake() up
+        android_app->inputAvailableWakeUp = true;
+        android_app->inputSwapPending = true;
+        ALooper_wake(android_app->looper);
+    }
+}
+
 static bool onTouchEvent(GameActivity* activity,
                          const GameActivityMotionEvent* event) {
     struct android_app* android_app = ToApp(activity);
@@ -506,6 +529,7 @@ static bool onTouchEvent(GameActivity* activity,
     int new_ix = inputBuffer->motionEventsCount;
     memcpy(&inputBuffer->motionEvents[new_ix], event, sizeof(GameActivityMotionEvent));
     ++inputBuffer->motionEventsCount;
+    notifyInput(android_app);
 
     pthread_mutex_unlock(&android_app->mutex);
     return true;
@@ -526,6 +550,9 @@ struct android_input_buffer* android_app_swap_input_buffers(
             (android_app->currentInputBuffer + 1) %
             NATIVE_APP_GLUE_MAX_INPUT_BUFFERS;
     }
+
+    android_app->inputSwapPending = false;
+    android_app->inputAvailableWakeUp = false;
 
     pthread_mutex_unlock(&android_app->mutex);
 
@@ -579,6 +606,7 @@ static bool onKey(GameActivity* activity, const GameActivityKeyEvent* event) {
     int new_ix = inputBuffer->keyEventsCount;
     memcpy(&inputBuffer->keyEvents[new_ix], event, sizeof(GameActivityKeyEvent));
     ++inputBuffer->keyEventsCount;
+    notifyInput(android_app);
 
     pthread_mutex_unlock(&android_app->mutex);
     return true;
