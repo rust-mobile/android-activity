@@ -24,7 +24,7 @@ use ndk::configuration::Configuration;
 use ndk::looper::FdEvent;
 use ndk::native_window::NativeWindow;
 
-use crate::{util, AndroidApp, ConfigurationRef, MainEvent, NativeWindowRef, PollEvent, Rect};
+use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect};
 
 mod ffi;
 
@@ -154,13 +154,8 @@ pub struct AndroidAppInner {
 }
 
 impl AndroidAppInner {
-    pub fn native_window<'a>(&self) -> Option<NativeWindowRef> {
-        let guard = self.native_window.read().unwrap();
-        if let Some(ref window) = *guard {
-            Some(NativeWindowRef::new(window))
-        } else {
-            None
-        }
+    pub fn native_window<'a>(&self) -> Option<NativeWindow> {
+        self.native_window.read().unwrap().clone()
     }
 
     pub fn poll_events<F>(&self, timeout: Option<Duration>, mut callback: F)
