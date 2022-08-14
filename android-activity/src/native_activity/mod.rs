@@ -3,6 +3,7 @@
 use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::ops::Deref;
 use std::os::raw;
 use std::os::unix::prelude::*;
 use std::ptr::NonNull;
@@ -47,7 +48,7 @@ impl<'a> StateSaver<'a> {
         // via libc::malloc since it will automatically handle freeing the data once it
         // has been handed over to the Java Activity / main thread.
         unsafe {
-            let app_ptr = self.app.ptr.as_ptr();
+            let app_ptr = self.app.native_app.as_ptr();
 
             // In case the application calls store() multiple times for some reason we
             // make sure to free any pre-existing state...
@@ -84,7 +85,7 @@ pub struct StateLoader<'a> {
 impl<'a> StateLoader<'a> {
     pub fn load(&self) -> Option<Vec<u8>> {
         unsafe {
-            let app_ptr = self.app.ptr.as_ptr();
+            let app_ptr = self.app.native_app.as_ptr();
             if (*app_ptr).savedState != ptr::null_mut() && (*app_ptr).savedStateSize > 0 {
                 let buf: &mut [u8] = std::slice::from_raw_parts_mut(
                     (*app_ptr).savedState.cast(),
@@ -128,18 +129,32 @@ impl AndroidApp {
         let config = Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
 
         AndroidApp {
-            inner: Arc::new(AndroidAppInner {
-                ptr,
+            inner: Arc::new(RwLock::new(AndroidAppInner {
+                native_app: NativeAppGlue { ptr },
                 config: RwLock::new(config),
                 native_window: Default::default(),
-            }),
+            })),
         }
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct AndroidAppInner {
+struct NativeAppGlue {
     ptr: NonNull<ffi::android_app>,
+}
+impl Deref for NativeAppGlue {
+    type Target = NonNull<ffi::android_app>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.ptr
+    }
+}
+unsafe impl Send for NativeAppGlue {}
+unsafe impl Sync for NativeAppGlue {}
+
+#[derive(Debug)]
+pub(crate) struct AndroidAppInner {
+    native_app: NativeAppGlue,
     config: RwLock<Configuration>,
     native_window: RwLock<Option<NativeWindow>>,
 }
@@ -147,7 +162,7 @@ pub(crate) struct AndroidAppInner {
 impl AndroidAppInner {
     pub(crate) fn native_activity(&self) -> *const ndk_sys::ANativeActivity {
         unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             (*app_ptr).activity.cast()
         }
     }
@@ -168,7 +183,7 @@ impl AndroidAppInner {
         trace!("poll_events");
 
         unsafe {
-            let app_ptr = self.ptr;
+            let native_app = &self.native_app;
 
             let mut fd: i32 = 0;
             let mut events: i32 = 0;
@@ -217,7 +232,7 @@ impl AndroidAppInner {
                             trace!("ALooper_pollAll returned ID_MAIN");
                             let source: *mut ffi::android_poll_source = source.cast();
                             if source != ptr::null_mut() {
-                                let cmd_i = ffi::android_app_read_cmd(app_ptr.as_ptr());
+                                let cmd_i = ffi::android_app_read_cmd(native_app.as_ptr());
 
                                 let cmd = match cmd_i as u32 {
                                     // We don't forward info about the AInputQueue to apps since it's
@@ -256,7 +271,7 @@ impl AndroidAppInner {
                                 };
 
                                 trace!("Calling android_app_pre_exec_cmd({cmd_i})");
-                                ffi::android_app_pre_exec_cmd(app_ptr.as_ptr(), cmd_i);
+                                ffi::android_app_pre_exec_cmd(native_app.as_ptr(), cmd_i);
 
                                 if let Some(cmd) = cmd {
                                     trace!("Read ID_MAIN command {cmd_i} = {cmd:?}");
@@ -265,12 +280,12 @@ impl AndroidAppInner {
                                             *self.config.write().unwrap() =
                                                 Configuration::clone_from_ptr(
                                                     NonNull::new_unchecked(
-                                                        (*app_ptr.as_ptr()).config,
+                                                        (*native_app.as_ptr()).config,
                                                     ),
                                                 );
                                         }
                                         MainEvent::InitWindow { .. } => {
-                                            let win_ptr = (*app_ptr.as_ptr()).window;
+                                            let win_ptr = (*native_app.as_ptr()).window;
                                             // It's important that we use ::clone_from_ptr() here
                                             // because NativeWindow has a Drop implementation that
                                             // will unconditionally _release() the native window
@@ -290,7 +305,7 @@ impl AndroidAppInner {
                                 }
 
                                 trace!("Calling android_app_post_exec_cmd({cmd_i})");
-                                ffi::android_app_post_exec_cmd(app_ptr.as_ptr(), cmd_i);
+                                ffi::android_app_post_exec_cmd(native_app.as_ptr(), cmd_i);
                             } else {
                                 panic!("ALooper_pollAll returned ID_MAIN event with NULL android_poll_source!");
                             }
@@ -302,7 +317,7 @@ impl AndroidAppInner {
                             // input events then we only send one `InputAvailable` per iteration of input
                             // handling. We re-attach the looper when the application calls
                             // `AndroidApp::input_events()`
-                            ffi::android_app_detach_input_queue_looper(app_ptr.as_ptr());
+                            ffi::android_app_detach_input_queue_looper(native_app.as_ptr());
                             callback(PollEvent::Main(MainEvent::InputAvailable))
                         }
                         _ => {
@@ -331,7 +346,7 @@ impl AndroidAppInner {
         unsafe {
             // From the application's pov we assume the app_ptr and looper pointer
             // have static lifetimes and we can safely assume they are never NULL.
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             AndroidAppWaker {
                 looper: NonNull::new_unchecked((*app_ptr).looper),
             }
@@ -344,7 +359,7 @@ impl AndroidAppInner {
 
     pub fn content_rect(&self) -> Rect {
         unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             Rect {
                 left: (*app_ptr).contentRect.left,
                 right: (*app_ptr).contentRect.right,
@@ -356,7 +371,7 @@ impl AndroidAppInner {
 
     pub fn asset_manager(&self) -> AssetManager {
         unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             let am_ptr = NonNull::new_unchecked((*(*app_ptr).activity).assetManager);
             AssetManager::from_ptr(am_ptr)
         }
@@ -375,7 +390,7 @@ impl AndroidAppInner {
         F: FnMut(&input::InputEvent),
     {
         let queue = unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             if (*app_ptr).inputQueue == ptr::null_mut() {
                 return;
             }

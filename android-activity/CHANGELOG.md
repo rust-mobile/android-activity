@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Emit an `InputAvailable` event for new input with `NativeActivity` and `GameActivity`
   enabling gui apps that don't render continuously
 - Oboe and Cpal audio examples added
+- `AndroidApp` is now `Send` + `Sync`
 ### Changed
 - *Breaking*: updates to `ndk 0.7` and `ndk-sys 0.4`
 
