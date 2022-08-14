@@ -17,7 +17,7 @@ egui-winit = { version = "0.18", default-features = false }
 egui_demo_lib = "0.18"
 
 [patch.crates-io]
-winit = { git = "https://github.com/rib/winit", branch = "android-activity-0.27" }
+winit = { git = "https://github.com/rib/winit", branch = "android-activity-0.27-staging" }
 #winit = { path="../../../winit" }
 
 egui = { git = "https://github.com/budde25/egui", branch = "bump-winit" }
