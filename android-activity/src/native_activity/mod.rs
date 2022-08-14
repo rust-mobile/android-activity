@@ -245,7 +245,7 @@ impl AndroidAppInner {
                                         Some(MainEvent::RedrawNeeded {})
                                     }
                                     ffi::APP_CMD_CONTENT_RECT_CHANGED => {
-                                        Some(MainEvent::ContentRectChanged)
+                                        Some(MainEvent::ContentRectChanged {})
                                     }
                                     ffi::APP_CMD_GAINED_FOCUS => Some(MainEvent::GainedFocus),
                                     ffi::APP_CMD_LOST_FOCUS => Some(MainEvent::LostFocus),

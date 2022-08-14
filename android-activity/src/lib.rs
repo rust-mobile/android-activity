@@ -137,7 +137,8 @@ pub enum MainEvent<'a> {
     /// Command from main thread: the content area of the window has changed,
     /// such as from the soft input window being shown or hidden.  You can
     /// get the new content rect by calling [`AndroidApp::content_rect()`]
-    ContentRectChanged,
+    #[non_exhaustive]
+    ContentRectChanged {},
 
     /// Command from main thread: the app's activity window has gained
     /// input focus.

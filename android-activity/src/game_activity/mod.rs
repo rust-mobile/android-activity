@@ -241,7 +241,7 @@ impl AndroidAppInner {
                                         MainEvent::RedrawNeeded {}
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_CONTENT_RECT_CHANGED => {
-                                        MainEvent::ContentRectChanged
+                                        MainEvent::ContentRectChanged {}
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_GAINED_FOCUS => {
                                         MainEvent::GainedFocus
