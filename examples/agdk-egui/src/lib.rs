@@ -1,10 +1,7 @@
-use log::Level;
 use winit::event_loop::{EventLoop, EventLoopBuilder, EventLoopWindowTarget};
 
 #[cfg(target_os = "android")]
 use android_activity::AndroidApp;
-#[cfg(target_os = "android")]
-use winit::platform::android::EventLoopBuilderExtAndroid;
 
 use winit::event_loop::ControlFlow;
 
@@ -87,15 +84,7 @@ fn _main(event_loop: EventLoop<Event>) {
     let mut window: Option<winit::window::Window> = None;
     let mut egui_demo_windows = egui_demo_lib::DemoWindows::default();
 
-    // On most platforms we can immediately create a winit window. On Android we manage
-    // window + surface state according to Resumed/Paused events.
-    #[cfg(not(target_os = "android"))]
-    {
-        window = Some(create_window(&event_loop, &mut state, &mut painter));
-    }
-
     event_loop.run(move |event, event_loop, control_flow| match event {
-        #[cfg(target_os = "android")]
         Resumed => match window {
             None => {
                 window = Some(create_window(event_loop, &mut state, &mut painter));
@@ -105,12 +94,9 @@ fn _main(event_loop: EventLoop<Event>) {
                 window.request_redraw();
             }
         },
-
-        #[cfg(target_os = "android")]
         Suspended => {
             window = None;
         }
-
         RedrawRequested(..) => {
             if let Some(window) = window.as_ref() {
                 let raw_input = state.take_egui_input(window);
@@ -154,10 +140,13 @@ fn _main(event_loop: EventLoop<Event>) {
     });
 }
 
+#[allow(dead_code)]
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(app: AndroidApp) {
-    android_logger::init_once(android_logger::Config::default().with_min_level(Level::Trace));
+    use winit::platform::android::EventLoopBuilderExtAndroid;
+
+    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
 
     let event_loop = EventLoopBuilder::with_user_event()
         .with_android_app(app)
@@ -165,6 +154,7 @@ fn android_main(app: AndroidApp) {
     _main(event_loop);
 }
 
+#[allow(dead_code)]
 #[cfg(not(target_os = "android"))]
 fn main() {
     env_logger::builder()

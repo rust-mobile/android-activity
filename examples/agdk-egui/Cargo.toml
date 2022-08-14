@@ -11,20 +11,14 @@ log = "0.4"
 winit = "0.27"
 wgpu = "0.13.0"
 pollster = "0.2"
-egui = "0.18"
-egui-wgpu = { version = "0.18", features = [ "winit" ] }
-egui-winit = { version = "0.18", default-features = false }
-egui_demo_lib = "0.18"
+egui = "0.19"
+egui-wgpu = { version = "0.19", features = [ "winit" ] }
+egui-winit = { version = "0.19", default-features = false }
+egui_demo_lib = "0.19"
 
 [patch.crates-io]
 winit = { git = "https://github.com/rib/winit", branch = "android-activity-0.27" }
 #winit = { path="../../../winit" }
-
-egui = { git = "https://github.com/budde25/egui", branch = "bump-winit" }
-egui-wgpu = { git = "https://github.com/budde25/egui", branch = "bump-winit" }
-egui-winit = { git = "https://github.com/budde25/egui", branch = "bump-winit" }
-egui_extras = { git = "https://github.com/budde25/egui", branch = "bump-winit" }
-egui_demo_lib = { git = "https://github.com/budde25/egui", branch = "bump-winit" }
 
 #egui = { git = "https://github.com/emilk/egui" }
 #egui-wgpu = { git = "https://github.com/emilk/egui" }
