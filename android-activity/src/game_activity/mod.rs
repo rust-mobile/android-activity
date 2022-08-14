@@ -21,7 +21,6 @@ use ndk_sys::{ALooper, ALooper_pollAll};
 
 use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
-use ndk::looper::FdEvent;
 use ndk::native_window::NativeWindow;
 
 use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect};
@@ -204,14 +203,9 @@ impl AndroidAppInner {
                     callback(PollEvent::Timeout);
                 }
                 ffi::ALOOPER_POLL_ERROR => {
-                    trace!("ALooper_pollAll returned POLL_ERROR");
-                    callback(PollEvent::Error);
-
-                    // Considering that this API is quite likely to be used in `android_main`
-                    // it's rather unergonomic to require the call to unwrap a Result for each
-                    // call to poll_events(). Alternatively we could maybe even just panic!()
-                    // here, while it's hard to imagine practically being able to recover
-                    //return Err(LooperError);
+                    // If we have an IO error with our pipe to the main Java thread that's surely
+                    // not something we can recover from
+                    panic!("ALooper_pollAll returned POLL_ERROR");
                 }
                 id if id >= 0 => {
                     match id as u32 {
@@ -304,17 +298,7 @@ impl AndroidAppInner {
                             }
                         }
                         _ => {
-                            let events = FdEvent::from_bits(events as u32).expect(&format!(
-                                "Spurious ALooper_pollAll event flags {:#04x}",
-                                events as u32
-                            ));
-                            trace!("Custom ALooper event source: id = {id}, fd = {fd}, events = {events:?}, data = {source:?}");
-                            callback(PollEvent::FdEvent {
-                                ident: id,
-                                fd: fd as RawFd,
-                                events,
-                                data: source,
-                            });
+                            error!("Ignoring spurious ALooper event source: id = {id}, fd = {fd}, events = {events:?}, data = {source:?}");
                         }
                     }
                 }

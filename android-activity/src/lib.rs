@@ -1,12 +1,9 @@
 use std::hash::Hash;
+use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
-use std::{os::unix::prelude::RawFd, sync::Arc};
 
 use ndk::asset::AssetManager;
-// TODO: import FdEvent and avoid depending on ndk Looper abstraction in case we want to
-// support using epoll directly in the future.
-use ndk::looper::FdEvent;
 use ndk::native_window::NativeWindow;
 
 #[cfg(not(target_os = "android"))]
@@ -160,16 +157,6 @@ pub enum PollEvent<'a> {
     Wake,
     Timeout,
     Main(MainEvent<'a>),
-
-    #[non_exhaustive]
-    FdEvent {
-        ident: i32,
-        fd: RawFd,
-        events: FdEvent,
-        data: *mut std::ffi::c_void,
-    },
-
-    Error,
 }
 
 use activity_impl::AndroidAppInner;
@@ -210,8 +197,8 @@ impl AndroidApp {
         self.inner.read().unwrap().native_window()
     }
 
-    /// Calls [`ALooper_pollAll`] on the looper associated with this AndroidApp as well
-    /// as processing any events (such as lifecycle events) via the given `callback`.
+    /// Polls for any events associated with this AndroidApp and processes those events
+    /// (such as lifecycle events) via the given `callback`.
     ///
     /// It's important to use this API for polling, and not call [`ALooper_pollAll`] directly since
     /// some events require pre- and post-processing either side of the callback. For correct
@@ -230,9 +217,6 @@ impl AndroidApp {
 
     /// Creates a means to wake up the main loop while it is blocked waiting for
     /// events within [`poll_events()`].
-    ///
-    /// Internally this uses [`ALooper_wake`] on the looper associated with this
-    /// [AndroidApp].
     pub fn create_waker(&self) -> activity_impl::AndroidAppWaker {
         self.inner.read().unwrap().create_waker()
     }
