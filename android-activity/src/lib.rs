@@ -65,12 +65,6 @@ pub enum MainEvent<'a> {
     /// redundant event loop wake ups._
     ///
     /// [`AndroidApp::input_events()`]: AndroidApp::input_events
-    ///
-    /// # Portability
-    ///
-    /// This is currently only supported with `NativeActivity` with the
-    /// "native-activity" feature. Applications using `GameActivity` should
-    /// continue to check for input as part of their rendering updates.
     InputAvailable,
 
     /// Command from main thread: a new [`NativeWindow`] is ready for use.  Upon
