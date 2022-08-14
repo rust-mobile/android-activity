@@ -1,5 +1,4 @@
 use std::hash::Hash;
-use std::ops::Deref;
 use std::sync::RwLock;
 use std::time::Duration;
 use std::{os::unix::prelude::RawFd, sync::Arc};
@@ -53,39 +52,6 @@ pub struct Rect {
     pub top: i32,
     pub right: i32,
     pub bottom: i32,
-}
-
-// XXX: NativeWindow is a ref-counted object but the NativeWindow rust API
-// doesn't currently implement Clone() in terms of acquiring a reference
-// and Drop() in terms of releasing a reference. NativeWindowRef lets
-// us expose a pointer to a NativeWindow more safely by ensuring it won't
-// become invalid, even it it gets 'terminated'.
-
-/// A reference to a `NativeWindow`, used for rendering
-pub struct NativeWindowRef {
-    inner: NativeWindow,
-}
-impl NativeWindowRef {
-    pub fn new(native_window: &NativeWindow) -> Self {
-        unsafe {
-            ndk_sys::ANativeWindow_acquire(native_window.ptr().as_ptr());
-        }
-        Self {
-            inner: native_window.clone(),
-        }
-    }
-}
-impl Drop for NativeWindowRef {
-    fn drop(&mut self) {
-        unsafe { ndk_sys::ANativeWindow_release(self.inner.ptr().as_ptr()) }
-    }
-}
-impl Deref for NativeWindowRef {
-    type Target = NativeWindow;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
 }
 
 pub type StateSaver<'a> = activity_impl::StateSaver<'a>;
@@ -240,7 +206,7 @@ impl AndroidApp {
     /// This will only return `Some(window)` between
     /// [`AndroidAppMainEvent::InitWindow`] and [`AndroidAppMainEvent::TerminateWindow`]
     /// events.
-    pub fn native_window<'a>(&self) -> Option<NativeWindowRef> {
+    pub fn native_window<'a>(&self) -> Option<NativeWindow> {
         self.inner.read().unwrap().native_window()
     }
 
