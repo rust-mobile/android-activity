@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AndroidApp` is now `Send` + `Sync`
 ### Changed
 - *Breaking*: updates to `ndk 0.7` and `ndk-sys 0.4`
+- *Breaking*: `AndroidApp::config()` now returns a clonable `ConfigurationRef` instead of a deep `Configuration` copy
 
 ## [0.1.1] - 2022-07-04
 ### Changed

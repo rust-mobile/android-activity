@@ -5,7 +5,6 @@ use std::time::Duration;
 use std::{os::unix::prelude::RawFd, sync::Arc};
 
 use ndk::asset::AssetManager;
-use ndk::configuration::Configuration;
 // TODO: import FdEvent and avoid depending on ndk Looper abstraction in case we want to
 // support using epoll directly in the future.
 use ndk::looper::FdEvent;
@@ -35,6 +34,9 @@ mod game_activity;
 use game_activity as activity_impl;
 
 pub use activity_impl::input;
+
+mod config;
+pub use config::ConfigurationRef;
 
 mod util;
 
@@ -148,7 +150,8 @@ pub enum MainEvent<'a> {
     /// Command from main thread: the current device configuration has changed.
     /// You can get a copy of the latest [Configuration] by calling
     /// [`AndroidApp::config()`]
-    ConfigChanged,
+    #[non_exhaustive]
+    ConfigChanged {},
 
     /// Command from main thread: the system is running low on memory.
     /// Try to reduce your memory use.
@@ -267,8 +270,8 @@ impl AndroidApp {
         self.inner.read().unwrap().create_waker()
     }
 
-    /// Returns a deep copy of this application's [`Configuration`]
-    pub fn config(&self) -> Configuration {
+    /// Returns a (cheaply clonable) reference to this application's [`Configuration`]
+    pub fn config(&self) -> ConfigurationRef {
         self.inner.read().unwrap().config()
     }
 
