@@ -7,8 +7,7 @@ use std::ops::Deref;
 use std::os::raw;
 use std::os::unix::prelude::*;
 use std::ptr::NonNull;
-use std::sync::Arc;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::{ptr, thread};
 
@@ -23,7 +22,7 @@ use ndk::input_queue::InputQueue;
 use ndk::looper::FdEvent;
 use ndk::native_window::NativeWindow;
 
-use crate::{util, AndroidApp, MainEvent, NativeWindowRef, PollEvent, Rect};
+use crate::{util, AndroidApp, ConfigurationRef, MainEvent, NativeWindowRef, PollEvent, Rect};
 
 mod ffi;
 
@@ -123,15 +122,12 @@ impl AndroidApp {
         // Note: we don't use from_ptr since we don't own the android_app.config
         // and need to keep in mind that the Drop handler is going to call
         // AConfiguration_delete()
-        //
-        // Whenever we get a ConfigChanged notification we synchronize this
-        // config state with a deep copy.
         let config = Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
 
         AndroidApp {
             inner: Arc::new(RwLock::new(AndroidAppInner {
                 native_app: NativeAppGlue { ptr },
-                config: RwLock::new(config),
+                config: ConfigurationRef::new(config),
                 native_window: Default::default(),
             })),
         }
@@ -155,7 +151,7 @@ unsafe impl Sync for NativeAppGlue {}
 #[derive(Debug)]
 pub(crate) struct AndroidAppInner {
     native_app: NativeAppGlue,
-    config: RwLock<Configuration>,
+    config: ConfigurationRef,
     native_window: RwLock<Option<NativeWindow>>,
 }
 
@@ -253,7 +249,9 @@ impl AndroidAppInner {
                                     }
                                     ffi::APP_CMD_GAINED_FOCUS => Some(MainEvent::GainedFocus),
                                     ffi::APP_CMD_LOST_FOCUS => Some(MainEvent::LostFocus),
-                                    ffi::APP_CMD_CONFIG_CHANGED => Some(MainEvent::ConfigChanged),
+                                    ffi::APP_CMD_CONFIG_CHANGED => {
+                                        Some(MainEvent::ConfigChanged {})
+                                    }
                                     ffi::APP_CMD_LOW_MEMORY => Some(MainEvent::LowMemory),
                                     ffi::APP_CMD_START => Some(MainEvent::Start),
                                     ffi::APP_CMD_RESUME => Some(MainEvent::Resume {
@@ -276,13 +274,12 @@ impl AndroidAppInner {
                                 if let Some(cmd) = cmd {
                                     trace!("Read ID_MAIN command {cmd_i} = {cmd:?}");
                                     match cmd {
-                                        MainEvent::ConfigChanged => {
-                                            *self.config.write().unwrap() =
-                                                Configuration::clone_from_ptr(
-                                                    NonNull::new_unchecked(
-                                                        (*native_app.as_ptr()).config,
-                                                    ),
-                                                );
+                                        MainEvent::ConfigChanged { .. } => {
+                                            self.config.replace(Configuration::clone_from_ptr(
+                                                NonNull::new_unchecked(
+                                                    (*native_app.as_ptr()).config,
+                                                ),
+                                            ));
                                         }
                                         MainEvent::InitWindow { .. } => {
                                             let win_ptr = (*native_app.as_ptr()).window;
@@ -353,8 +350,8 @@ impl AndroidAppInner {
         }
     }
 
-    pub fn config(&self) -> Configuration {
-        self.config.read().unwrap().clone()
+    pub fn config(&self) -> ConfigurationRef {
+        self.config.clone()
     }
 
     pub fn content_rect(&self) -> Rect {

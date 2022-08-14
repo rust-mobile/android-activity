@@ -52,6 +52,9 @@ fn android_main(app: AndroidApp) {
                             MainEvent::InputAvailable { .. } => {
                                 redraw_pending = true;
                             }
+                            MainEvent::ConfigChanged { .. } => {
+                                info!("Config Changed: {:#?}", app.config());
+                            }
                             MainEvent::LowMemory => {}
 
                             MainEvent::Destroy => quit = true,
