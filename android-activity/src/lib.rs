@@ -1,5 +1,6 @@
 use std::hash::Hash;
 use std::ops::Deref;
+use std::sync::RwLock;
 use std::time::Duration;
 use std::{os::unix::prelude::RawFd, sync::Arc};
 
@@ -207,7 +208,7 @@ pub use activity_impl::AndroidAppWaker;
 
 #[derive(Debug, Clone)]
 pub struct AndroidApp {
-    pub(crate) inner: Arc<AndroidAppInner>,
+    pub(crate) inner: Arc<RwLock<AndroidAppInner>>,
 }
 
 impl PartialEq for AndroidApp {
@@ -227,7 +228,7 @@ impl AndroidApp {
     #[cfg_attr(docsrs, doc(cfg(feature = "native-activity")))]
     #[cfg(feature = "native-activity")]
     pub(crate) fn native_activity(&self) -> *const ndk_sys::ANativeActivity {
-        self.inner.native_activity()
+        self.inner.read().unwrap().native_activity()
     }
 
     /// Queries the current [`NativeWindow`] for the application.
@@ -236,7 +237,7 @@ impl AndroidApp {
     /// [`AndroidAppMainEvent::InitWindow`] and [`AndroidAppMainEvent::TerminateWindow`]
     /// events.
     pub fn native_window<'a>(&self) -> Option<NativeWindowRef> {
-        self.inner.native_window()
+        self.inner.read().unwrap().native_window()
     }
 
     /// Calls [`ALooper_pollAll`] on the looper associated with this AndroidApp as well
@@ -250,14 +251,11 @@ impl AndroidApp {
     /// set to `None` once the callback returns, and this is also synchronized with the Java
     /// main thread. The [`MainEvent::SaveState`] event is also synchronized with the
     /// Java main thread.
-    ///
-    /// # Safety
-    /// This API must only be called from the application's main thread
     pub fn poll_events<F>(&self, timeout: Option<Duration>, callback: F)
     where
         F: FnMut(PollEvent),
     {
-        self.inner.poll_events(timeout, callback);
+        self.inner.read().unwrap().poll_events(timeout, callback);
     }
 
     /// Creates a means to wake up the main loop while it is blocked waiting for
@@ -265,50 +263,41 @@ impl AndroidApp {
     ///
     /// Internally this uses [`ALooper_wake`] on the looper associated with this
     /// [AndroidApp].
-    ///
-    /// # Safety
-    /// This API can be used from any thread
     pub fn create_waker(&self) -> activity_impl::AndroidAppWaker {
-        self.inner.create_waker()
+        self.inner.read().unwrap().create_waker()
     }
 
     /// Returns a deep copy of this application's [`Configuration`]
     pub fn config(&self) -> Configuration {
-        self.inner.config()
+        self.inner.read().unwrap().config()
     }
 
     /// Queries the current content rectangle of the window; this is the area where the
     /// window's content should be placed to be seen by the user.
-    ///
-    /// # Safety
-    /// This API must only be called from the applications main thread
     pub fn content_rect(&self) -> Rect {
-        self.inner.content_rect()
+        self.inner.read().unwrap().content_rect()
     }
 
     /// Queries the Asset Manager instance for the application.
     ///
     /// Use this to access binary assets bundled inside your application's .apk file.
-    ///
-    /// # Safety
-    /// This API must only be called from the applications main thread
     pub fn asset_manager(&self) -> AssetManager {
-        self.inner.asset_manager()
+        self.inner.read().unwrap().asset_manager()
     }
 
     pub fn enable_motion_axis(&self, axis: input::Axis) {
-        self.inner.enable_motion_axis(axis);
+        self.inner.write().unwrap().enable_motion_axis(axis);
     }
 
     pub fn disable_motion_axis(&self, axis: input::Axis) {
-        self.inner.disable_motion_axis(axis);
+        self.inner.write().unwrap().disable_motion_axis(axis);
     }
 
     pub fn input_events<'b, F>(&self, callback: F)
     where
         F: FnMut(&input::InputEvent),
     {
-        self.inner.input_events(callback);
+        self.inner.read().unwrap().input_events(callback);
     }
 
     /// The user-visible SDK version of the framework
@@ -325,16 +314,22 @@ impl AndroidApp {
 
     /// Path to this application's internal data directory
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
-        self.inner.internal_data_path()
+        self.inner.read().unwrap().internal_data_path()
     }
 
     /// Path to this application's external data directory
     pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
-        self.inner.external_data_path()
+        self.inner.read().unwrap().external_data_path()
     }
 
     /// Path to the directory containing the application's OBB files (if any).
     pub fn obb_path(&self) -> Option<std::path::PathBuf> {
-        self.inner.obb_path()
+        self.inner.read().unwrap().obb_path()
     }
+}
+
+#[test]
+fn test_app_is_send_sync() {
+    fn needs_send_sync<T: Send + Sync>() {}
+    needs_send_sync::<AndroidApp>();
 }

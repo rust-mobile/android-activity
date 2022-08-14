@@ -4,6 +4,7 @@ use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::os::raw;
 use std::os::unix::prelude::*;
 use std::ptr::NonNull;
@@ -45,7 +46,7 @@ impl<'a> StateSaver<'a> {
         // via libc::malloc since it will automatically handle freeing the data once it
         // has been handed over to the Java Activity / main thread.
         unsafe {
-            let app_ptr = self.app.ptr.as_ptr();
+            let app_ptr = self.app.native_app.as_ptr();
 
             // In case the application calls store() multiple times for some reason we
             // make sure to free any pre-existing state...
@@ -82,7 +83,7 @@ pub struct StateLoader<'a> {
 impl<'a> StateLoader<'a> {
     pub fn load(&self) -> Option<Vec<u8>> {
         unsafe {
-            let app_ptr = self.app.ptr.as_ptr();
+            let app_ptr = self.app.native_app.as_ptr();
             if (*app_ptr).savedState != ptr::null_mut() && (*app_ptr).savedStateSize > 0 {
                 let buf: &mut [u8] = std::slice::from_raw_parts_mut(
                     (*app_ptr).savedState.cast(),
@@ -126,18 +127,32 @@ impl AndroidApp {
         let config = Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
 
         Self {
-            inner: Arc::new(AndroidAppInner {
-                ptr,
+            inner: Arc::new(RwLock::new(AndroidAppInner {
+                native_app: NativeAppGlue { ptr },
                 config: RwLock::new(config),
                 native_window: Default::default(),
-            }),
+            })),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct AndroidAppInner {
+struct NativeAppGlue {
     ptr: NonNull<ffi::android_app>,
+}
+impl Deref for NativeAppGlue {
+    type Target = NonNull<ffi::android_app>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.ptr
+    }
+}
+unsafe impl Send for NativeAppGlue {}
+unsafe impl Sync for NativeAppGlue {}
+
+#[derive(Debug)]
+pub struct AndroidAppInner {
+    native_app: NativeAppGlue,
     config: RwLock<Configuration>,
     native_window: RwLock<Option<NativeWindow>>,
 }
@@ -159,7 +174,7 @@ impl AndroidAppInner {
         trace!("poll_events");
 
         unsafe {
-            let app_ptr = self.ptr;
+            let native_app = &self.native_app;
 
             let mut fd: i32 = 0;
             let mut events: i32 = 0;
@@ -181,7 +196,7 @@ impl AndroidAppInner {
                 ffi::ALOOPER_POLL_WAKE => {
                     trace!("ALooper_pollAll returned POLL_WAKE");
 
-                    if ffi::android_app_input_available_wake_up(app_ptr.as_ptr()) {
+                    if ffi::android_app_input_available_wake_up(native_app.as_ptr()) {
                         log::debug!("Notifying Input Available");
                         callback(PollEvent::Main(MainEvent::InputAvailable));
                     }
@@ -213,7 +228,7 @@ impl AndroidAppInner {
                             trace!("ALooper_pollAll returned ID_MAIN");
                             let source: *mut ffi::android_poll_source = source.cast();
                             if source != ptr::null_mut() {
-                                let cmd_i = ffi::android_app_read_cmd(app_ptr.as_ptr());
+                                let cmd_i = ffi::android_app_read_cmd(native_app.as_ptr());
 
                                 let cmd = match cmd_i as u32 {
                                     //NativeAppGlueAppCmd_UNUSED_APP_CMD_INPUT_CHANGED => AndroidAppMainEvent::InputChanged,
@@ -265,16 +280,16 @@ impl AndroidAppInner {
                                 trace!("Read ID_MAIN command {cmd_i} = {cmd:?}");
 
                                 trace!("Calling android_app_pre_exec_cmd({cmd_i})");
-                                ffi::android_app_pre_exec_cmd(app_ptr.as_ptr(), cmd_i);
+                                ffi::android_app_pre_exec_cmd(native_app.as_ptr(), cmd_i);
                                 match cmd {
                                     MainEvent::ConfigChanged => {
                                         *self.config.write().unwrap() =
                                             Configuration::clone_from_ptr(NonNull::new_unchecked(
-                                                (*app_ptr.as_ptr()).config,
+                                                (*native_app.as_ptr()).config,
                                             ));
                                     }
                                     MainEvent::InitWindow { .. } => {
-                                        let win_ptr = (*app_ptr.as_ptr()).window;
+                                        let win_ptr = (*native_app.as_ptr()).window;
                                         // It's important that we use ::clone_from_ptr() here
                                         // because NativeWindow has a Drop implementation that
                                         // will unconditionally _release() the native window
@@ -293,7 +308,7 @@ impl AndroidAppInner {
                                 callback(PollEvent::Main(cmd));
 
                                 trace!("Calling android_app_post_exec_cmd({cmd_i})");
-                                ffi::android_app_post_exec_cmd(app_ptr.as_ptr(), cmd_i);
+                                ffi::android_app_post_exec_cmd(native_app.as_ptr(), cmd_i);
                             } else {
                                 panic!("ALooper_pollAll returned ID_MAIN event with NULL android_poll_source!");
                             }
@@ -320,11 +335,11 @@ impl AndroidAppInner {
         }
     }
 
-    pub fn enable_motion_axis(&self, axis: Axis) {
+    pub fn enable_motion_axis(&mut self, axis: Axis) {
         unsafe { ffi::GameActivityPointerAxes_enableAxis(axis as i32) }
     }
 
-    pub fn disable_motion_axis(&self, axis: Axis) {
+    pub fn disable_motion_axis(&mut self, axis: Axis) {
         unsafe { ffi::GameActivityPointerAxes_disableAxis(axis as i32) }
     }
 
@@ -332,7 +347,7 @@ impl AndroidAppInner {
         unsafe {
             // From the application's pov we assume the app_ptr and looper pointer
             // have static lifetimes and we can safely assume they are never NULL.
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             AndroidAppWaker {
                 looper: NonNull::new_unchecked((*app_ptr).looper),
             }
@@ -345,7 +360,7 @@ impl AndroidAppInner {
 
     pub fn content_rect(&self) -> Rect {
         unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             Rect {
                 left: (*app_ptr).contentRect.left,
                 right: (*app_ptr).contentRect.right,
@@ -357,7 +372,7 @@ impl AndroidAppInner {
 
     pub fn asset_manager(&self) -> AssetManager {
         unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             let am_ptr = NonNull::new_unchecked((*(*app_ptr).activity).assetManager);
             AssetManager::from_ptr(am_ptr)
         }
@@ -368,7 +383,7 @@ impl AndroidAppInner {
         F: FnMut(&InputEvent),
     {
         let buf = unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             let input_buffer = ffi::android_app_swap_input_buffers(app_ptr);
             if input_buffer == ptr::null_mut() {
                 return;
@@ -386,21 +401,21 @@ impl AndroidAppInner {
 
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             util::try_get_path_from_ptr((*(*app_ptr).activity).internalDataPath)
         }
     }
 
     pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             util::try_get_path_from_ptr((*(*app_ptr).activity).externalDataPath)
         }
     }
 
     pub fn obb_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
-            let app_ptr = self.ptr.as_ptr();
+            let app_ptr = self.native_app.as_ptr();
             util::try_get_path_from_ptr((*(*app_ptr).activity).obbPath)
         }
     }
