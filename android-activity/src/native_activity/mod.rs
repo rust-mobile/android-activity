@@ -353,6 +353,10 @@ impl AndroidAppInner {
         }
     }
 
+    pub fn set_soft_input(&self, _show: bool) {
+        // Unsupported
+    }
+
     pub fn enable_motion_axis(&self, _axis: input::Axis) {
         // NOP - The InputQueue API doesn't let us optimize which axis values are read
     }

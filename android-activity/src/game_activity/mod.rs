@@ -309,6 +309,17 @@ impl AndroidAppInner {
         }
     }
 
+    pub fn set_soft_input(&self, show: bool) {
+        unsafe {
+            let activity = (*self.native_app.as_ptr()).activity;
+            if show {
+                ffi::GameActivity_showSoftInput(activity, 0);
+            } else {
+                ffi::GameActivity_hideSoftInput(activity, 0);
+            }
+        }
+    }
+
     pub fn enable_motion_axis(&mut self, axis: Axis) {
         unsafe { ffi::GameActivityPointerAxes_enableAxis(axis as i32) }
     }

@@ -241,6 +241,10 @@ impl AndroidApp {
         self.inner.write().unwrap().disable_motion_axis(axis);
     }
 
+    pub fn set_soft_input(&self, show: bool) {
+        self.inner.read().unwrap().set_soft_input(show);
+    }
+
     pub fn input_events<'b, F>(&self, callback: F)
     where
         F: FnMut(&input::InputEvent),
