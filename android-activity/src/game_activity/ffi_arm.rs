@@ -3530,6 +3530,7 @@ pub struct GameActivityKeyEvent {
     pub repeatCount: i32,
     pub keyCode: i32,
     pub scanCode: i32,
+    pub unicodeChar: i32,
 }
 #[test]
 fn bindgen_test_layout_GameActivityKeyEvent() {

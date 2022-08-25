@@ -1385,6 +1385,14 @@ impl KeyEvent {
     pub fn scan_code(&self) -> i32 {
         self.scanCode
     }
+
+    /// Returns the unicode character of this key event.
+    #[inline]
+    pub fn char(&self) -> Option<char> {
+        (self.unicodeChar != 0)
+            .then_some(self.unicodeChar)
+            .and_then(|char| (char as u32).try_into().ok())
+    }
 }
 
 /// Flags associated with [`KeyEvent`].
