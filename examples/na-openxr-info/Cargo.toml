@@ -1,0 +1,37 @@
+[package]
+name = "na-openxr-info"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+openxr = { version = "0.16" }
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+env_logger = "0.9"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.11.0"
+android-activity = { path="../../android-activity", features = ["native-activity"] }
+
+[patch.crates-io]
+# openxr 0.16 uses ndk-glue, but master uses ndk-context which is compatible with android-activity
+openxr = { git = "https://github.com/Ralith/openxrs" }
+
+[features]
+default = [ "linked" ]
+
+android = [ "openxr/linked" ]
+desktop = [ "linked", "openxr/static"]
+linked = []
+
+[lib]
+name="main"
+crate_type=["cdylib"]
+
+[[bin]]
+path="src/lib.rs"
+name="test-winit-wgpu"
+required-features = [ "desktop" ]
