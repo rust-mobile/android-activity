@@ -1,5 +1,4 @@
 ///! Based on https://github.com/Ralith/openxrs/blob/master/openxr/examples/hello.rs
-
 use openxr as xr;
 
 #[cfg(target_os = "android")]

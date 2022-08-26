@@ -1,9 +1,13 @@
-This is a minimal OpenXR application that builds for desktop or
-Android and simply prints out extension information for the OpenXR
-library.
+This is an example OpenXR application that builds for desktop or
+Android and simply renders a head-locked gradient using Wgpu
+(via Vulkan).
 
-This is based on the [hello](https://github.com/Ralith/openxrs/blob/master/openxr/examples/hello.rs)
-example from the [openxrs](https://github.com/Ralith/openxrs) repo.
+This borrows heavily from [here](https://github.com/Ralith/openxrs/blob/master/openxr/examples/vulkan.rs) and
+[here](https://github.com/zarik5/openxrs/blob/wgpu-test/openxr/examples/vulkan.rs),
+although updated to run with Wgpu 0.13 and with most of the
+boilerplate for initializing OpenXR and Vulkan + Wgpu factored
+into a re-usable `XrShell` that could potentially be a helpful
+starting point for building more complex applications.
 
 # Oculus Quest
 

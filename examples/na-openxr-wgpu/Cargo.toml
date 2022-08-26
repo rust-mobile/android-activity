@@ -1,0 +1,49 @@
+[package]
+name = "na-openxr-wgpu"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+ash = "0.37"
+wgpu-hal = { version = "0.13", features = [ "vulkan" ] }
+wgpu = "0.13"
+wgpu-types = "0.13"
+anyhow = "1"
+bitflags = "1"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+openxr = { version = "0.16", features = [ "static" ] }
+env_logger = "0.9"
+ctrlc = "3"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.11.0"
+android-activity = { version = "0.2", features = [ "native-activity" ] }
+openxr = { version = "0.16", features = [ "linked" ] }
+
+[patch.crates-io]
+# openxr 0.16 uses ndk-glue, but master uses ndk-context which is compatible with android-activity
+openxr = { git = "https://github.com/Ralith/openxrs" }
+
+# Since Winit also depends on android-activity we need to
+# make sure we only resolve a single implementation.
+android-activity = { path="../../android-activity" }
+
+[features]
+default = []
+#default = [ "android" ]
+
+#android = [ "openxr/linked" ]
+desktop = []
+
+[lib]
+name="main"
+crate_type=["cdylib"]
+
+[[bin]]
+path="src/lib.rs"
+name="test-openxr-wgpu"
+required-features = [ "desktop" ]
