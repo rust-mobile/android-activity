@@ -5,12 +5,12 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::os::raw;
+use std::os::raw::{self, c_void};
 use std::os::unix::prelude::*;
 use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-use std::{ptr, thread};
+use std::{ptr, slice, thread};
 
 use log::{error, trace, Level};
 
@@ -23,6 +23,8 @@ use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
+use crate::game_activity::ffi::{GameTextInputSpan, GameTextInputState};
+use crate::input::CharacterEvent;
 use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect};
 
 mod ffi;
@@ -367,6 +369,39 @@ impl AndroidAppInner {
     where
         F: FnMut(&InputEvent),
     {
+        let mut chars = String::new();
+        unsafe {
+            let activity = (*self.native_app.as_ptr()).activity;
+
+            unsafe extern "C" fn callback(context: *mut c_void, state: *const GameTextInputState) {
+                *(context as *mut String) = std::str::from_utf8_unchecked(slice::from_raw_parts(
+                    (*state).text_UTF8,
+                    (*state).text_length as usize,
+                ))
+                .to_owned();
+            }
+            ffi::GameActivity_getTextInputState(
+                activity,
+                Some(callback),
+                &mut chars as *mut String as *mut c_void,
+            );
+            if !chars.is_empty() {
+                ffi::GameActivity_setTextInputState(
+                    activity,
+                    &GameTextInputState {
+                        text_UTF8: ptr::null(),
+                        text_length: 0,
+                        selection: GameTextInputSpan { start: 0, end: 0 },
+                        composingRegion: GameTextInputSpan { start: 0, end: 0 },
+                    } as *const _,
+                );
+            }
+        }
+
+        for character in chars.chars() {
+            callback(&InputEvent::CharacterEvent(CharacterEvent { character }));
+        }
+
         let buf = unsafe {
             let app_ptr = self.native_app.as_ptr();
             let input_buffer = ffi::android_app_swap_input_buffers(app_ptr);

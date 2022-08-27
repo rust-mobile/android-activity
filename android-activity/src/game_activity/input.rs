@@ -26,6 +26,12 @@ use bitflags::bitflags;
 pub enum InputEvent {
     MotionEvent(MotionEvent),
     KeyEvent(KeyEvent),
+    CharacterEvent(CharacterEvent),
+}
+
+#[derive(Debug, Clone)]
+pub struct CharacterEvent {
+    pub character: char,
 }
 
 /// An enum representing the source of an [`MotionEvent`] or [`KeyEvent`]

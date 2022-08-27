@@ -601,6 +601,7 @@ static void onTextInputEvent(GameActivity* activity,
     pthread_mutex_lock(&android_app->mutex);
 
     android_app->textInputState = 1;
+    notifyInput(android_app);
     pthread_mutex_unlock(&android_app->mutex);
 }
 
