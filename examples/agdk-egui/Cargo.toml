@@ -16,33 +16,33 @@ egui-wgpu = { version = "0.19", features = [ "winit" ] }
 egui-winit = { version = "0.19", default-features = false }
 egui_demo_lib = "0.19"
 
-[patch.crates-io]
-winit = { git = "https://github.com/rib/winit", branch = "android-activity-0.27" }
-#winit = { path="../../../winit" }
-
-#egui = { git = "https://github.com/emilk/egui" }
-#egui-wgpu = { git = "https://github.com/emilk/egui" }
-#egui-winit = { git = "https://github.com/emilk/egui" }
-#egui_extras = { git = "https://github.com/emilk/egui" }
-#egui_demo_lib = { git = "https://github.com/emilk/egui" }
-
-#egui = { path = "../../../egui/egui" }
-#egui-wgpu = { path = "../../../egui/egui-wgpu" }
-#egui-winit = { path = "../../../egui/egui-winit" }
-#egui_extras = { path = "../../../egui/egui_extras" }
-#egui_demo_lib = { path = "../../../egui/egui_demo_lib" }
-
 [target.'cfg(not(target_os = "android"))'.dependencies]
 env_logger = "0.9"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
-android-activity = { path="../../android-activity", features = [ "game-activity" ] }
+android-activity = { version = "0.2", features = [ "game-activity" ] }
 
-# Since Winit also depends on android-activity (via a github url) we need to
-# make sure we only resolve a single implementation.
-[patch.'https://github.com/rib/android-activity']
-android-activity = { path="../../android-activity", features = [ "game-activity" ] }
+[patch.crates-io]
+
+# This branch of Winit has an updated Android backend based on android-activity
+# Note: The winit branches are current misnamed:
+# - "android-activity" is based on Winit 0.27 (required for Egui compatibility)
+# - "android-activity-0.27" is based on Winit master
+# The -0.27 branch is currently associated with a pull request so we'll just
+# stick with these names for now
+winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
+#winit = { path = "../../../winit" }
+
+# Note:
+# Since android-activity is responsible for invoking the `android_main`
+# entrypoint for a native Rust application there can only be a single
+# implementation of the crate linked with the application.
+#
+# Since Winit also depends on android-activity (version = "0.2") but we'd like
+# to build against the local version of android-activity in this repo then we
+# use a [patch] to ensure we only end up with a single implementation.
+android-activity = { path = "../../android-activity" }
 
 [features]
 default = []
