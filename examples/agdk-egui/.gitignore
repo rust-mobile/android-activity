@@ -19,4 +19,3 @@ local.properties
 # Added by cargo
 
 /target
-Cargo.lock
