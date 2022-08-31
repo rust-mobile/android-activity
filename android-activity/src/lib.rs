@@ -68,14 +68,14 @@ pub enum MainEvent<'a> {
     InputAvailable,
 
     /// Command from main thread: a new [`NativeWindow`] is ready for use.  Upon
-    /// receiving this command, [`native_window()`] will return the new window
+    /// receiving this command, [`AndroidApp::native_window()`] will return the new window
     #[non_exhaustive]
     InitWindow {},
 
     /// Command from main thread: the existing [`NativeWindow`] needs to be
-    /// terminated.  Upon receiving this command, [`native_window()`] still
+    /// terminated.  Upon receiving this command, [`AndroidApp::native_window()`] still
     /// returns the existing window; after returning from the [`AndroidApp::poll_events()`]
-    /// callback then [`native_window()`] will return `None`.
+    /// callback then [`AndroidApp::native_window()`] will return `None`.
     #[non_exhaustive]
     TerminateWindow {},
 
@@ -106,7 +106,7 @@ pub enum MainEvent<'a> {
     LostFocus,
 
     /// Command from main thread: the current device configuration has changed.
-    /// You can get a copy of the latest [Configuration] by calling
+    /// You can get a copy of the latest [`ndk::configuration::Configuration`] by calling
     /// [`AndroidApp::config()`]
     #[non_exhaustive]
     ConfigChanged {},
@@ -185,7 +185,7 @@ impl AndroidApp {
     /// Queries the current [`NativeWindow`] for the application.
     ///
     /// This will only return `Some(window)` between
-    /// [`AndroidAppMainEvent::InitWindow`] and [`AndroidAppMainEvent::TerminateWindow`]
+    /// [`MainEvent::InitWindow`] and [`MainEvent::TerminateWindow`]
     /// events.
     pub fn native_window<'a>(&self) -> Option<NativeWindow> {
         self.inner.read().unwrap().native_window()
@@ -202,6 +202,8 @@ impl AndroidApp {
     /// set to `None` once the callback returns, and this is also synchronized with the Java
     /// main thread. The [`MainEvent::SaveState`] event is also synchronized with the
     /// Java main thread.
+    ///
+    /// [`ALooper_pollAll`]: ndk::looper::ThreadLooper::poll_all
     pub fn poll_events<F>(&self, timeout: Option<Duration>, callback: F)
     where
         F: FnMut(PollEvent),
@@ -210,12 +212,12 @@ impl AndroidApp {
     }
 
     /// Creates a means to wake up the main loop while it is blocked waiting for
-    /// events within [`poll_events()`].
+    /// events within [`AndroidApp::poll_events()`].
     pub fn create_waker(&self) -> activity_impl::AndroidAppWaker {
         self.inner.read().unwrap().create_waker()
     }
 
-    /// Returns a (cheaply clonable) reference to this application's [`Configuration`]
+    /// Returns a (cheaply clonable) reference to this application's [`ndk::configuration::Configuration`]
     pub fn config(&self) -> ConfigurationRef {
         self.inner.read().unwrap().config()
     }

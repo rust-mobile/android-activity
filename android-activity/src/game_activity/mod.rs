@@ -175,7 +175,10 @@ impl AndroidAppInner {
             } else {
                 -1
             };
-            trace!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
+            trace!(
+                "Calling ALooper_pollAll, timeout = {}",
+                timeout_milliseconds
+            );
             let id = ALooper_pollAll(
                 timeout_milliseconds,
                 &mut fd,
@@ -262,9 +265,9 @@ impl AndroidAppInner {
                                     _ => unreachable!(),
                                 };
 
-                                trace!("Read ID_MAIN command {cmd_i} = {cmd:?}");
+                                trace!("Read ID_MAIN command {} = {:?}", cmd_i, cmd);
 
-                                trace!("Calling android_app_pre_exec_cmd({cmd_i})");
+                                trace!("Calling android_app_pre_exec_cmd({})", cmd_i);
                                 ffi::android_app_pre_exec_cmd(native_app.as_ptr(), cmd_i);
                                 match cmd {
                                     MainEvent::ConfigChanged { .. } => {
@@ -291,19 +294,19 @@ impl AndroidAppInner {
                                 trace!("Invoking callback for ID_MAIN command = {:?}", cmd);
                                 callback(PollEvent::Main(cmd));
 
-                                trace!("Calling android_app_post_exec_cmd({cmd_i})");
+                                trace!("Calling android_app_post_exec_cmd({})", cmd_i);
                                 ffi::android_app_post_exec_cmd(native_app.as_ptr(), cmd_i);
                             } else {
                                 panic!("ALooper_pollAll returned ID_MAIN event with NULL android_poll_source!");
                             }
                         }
                         _ => {
-                            error!("Ignoring spurious ALooper event source: id = {id}, fd = {fd}, events = {events:?}, data = {source:?}");
+                            error!("Ignoring spurious ALooper event source: id = {}, fd = {}, events = {:?}, data = {:?}", id, fd, events, source);
                         }
                     }
                 }
                 _ => {
-                    error!("Spurious ALooper_pollAll return value {id} (ignored)");
+                    error!("Spurious ALooper_pollAll return value {} (ignored)", id);
                 }
             }
         }
