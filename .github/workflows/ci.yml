@@ -68,7 +68,7 @@ jobs:
           build --features native-activity
 
       - name: Build agdk-mainloop example
-        if: matrix.rust_version == "stable"
+        if: matrix.rust_version == 'stable'
         working-directory: examples/agdk-mainloop
         run: >
           cargo ndk
@@ -79,7 +79,7 @@ jobs:
           -o app/src/main/jniLibs/ -- build
 
       - name: Build na-mainloop example
-        if: matrix.rust_version == "stable"
+        if: matrix.rust_version == 'stable'
         working-directory: examples/na-mainloop
         run: >
           cargo ndk
@@ -90,7 +90,7 @@ jobs:
           -o app/src/main/jniLibs/ -- build
 
       - name: Build agdk-egui example
-        if: matrix.rust_version == "stable"
+        if: matrix.rust_version == 'stable'
         working-directory: examples/agdk-egui
         run: >
           cargo ndk
@@ -101,7 +101,7 @@ jobs:
           -o app/src/main/jniLibs/ -- build
 
       - name: Build agdk-eframe example
-        if: matrix.rust_version == "stable"
+        if: matrix.rust_version == 'stable'
         working-directory: examples/agdk-eframe
         run: >
           cargo ndk
