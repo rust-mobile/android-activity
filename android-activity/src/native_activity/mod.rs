@@ -369,6 +369,32 @@ impl AndroidAppInner {
         }
     }
 
+    // TODO: move into a trait
+    pub fn show_soft_input(&self, show_implicit: bool) {
+        let na = self.native_activity();
+        unsafe {
+            let flags = if show_implicit {
+                ffi::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
+            } else {
+                0
+            };
+            ffi::ANativeActivity_showSoftInput(na as *mut _, flags);
+        }
+    }
+
+    // TODO: move into a trait
+    pub fn hide_soft_input(&self, hide_implicit_only: bool) {
+        let na = self.native_activity();
+        unsafe {
+            let flags = if hide_implicit_only {
+                ffi::ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY
+            } else {
+                0
+            };
+            ffi::ANativeActivity_hideSoftInput(na as *mut _, flags);
+        }
+    }
+
     pub fn enable_motion_axis(&self, _axis: input::Axis) {
         // NOP - The InputQueue API doesn't let us optimize which axis values are read
     }

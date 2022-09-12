@@ -320,6 +320,32 @@ impl AndroidAppInner {
         }
     }
 
+    // TODO: move into a trait
+    pub fn show_soft_input(&self, show_implicit: bool) {
+        unsafe {
+            let activity = (*self.native_app.as_ptr()).activity;
+            let flags = if show_implicit {
+                ffi::ShowImeFlags_SHOW_IMPLICIT
+            } else {
+                0
+            };
+            ffi::GameActivity_showSoftInput(activity, flags);
+        }
+    }
+
+    // TODO: move into a trait
+    pub fn hide_soft_input(&self, hide_implicit_only: bool) {
+        unsafe {
+            let activity = (*self.native_app.as_ptr()).activity;
+            let flags = if hide_implicit_only {
+                ffi::HideImeFlags_HIDE_IMPLICIT_ONLY
+            } else {
+                0
+            };
+            ffi::GameActivity_hideSoftInput(activity, flags);
+        }
+    }
+
     pub fn enable_motion_axis(&mut self, axis: Axis) {
         unsafe { ffi::GameActivityPointerAxes_enableAxis(axis as i32) }
     }
