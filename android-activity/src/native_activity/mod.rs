@@ -9,6 +9,7 @@ use libc::c_void;
 use log::{error, trace};
 use ndk::{asset::AssetManager, native_window::NativeWindow};
 
+use crate::input::{TextInputState, TextSpan};
 use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
@@ -341,6 +342,20 @@ impl AndroidAppInner {
         }
     }
 
+    // TODO: move into a trait
+    pub fn text_input_state(&self) -> TextInputState {
+        TextInputState {
+            text: String::new(),
+            selection: TextSpan { start: 0, end: 0 },
+            compose_region: None,
+        }
+    }
+
+    // TODO: move into a trait
+    pub fn set_text_input_state(&self, _state: TextInputState) {
+        // NOP: Unsupported
+    }
+
     pub fn enable_motion_axis(&self, _axis: input::Axis) {
         // NOP - The InputQueue API doesn't let us optimize which axis values are read
     }
@@ -390,6 +405,7 @@ impl AndroidAppInner {
                     input::InputEvent::KeyEvent(e) => {
                         ndk::event::InputEvent::KeyEvent(e.into_ndk_event())
                     }
+                    _ => unreachable!(),
                 };
                 queue.finish_event(ndk_event, matches!(handled, InputStatus::Handled));
             }

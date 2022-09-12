@@ -25,6 +25,7 @@ native-activity = []
 [dependencies]
 log = "0.4"
 jni-sys = "0.3"
+cesu8 = "1"
 ndk = "0.7"
 ndk-sys = "0.4"
 ndk-context = "0.1"

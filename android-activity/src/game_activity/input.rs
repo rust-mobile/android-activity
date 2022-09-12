@@ -26,6 +26,7 @@ use crate::input::{Class, Source};
 pub enum InputEvent<'a> {
     MotionEvent(MotionEvent<'a>),
     KeyEvent(KeyEvent<'a>),
+    TextEvent(crate::input::TextInputState),
 }
 
 /// A bitfield representing the state of modifier keys during an event.
