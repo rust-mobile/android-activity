@@ -442,8 +442,33 @@ impl AndroidApp {
         self.inner.write().unwrap().enable_motion_axis(axis);
     }
 
+    /// Disable input axis
+    ///
+    /// To reduce overhead, by default only [`input::Axis::X`] and [`input::Axis::Y`] are enabled
+    /// and other axis should be enabled explicitly.
     pub fn disable_motion_axis(&self, axis: input::Axis) {
         self.inner.write().unwrap().disable_motion_axis(axis);
+    }
+
+    /// Explicitly request that the current input method's soft input area be
+    /// shown to the user, if needed.
+    ///
+    /// Call this if the user interacts with your view in such a way that they
+    /// have expressed they would like to start performing input into it.
+    pub fn show_soft_input(&self, show_implicit: bool) {
+        self.inner.read().unwrap().show_soft_input(show_implicit);
+    }
+
+    /// Request to hide the soft input window from the context of the window
+    /// that is currently accepting input.
+    ///
+    /// This should be called as a result of the user doing some action that
+    /// fairly explicitly requests to have the input window hidden.
+    pub fn hide_soft_input(&self, hide_implicit_only: bool) {
+        self.inner
+            .read()
+            .unwrap()
+            .hide_soft_input(hide_implicit_only);
     }
 
     /// Query and process all out-standing input event
