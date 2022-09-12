@@ -23,7 +23,7 @@ use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
-use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect};
+use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect, WindowManagerFlags};
 
 mod ffi;
 
@@ -306,6 +306,17 @@ impl AndroidAppInner {
                     error!("Spurious ALooper_pollAll return value {id} (ignored)");
                 }
             }
+        }
+    }
+
+    pub fn set_window_flags(
+        &self,
+        add_flags: WindowManagerFlags,
+        remove_flags: WindowManagerFlags,
+    ) {
+        unsafe {
+            let activity = (*self.native_app.as_ptr()).activity;
+            ffi::GameActivity_setWindowFlags(activity, add_flags.bits(), remove_flags.bits())
         }
     }
 
