@@ -21,7 +21,7 @@ use ndk::configuration::Configuration;
 use ndk::input_queue::InputQueue;
 use ndk::native_window::NativeWindow;
 
-use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect};
+use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect, WindowManagerFlags};
 
 mod ffi;
 
@@ -350,6 +350,22 @@ impl AndroidAppInner {
             let app_ptr = self.native_app.as_ptr();
             let am_ptr = NonNull::new_unchecked((*(*app_ptr).activity).assetManager);
             AssetManager::from_ptr(am_ptr)
+        }
+    }
+
+    pub fn set_window_flags(
+        &self,
+        add_flags: WindowManagerFlags,
+        remove_flags: WindowManagerFlags,
+    ) {
+        let na = self.native_activity();
+        let na_mut = na as *mut ndk_sys::ANativeActivity;
+        unsafe {
+            ffi::ANativeActivity_setWindowFlags(
+                na_mut.cast(),
+                add_flags.bits(),
+                remove_flags.bits(),
+            );
         }
     }
 
