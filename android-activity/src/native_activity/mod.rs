@@ -27,9 +27,19 @@ mod ffi;
 
 pub mod input {
     pub use ndk::event::{
-        Axis, ButtonState, EdgeFlags, InputEvent, KeyAction, KeyEvent, KeyEventFlags, Keycode,
-        MetaState, MotionAction, MotionEvent, MotionEventFlags, Pointer, Source,
+        Axis, ButtonState, EdgeFlags, KeyAction, KeyEvent, KeyEventFlags, Keycode, MetaState,
+        MotionAction, MotionEvent, MotionEventFlags, Pointer, Source,
     };
+
+    // We use our own wrapper type for input events to have better consistency
+    // with GameActivity and ensure the enum can be extended without needing a
+    // semver bump
+    #[derive(Debug)]
+    #[non_exhaustive]
+    pub enum InputEvent {
+        MotionEvent(self::MotionEvent),
+        KeyEvent(self::KeyEvent),
+    }
 }
 
 // The only time it's safe to update the android_app->savedState pointer is
@@ -429,8 +439,17 @@ impl AndroidAppInner {
         // ref: https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/jni/android_view_InputQueue.cpp
         //
         while let Ok(Some(event)) = queue.get_event() {
-            if let Some(event) = queue.pre_dispatch(event) {
+            if let Some(ndk_event) = queue.pre_dispatch(event) {
+                let event = match ndk_event {
+                    ndk::event::InputEvent::MotionEvent(e) => input::InputEvent::MotionEvent(e),
+                    ndk::event::InputEvent::KeyEvent(e) => input::InputEvent::KeyEvent(e),
+                };
                 callback(&event);
+
+                let ndk_event = match event {
+                    input::InputEvent::MotionEvent(e) => ndk::event::InputEvent::MotionEvent(e),
+                    input::InputEvent::KeyEvent(e) => ndk::event::InputEvent::KeyEvent(e),
+                };
 
                 // Always report events as 'handled'. This means we won't get
                 // so called 'fallback' events generated (such as converting trackball
@@ -438,7 +457,7 @@ impl AndroidAppInner {
                 // implement similar emulation somewhere else in the stack if
                 // necessary, and this will be more consistent with the GameActivity
                 // input handling that doesn't do any kind of emulation.
-                queue.finish_event(event, true);
+                queue.finish_event(ndk_event, true);
             }
         }
     }
