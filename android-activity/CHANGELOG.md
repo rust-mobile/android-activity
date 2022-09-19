@@ -5,6 +5,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.3] - 2022-09-15
+### Added
+- `show/hide_sot_input` API for being able to show/hide a soft keyboard (other IME still pending)
+- `set_window_flags()` API for setting WindowManager params
+### Changed
+- *Breaking*: Created extensible, `#[non_exhaustive]` `InputEvent` wrapper enum instead of exposing `ndk` type directly
+
 ## [0.2] - 2022-08-25
 ### Added
 - Emit an `InputAvailable` event for new input with `NativeActivity` and `GameActivity`
