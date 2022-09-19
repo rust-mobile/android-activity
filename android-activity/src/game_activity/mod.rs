@@ -23,7 +23,9 @@ use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
-use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect, WindowManagerFlags};
+use crate::{
+    util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
+};
 
 mod ffi;
 
@@ -391,7 +393,7 @@ impl AndroidAppInner {
 
     pub fn input_events<'b, F>(&self, mut callback: F)
     where
-        F: FnMut(&InputEvent),
+        F: FnMut(&InputEvent) -> InputStatus,
     {
         let buf = unsafe {
             let app_ptr = self.native_app.as_ptr();

@@ -21,7 +21,9 @@ use ndk::configuration::Configuration;
 use ndk::input_queue::InputQueue;
 use ndk::native_window::NativeWindow;
 
-use crate::{util, AndroidApp, ConfigurationRef, MainEvent, PollEvent, Rect, WindowManagerFlags};
+use crate::{
+    util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
+};
 
 mod ffi;
 
@@ -415,7 +417,7 @@ impl AndroidAppInner {
 
     pub fn input_events<'b, F>(&self, mut callback: F)
     where
-        F: FnMut(&input::InputEvent),
+        F: FnMut(&input::InputEvent) -> InputStatus,
     {
         let queue = unsafe {
             let app_ptr = self.native_app.as_ptr();
@@ -444,20 +446,19 @@ impl AndroidAppInner {
                     ndk::event::InputEvent::MotionEvent(e) => input::InputEvent::MotionEvent(e),
                     ndk::event::InputEvent::KeyEvent(e) => input::InputEvent::KeyEvent(e),
                 };
-                callback(&event);
+                let handled = callback(&event);
 
                 let ndk_event = match event {
                     input::InputEvent::MotionEvent(e) => ndk::event::InputEvent::MotionEvent(e),
                     input::InputEvent::KeyEvent(e) => ndk::event::InputEvent::KeyEvent(e),
                 };
-
-                // Always report events as 'handled'. This means we won't get
-                // so called 'fallback' events generated (such as converting trackball
-                // events into emulated keypad events), but we could conceivably
-                // implement similar emulation somewhere else in the stack if
-                // necessary, and this will be more consistent with the GameActivity
-                // input handling that doesn't do any kind of emulation.
-                queue.finish_event(ndk_event, true);
+                queue.finish_event(
+                    ndk_event,
+                    match handled {
+                        InputStatus::Handled => true,
+                        _ => false,
+                    },
+                );
             }
         }
     }

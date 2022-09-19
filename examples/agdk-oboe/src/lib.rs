@@ -1,4 +1,4 @@
-use android_activity::{AndroidApp, MainEvent, PollEvent};
+use android_activity::{AndroidApp, MainEvent, PollEvent, InputStatus};
 use log::info;
 
 mod audio;
@@ -75,6 +75,7 @@ fn android_main(app: AndroidApp) {
                         // Handle input
                         app.input_events(|event| {
                             info!("Input Event: {event:?}");
+                            InputStatus::Unhandled
                         });
 
                         info!("Render...");
