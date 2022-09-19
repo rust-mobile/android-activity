@@ -86,11 +86,11 @@ which can also facilitate integration with additional AGDK libraries including:
 to help fullscreen native applications utilize the Android soft keyboard.
 2. [Game Controller Library, aka 'Paddleboat'](https://developer.android.com/games/sdk/game-controller):
 a native library designed to help support access to game controller inputs.
-3.[Frame Pacing Library, aka ' Swappy'](https://developer.android.com/games/sdk/frame-pacing): a library
+3. [Frame Pacing Library, aka ' Swappy'](https://developer.android.com/games/sdk/frame-pacing): a library
 that helps OpenGL and Vulkan games achieve smooth rendering and correct frame pacing on Android.
-3. [Memory Advice API](https://developer.android.com/games/sdk/memory-advice/overview): an API to
+4. [Memory Advice API](https://developer.android.com/games/sdk/memory-advice/overview): an API to
 help applications monitor their own memory usage to stay within safe limits for the system.
-4. [Oboe audio library](https://developer.android.com/games/sdk/oboe): a low-latency audio API for native
+5. [Oboe audio library](https://developer.android.com/games/sdk/oboe): a low-latency audio API for native
 applications.
 
 Since `GameActivity` is based on the widely used [AppCompatActivity] base class, it also
