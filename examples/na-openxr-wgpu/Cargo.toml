@@ -21,16 +21,12 @@ ctrlc = "3"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
-android-activity = { version = "0.3", features = [ "native-activity" ] }
+android-activity = { path="../../android-activity", features = [ "native-activity" ] }
 openxr = { version = "0.16", features = [ "linked" ] }
 
 [patch.crates-io]
 # openxr 0.16 uses ndk-glue, but master uses ndk-context which is compatible with android-activity
 openxr = { git = "https://github.com/Ralith/openxrs" }
-
-# Since Winit also depends on android-activity we need to
-# make sure we only resolve a single implementation.
-android-activity = { path="../../android-activity" }
 
 [features]
 default = []
