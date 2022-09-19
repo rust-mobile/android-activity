@@ -14,9 +14,9 @@ dependencies = [
 
 [[package]]
 name = "ab_glyph_rasterizer"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "363b9b88fad3af3be80bc8f762c9a3f9dfe906fd0327b8e92f1c12e5ae1b8bbb"
+checksum = "330223a1aecc308757b9926e9391c9b47f8ef2dbd8aea9df88312aea18c5e8d6"
 
 [[package]]
 name = "adler"
@@ -554,7 +554,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "bytemuck",
  "egui",
@@ -577,7 +577,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "ahash 0.8.0",
  "epaint",
@@ -588,7 +588,7 @@ dependencies = [
 [[package]]
 name = "egui-wgpu"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "bytemuck",
  "egui",
@@ -602,7 +602,7 @@ dependencies = [
 [[package]]
 name = "egui-winit"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "arboard",
  "egui",
@@ -616,7 +616,7 @@ dependencies = [
 [[package]]
 name = "egui_demo_lib"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "egui",
  "egui_extras",
@@ -628,7 +628,7 @@ dependencies = [
 [[package]]
 name = "egui_extras"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "egui",
 ]
@@ -636,7 +636,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "bytemuck",
  "egui",
@@ -650,7 +650,7 @@ dependencies = [
 [[package]]
 name = "emath"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "bytemuck",
 ]
@@ -678,9 +678,9 @@ dependencies = [
 
 [[package]]
 name = "env_logger"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b2cf0344971ee6c64c31be0d530793fba457d322dfec2810c453d0ef228f9c3"
+checksum = "c90bf5f19754d10198ccb95b70664fc925bd1fc090a0fd9a6ebc54acc8cd6272"
 dependencies = [
  "atty",
  "humantime",
@@ -692,7 +692,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.19.0"
-source = "git+https://github.com/emilk/egui#c4117066cf85e84cb5a33b358f36a884f858b33a"
+source = "git+https://github.com/emilk/egui#311eb66cae5d0a029e2f19dc60b9010872aa25db"
 dependencies = [
  "ab_glyph",
  "ahash 0.8.0",
@@ -1108,9 +1108,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.132"
+version = "0.2.133"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8371e4e5341c3a96db127eb2465ac681ced4c433e01dd0e938adbef26ba93ba5"
+checksum = "c0f80d65747a3e43d1596c7c5492d95d5edddaabd45a7fcdb02b95f644164966"
 
 [[package]]
 name = "libloading"
@@ -1762,9 +1762,9 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "syn"
-version = "1.0.99"
+version = "1.0.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58dbef6ec655055e20b86b15a8cc6d439cca19b667537ac6a1369572d151ab13"
+checksum = "52205623b1b0f064a4e71182c3b18ae902267282930c6d5462c91b859668426e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1898,9 +1898,9 @@ checksum = "dcc811dc4066ac62f84f11307873c4850cb653bfa9b1719cee2bd2204a4bc5dd"
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.21"
+version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "854cbdc4f7bc6ae19c820d44abdc3277ac3e1b2b93db20a636825d9322fb60e6"
+checksum = "5c5713f0fc4b5db668a2ac63cdb7bb4469d8c9fed047b1d0292cc7b0ce2ba921"
 dependencies = [
  "tinyvec",
 ]
@@ -2322,6 +2322,7 @@ checksum = "c811ca4a8c853ef420abd8592ba53ddbbac90410fab6903b3e79972a631f7680"
 [[package]]
 name = "winit"
 version = "0.27.2"
+source = "git+https://github.com/rib/winit?branch=android-activity#c6e5e409f47d59d1c4c881a6b5316eaf4e4a228e"
 dependencies = [
  "android-activity",
  "bitflags",
