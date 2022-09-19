@@ -76,6 +76,8 @@ dependencies = [
 [[package]]
 name = "android-activity"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe057899cd59c5254279b74382bf8132d683f8619ea50592c096710d65d03902"
 dependencies = [
  "android-properties",
  "bitflags",

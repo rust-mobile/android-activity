@@ -43,6 +43,7 @@ impl SineGen {
     }
 
     /// Pause audio stream
+    #[allow(dead_code)]
     pub fn try_pause(&mut self) {
         if let Some(stream) = &mut self.stream {
             log::debug!("pause stream: {:?}", stream);
@@ -92,6 +93,7 @@ impl SineParam {
         );
     }
 
+    #[allow(dead_code)]
     fn set_frequency(&self, frequency: f32) {
         let sample_rate = self.sample_rate.load(Ordering::Relaxed);
         let delta = frequency * 2.0 * PI / sample_rate;
@@ -100,6 +102,7 @@ impl SineParam {
         self.frequency.store(frequency, Ordering::Relaxed);
     }
 
+    #[allow(dead_code)]
     fn set_gain(&self, gain: f32) {
         self.gain.store(gain, Ordering::Relaxed);
     }
@@ -151,7 +154,7 @@ impl AudioOutputCallback for SineWave<f32, Mono> {
 
     fn on_audio_ready(
         &mut self,
-        stream: &mut dyn AudioOutputStreamSafe,
+        _stream: &mut dyn AudioOutputStreamSafe,
         frames: &mut [f32],
     ) -> DataCallbackResult {
         for frame in frames {
@@ -166,7 +169,7 @@ impl AudioOutputCallback for SineWave<f32, Stereo> {
 
     fn on_audio_ready(
         &mut self,
-        stream: &mut dyn AudioOutputStreamSafe,
+        _stream: &mut dyn AudioOutputStreamSafe,
         frames: &mut [(f32, f32)],
     ) -> DataCallbackResult {
         for frame in frames {

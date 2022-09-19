@@ -171,6 +171,12 @@ pub enum PollEvent<'a> {
     Main(MainEvent<'a>),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputStatus {
+    Handled,
+    Unhandled,
+}
+
 use activity_impl::AndroidAppInner;
 pub use activity_impl::AndroidAppWaker;
 
@@ -473,6 +479,10 @@ impl AndroidApp {
 
     /// Query and process all out-standing input event
     ///
+    /// `callback` should return [`InputStatus::Unhandled`] for any input events that aren't directly
+    /// handled by the application, or else [`InputStatus::Handled`]. Unhandled events may lead to a
+    /// fallback interpretation of the event.
+    ///
     /// Applications are generally either expected to call this in-sync with their rendering or
     /// in response to a [`MainEvent::InputAvailable`] event being delivered. _Note though that your
     /// application is will only be delivered a single [`MainEvent::InputAvailable`] event between calls
@@ -482,9 +492,9 @@ impl AndroidApp {
     /// and other axis should be enabled explicitly via [`Self::enable_motion_axis`].
     pub fn input_events<'b, F>(&self, callback: F)
     where
-        F: FnMut(&input::InputEvent),
+        F: FnMut(&input::InputEvent) -> InputStatus,
     {
-        self.inner.read().unwrap().input_events(callback);
+        self.inner.read().unwrap().input_events(callback)
     }
 
     /// The user-visible SDK version of the framework
