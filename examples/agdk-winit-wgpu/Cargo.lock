@@ -59,9 +59,9 @@ dependencies = [
 
 [[package]]
 name = "android-activity"
-version = "0.3.0"
+version = "0.4.0-beta"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe057899cd59c5254279b74382bf8132d683f8619ea50592c096710d65d03902"
+checksum = "5a075ee171be16fdd98264617e07df78e577f84dca12248b7a853461b4754dab"
 dependencies = [
  "android-properties",
  "bitflags",
@@ -1501,7 +1501,7 @@ checksum = "c811ca4a8c853ef420abd8592ba53ddbbac90410fab6903b3e79972a631f7680"
 [[package]]
 name = "winit"
 version = "0.27.3"
-source = "git+https://github.com/rib/winit?branch=android-activity-0.27#9b3b3b0ba6c5e89a3475c26adc8581e9ca499f8f"
+source = "git+https://github.com/rib/winit?branch=android-activity-0.27#dbd1d0795f68cd004bdc55aa1d1780a88e640954"
 dependencies = [
  "android-activity",
  "bitflags",
