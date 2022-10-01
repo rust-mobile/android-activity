@@ -651,7 +651,6 @@ fn bindgen_test_layout_pollfd() {
         )
     );
 }
-pub type size_t = ::std::os::raw::c_uint;
 pub type wchar_t = ::std::os::raw::c_int;
 #[repr(C)]
 #[repr(align(8))]
@@ -3098,7 +3097,6 @@ fn bindgen_test_layout___kernel_sigaction() {
     );
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
 pub struct sigaltstack {
     pub ss_sp: *mut ::std::os::raw::c_void,
     pub ss_flags: ::std::os::raw::c_int,
@@ -5229,7 +5227,6 @@ fn bindgen_test_layout_mcontext_t() {
     );
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct ucontext {
     pub uc_flags: ::std::os::raw::c_ulong,
     pub uc_link: *mut ucontext,
@@ -7257,67 +7254,6 @@ pub const ADataSpace_ADATASPACE_SCRGB: ADataSpace = 411107328;
 pub const ADataSpace_ADATASPACE_DISPLAY_P3: ADataSpace = 143261696;
 pub const ADataSpace_ADATASPACE_BT2020_PQ: ADataSpace = 163971072;
 pub type ADataSpace = ::std::os::raw::c_uint;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ARect {
-    pub left: i32,
-    pub top: i32,
-    pub right: i32,
-    pub bottom: i32,
-}
-#[test]
-fn bindgen_test_layout_ARect() {
-    assert_eq!(
-        ::std::mem::size_of::<ARect>(),
-        16usize,
-        concat!("Size of: ", stringify!(ARect))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<ARect>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ARect))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ARect>())).left as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ARect),
-            "::",
-            stringify!(left)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ARect>())).top as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ARect),
-            "::",
-            stringify!(top)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ARect>())).right as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ARect),
-            "::",
-            stringify!(right)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ARect>())).bottom as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ARect),
-            "::",
-            stringify!(bottom)
-        )
-    );
-}
 pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM: AHardwareBuffer_Format = 1;
 pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM: AHardwareBuffer_Format = 2;
 pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM: AHardwareBuffer_Format = 3;
@@ -8620,7 +8556,7 @@ extern "C" {
 extern "C" {
     pub fn android_app_create(
         activity: *mut ANativeActivity,
-        savedState: *mut ::std::os::raw::c_void,
+        savedState: *const ::std::os::raw::c_void,
         savedStateSize: size_t,
     ) -> *mut android_app;
 }
@@ -8640,10 +8576,7 @@ extern "C" {
     pub fn android_app_free(android_app: *mut android_app);
 }
 extern "C" {
-    #[doc = " Dummy function that used to be used to prevent the linker from stripping app"]
-    #[doc = " glue code. No longer necessary, since __attribute__((visibility(\"default\")))"]
-    #[doc = " does this for us."]
-    pub fn app_dummy();
+    pub fn android_app_entry(param: *mut ::std::os::raw::c_void) -> *mut ::std::os::raw::c_void;
 }
 extern "C" {
     #[doc = " This is the function that application code must implement, representing"]

@@ -16,6 +16,10 @@ while read ARCH && read TARGET ; do
         --blocklist-item 'C?_?JNIEnv' \
         --blocklist-item '_?JavaVM' \
         --blocklist-item '_?j\w+' \
+        --blocklist-item 'size_t' \
+        --blocklist-item 'pthread_\w*' \
+        --blocklist-function 'pthread_\w' \
+        --blocklist-item 'ARect' \
         --blocklist-item 'ALooper\w*' \
         --blocklist-function 'ALooper\w*' \
         --blocklist-item 'AAsset\w*' \
@@ -38,6 +42,10 @@ while read ARCH && read TARGET ; do
         --blocklist-item 'C?_?JNIEnv' \
         --blocklist-item '_?JavaVM' \
         --blocklist-item '_?j\w+' \
+        --blocklist-item 'size_t' \
+        --blocklist-item 'pthread_\w*' \
+        --blocklist-function 'pthread_\w' \
+        --blocklist-item 'ARect' \
         --blocklist-item 'ALooper\w*' \
         --blocklist-function 'ALooper\w*' \
         --blocklist-item 'AAsset\w*' \
@@ -53,9 +61,6 @@ while read ARCH && read TARGET ; do
         --blocklist-item 'GameActivity_onCreate' \
         --blocklist-function 'GameActivity_onCreate_C' \
         --newtype-enum '\w+_(result|status)_t' \
-        --blocklist-item 'pthread_mutex_t' \
-        --blocklist-item 'pthread_cond_t' \
-        --blocklist-item 'pthread_\w*' \
         -- \
         -Inative-activity-csrc \
         --sysroot="$SYSROOT" --target=$TARGET

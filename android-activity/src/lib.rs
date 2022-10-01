@@ -69,6 +69,25 @@ pub struct Rect {
     pub bottom: i32,
 }
 
+impl Rect {
+    /// An empty `Rect` with all components set to zero.
+    pub fn empty() -> Self {
+        Self { left: 0, top: 0, right: 0, bottom: 0 }
+    }
+}
+
+impl Into<ndk_sys::ARect> for Rect {
+    fn into(self) -> ndk_sys::ARect {
+        ndk_sys::ARect { left: self.left, right: self.right, top: self.top, bottom: self.bottom }
+    }
+}
+
+impl From<ndk_sys::ARect> for Rect {
+    fn from(arect: ndk_sys::ARect) -> Self {
+        Self { left: arect.left, right: arect.right, top: arect.top, bottom: arect.bottom }
+    }
+}
+
 pub type StateSaver<'a> = activity_impl::StateSaver<'a>;
 pub type StateLoader<'a> = activity_impl::StateLoader<'a>;
 

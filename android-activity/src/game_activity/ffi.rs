@@ -13,9 +13,8 @@
 #![allow(dead_code)]
 
 use jni_sys::*;
-use ndk_sys::AAssetManager;
-use ndk_sys::ANativeWindow;
-use ndk_sys::{AConfiguration, ALooper, ALooper_callbackFunc};
+use ndk_sys::{ARect, AConfiguration, ALooper, ALooper_callbackFunc, AAssetManager, ANativeWindow};
+use libc::{size_t, pthread_t, pthread_mutex_t, pthread_cond_t};
 
 #[cfg(all(
     any(target_os = "android", feature = "test"),

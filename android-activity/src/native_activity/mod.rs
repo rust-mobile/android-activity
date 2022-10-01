@@ -479,10 +479,101 @@ impl AndroidAppInner {
     }
 }
 
+extern "C" fn android_app_main(arg: *mut libc::c_void) -> *mut libc::c_void {
+    unsafe { ffi::android_app_entry(arg) as *mut _ }
+}
+
+unsafe extern "C" fn android_app_create(activity: *mut ffi::ANativeActivity,
+    saved_state_in: *const libc::c_void, saved_state_size: libc::size_t) -> *mut ffi::android_app
+{
+    let mut msgpipe: [libc::c_int; 2] = [ -1, -1 ];
+    if libc::pipe(msgpipe.as_mut_ptr()) != 0 {
+        panic!("could not create  Rust <-> Java IPC pipe: {}", std::io::Error::last_os_error());
+    }
+
+    // For now we need to use malloc to track saved state, while the android_native_app_glue
+    // code will use free() to free the memory.
+    let mut saved_state = ptr::null_mut();
+    if saved_state_in != ptr::null() && saved_state_size > 0 {
+        saved_state = libc::malloc(saved_state_size);
+        assert!(saved_state != ptr::null_mut(), "Failed to allocate {} bytes for restoring saved application state", saved_state_size);
+        libc::memcpy(saved_state, saved_state_in, saved_state_size);
+    }
+
+    let android_app = Box::into_raw(Box::new(ffi::android_app {
+        userData: ptr::null_mut(),
+        onAppCmd: None,
+        onInputEvent: None,
+        activity,
+        config: ptr::null_mut(),
+        savedState: saved_state,
+        savedStateSize: saved_state_size,
+        looper: ptr::null_mut(),
+        inputQueue: ptr::null_mut(),
+        window: ptr::null_mut(),
+        contentRect: Rect::empty().into(),
+        activityState: 0,
+        destroyRequested: 0,
+        mutex: libc::PTHREAD_MUTEX_INITIALIZER,
+        cond: libc::PTHREAD_COND_INITIALIZER,
+        msgread: msgpipe[0],
+        msgwrite: msgpipe[1],
+        thread: 0,
+        cmdPollSource: ffi::android_poll_source { id: 0, app: ptr::null_mut(), process: None },
+        inputPollSource: ffi::android_poll_source { id: 0, app: ptr::null_mut(), process: None },
+        running: 0,
+        stateSaved: 0,
+        destroyed: 0,
+        redrawNeeded: 0,
+        pendingInputQueue: ptr::null_mut(),
+        pendingWindow: ptr::null_mut(),
+        pendingContentRect: Rect::empty().into(),
+    }));
+
+    // TODO: use std::os::spawn and drop the handle to detach instead of directly
+    // using pthread_create
+    let mut attr = std::mem::MaybeUninit::<libc::pthread_attr_t>::zeroed();
+    libc::pthread_attr_init(attr.as_mut_ptr());
+    libc::pthread_attr_setdetachstate(attr.as_mut_ptr(), libc::PTHREAD_CREATE_DETACHED);
+    let mut thread = std::mem::MaybeUninit::<libc::pthread_t>::zeroed();
+    libc::pthread_create(thread.as_mut_ptr(), attr.as_mut_ptr(), android_app_main, android_app as *mut _);
+    let thread = thread.assume_init();
+    (*android_app).thread = thread;
+
+    // TODO: switch to std::sync::Condvar
+    // Wait for thread to start.
+    libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+    while (*android_app).running == 0 {
+        libc::pthread_cond_wait(&mut (*android_app).cond as *mut _, &mut (*android_app).mutex as *mut _);
+    }
+    libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+
+    android_app
+}
+
+unsafe extern "C" fn android_app_drop(android_app: *mut ffi::android_app) {
+    libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+    ffi::android_app_write_cmd(android_app, ffi::APP_CMD_DESTROY as i8);
+    while !(*android_app).destroyed == 0 {
+        libc::pthread_cond_wait(&mut (*android_app).cond as *mut _, &mut (*android_app).mutex as *mut _);
+    }
+    libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+
+    libc::close((*android_app).msgread);
+    libc::close((*android_app).msgwrite);
+    libc::pthread_cond_destroy(&mut (*android_app).cond as *mut _);
+    libc::pthread_mutex_destroy(&mut (*android_app).mutex as *mut _);
+
+    let _android_app = Box::from_raw(android_app);
+    // Box dropped here
+}
+
 unsafe extern "C" fn on_destroy(activity: *mut ffi::ANativeActivity) {
     log::debug!("Destroy: {:p}\n", activity);
+
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_free(android_app);
+    (*activity).instance = ptr::null_mut();
+    android_app_drop(android_app);
 }
 
 unsafe extern "C" fn on_start(activity: *mut ffi::ANativeActivity) {
@@ -498,7 +589,7 @@ unsafe extern "C" fn on_resume(activity: *mut ffi::ANativeActivity) {
     ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_RESUME as i8);
 }
 
-unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity, out_len: *mut ffi::size_t) -> *mut libc::c_void {
+unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity, out_len: *mut libc::size_t) -> *mut libc::c_void {
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     let mut saved_state: *mut libc::c_void = ptr::null_mut();
 
@@ -580,8 +671,8 @@ unsafe extern "C" fn on_input_queue_destroyed(activity: *mut ffi::ANativeActivit
 #[no_mangle]
 unsafe extern "C" fn ANativeActivity_onCreate(
     activity: *mut ffi::ANativeActivity,
-    saved_state: *mut std::os::raw::c_void,
-    saved_state_size: usize,
+    saved_state: *const libc::c_void,
+    saved_state_size: libc::size_t,
 ) {
     log::debug!("Creating: {:p}", activity);
 
@@ -599,7 +690,7 @@ unsafe extern "C" fn ANativeActivity_onCreate(
     (*(*activity).callbacks).onInputQueueCreated = Some(on_input_queue_created);
     (*(*activity).callbacks).onInputQueueDestroyed = Some(on_input_queue_destroyed);
 
-    (*activity).instance = ffi::android_app_create(activity, saved_state, saved_state_size as u64) as *mut _;
+    (*activity).instance = android_app_create(activity, saved_state, saved_state_size) as *mut _;
 }
 
 fn android_log(level: Level, tag: &CStr, msg: &CStr) {

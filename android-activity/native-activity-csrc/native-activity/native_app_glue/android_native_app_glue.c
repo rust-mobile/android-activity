@@ -201,7 +201,7 @@ static void process_cmd(struct android_app* app, __attribute__((unused)) struct 
     android_app_post_exec_cmd(app, cmd);
 }
 
-static void* android_app_entry(void* param) {
+void* android_app_entry(void* param) {
     struct android_app* android_app = (struct android_app*)param;
 
     android_app->config = AConfiguration_new();
@@ -233,43 +233,6 @@ static void* android_app_entry(void* param) {
 // Native activity interaction (called from main thread)
 // --------------------------------------------------------------------
 
-struct android_app* android_app_create(ANativeActivity* activity,
-        void* savedState, size_t savedStateSize) {
-    struct android_app* android_app = (struct android_app*)malloc(sizeof(struct android_app));
-    memset(android_app, 0, sizeof(struct android_app));
-    android_app->activity = activity;
-
-    pthread_mutex_init(&android_app->mutex, NULL);
-    pthread_cond_init(&android_app->cond, NULL);
-
-    if (savedState != NULL) {
-        android_app->savedState = malloc(savedStateSize);
-        android_app->savedStateSize = savedStateSize;
-        memcpy(android_app->savedState, savedState, savedStateSize);
-    }
-
-    int msgpipe[2];
-    if (pipe(msgpipe)) {
-        LOGE("could not create pipe: %s", strerror(errno));
-        return NULL;
-    }
-    android_app->msgread = msgpipe[0];
-    android_app->msgwrite = msgpipe[1];
-
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    pthread_create(&android_app->thread, &attr, android_app_entry, android_app);
-
-    // Wait for thread to start.
-    pthread_mutex_lock(&android_app->mutex);
-    while (!android_app->running) {
-        pthread_cond_wait(&android_app->cond, &android_app->mutex);
-    }
-    pthread_mutex_unlock(&android_app->mutex);
-
-    return android_app;
-}
 
 void android_app_write_cmd(struct android_app* android_app, int8_t cmd) {
     if (write(android_app->msgwrite, &cmd, sizeof(cmd)) != sizeof(cmd)) {
@@ -309,19 +272,4 @@ void android_app_set_activity_state(struct android_app* android_app, int8_t cmd)
         pthread_cond_wait(&android_app->cond, &android_app->mutex);
     }
     pthread_mutex_unlock(&android_app->mutex);
-}
-
-void android_app_free(struct android_app* android_app) {
-    pthread_mutex_lock(&android_app->mutex);
-    android_app_write_cmd(android_app, APP_CMD_DESTROY);
-    while (!android_app->destroyed) {
-        pthread_cond_wait(&android_app->cond, &android_app->mutex);
-    }
-    pthread_mutex_unlock(&android_app->mutex);
-
-    close(android_app->msgread);
-    close(android_app->msgwrite);
-    pthread_cond_destroy(&android_app->cond);
-    pthread_mutex_destroy(&android_app->mutex);
-    free(android_app);
 }
