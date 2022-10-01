@@ -483,7 +483,7 @@ extern "C" fn android_app_main(arg: *mut libc::c_void) -> *mut libc::c_void {
     unsafe { ffi::android_app_entry(arg) as *mut _ }
 }
 
-unsafe extern "C" fn android_app_create(activity: *mut ffi::ANativeActivity,
+unsafe fn android_app_create(activity: *mut ffi::ANativeActivity,
     saved_state_in: *const libc::c_void, saved_state_size: libc::size_t) -> *mut ffi::android_app
 {
     let mut msgpipe: [libc::c_int; 2] = [ -1, -1 ];
@@ -551,9 +551,9 @@ unsafe extern "C" fn android_app_create(activity: *mut ffi::ANativeActivity,
     android_app
 }
 
-unsafe extern "C" fn android_app_drop(android_app: *mut ffi::android_app) {
+unsafe fn android_app_drop(android_app: *mut ffi::android_app) {
     libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
-    ffi::android_app_write_cmd(android_app, ffi::APP_CMD_DESTROY as i8);
+    android_app_write_cmd(android_app, ffi::APP_CMD_DESTROY as i8);
     while !(*android_app).destroyed == 0 {
         libc::pthread_cond_wait(&mut (*android_app).cond as *mut _, &mut (*android_app).mutex as *mut _);
     }
@@ -568,6 +568,55 @@ unsafe extern "C" fn android_app_drop(android_app: *mut ffi::android_app) {
     // Box dropped here
 }
 
+unsafe fn android_app_write_cmd(android_app: *mut ffi::android_app, cmd: i8) {
+    loop {
+        match libc::write((*android_app).msgwrite, &cmd as *const _ as *const _, 1) {
+            1 => break,
+            -1 => {
+                let err = std::io::Error::last_os_error();
+                if err.kind() != std::io::ErrorKind::Interrupted {
+                    panic!("Failure writing android_app cmd: {}", err);
+                }
+            }
+            count => panic!("Spurious write of {count} bytes while writing android_app cmd")
+        }
+    }
+}
+
+unsafe fn android_app_set_input(android_app: *mut ffi::android_app, input_queue: *mut ndk_sys::AInputQueue) {
+    libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+    (*android_app).pendingInputQueue = input_queue;
+    android_app_write_cmd(android_app, ffi::APP_CMD_INPUT_CHANGED as i8);
+    while (*android_app).inputQueue != (*android_app).pendingInputQueue {
+        libc::pthread_cond_wait(&mut (*android_app).cond as *mut _, &mut (*android_app).mutex as *mut _);
+    }
+    libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+}
+
+unsafe fn android_app_set_window(android_app: *mut ffi::android_app, window: *mut ndk_sys::ANativeWindow) {
+    libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+    if (*android_app).pendingWindow != ptr::null_mut() {
+        android_app_write_cmd(android_app, ffi::APP_CMD_TERM_WINDOW as i8);
+    }
+    (*android_app).pendingWindow = window;
+    if window != ptr::null_mut() {
+        android_app_write_cmd(android_app, ffi::APP_CMD_INIT_WINDOW as i8);
+    }
+    while (*android_app).window != (*android_app).pendingWindow {
+        libc::pthread_cond_wait(&mut (*android_app).cond as *mut _, &mut (*android_app).mutex as *mut _);
+    }
+    libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+}
+
+unsafe fn android_app_set_activity_state(android_app: *mut ffi::android_app, cmd: i8) {
+    libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+    android_app_write_cmd(android_app, cmd);
+    while (*android_app).activityState as i8 != cmd {
+        libc::pthread_cond_wait(&mut (*android_app).cond as *mut _, &mut (*android_app).mutex as *mut _);
+    }
+    libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+}
+
 unsafe extern "C" fn on_destroy(activity: *mut ffi::ANativeActivity) {
     log::debug!("Destroy: {:p}\n", activity);
 
@@ -580,13 +629,13 @@ unsafe extern "C" fn on_start(activity: *mut ffi::ANativeActivity) {
     log::debug!("Start: {:p}\n", activity);
 
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_START as i8);
+    android_app_set_activity_state(android_app, ffi::APP_CMD_START as i8);
 }
 
 unsafe extern "C" fn on_resume(activity: *mut ffi::ANativeActivity) {
     log::debug!("Resume: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_RESUME as i8);
+    android_app_set_activity_state(android_app, ffi::APP_CMD_RESUME as i8);
 }
 
 unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity, out_len: *mut libc::size_t) -> *mut libc::c_void {
@@ -596,7 +645,7 @@ unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity,
     log::debug!("SaveInstanceState: {:p}\n", activity);
     libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
     (*android_app).stateSaved = 0;
-    ffi::android_app_write_cmd(android_app, ffi::APP_CMD_SAVE_STATE as i8);
+    android_app_write_cmd(android_app, ffi::APP_CMD_SAVE_STATE as i8);
     while (*android_app).stateSaved == 0 {
         libc::pthread_cond_wait(&mut (*android_app).cond as *mut _, &mut (*android_app).mutex as *mut _);
     }
@@ -616,56 +665,56 @@ unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity,
 unsafe extern "C" fn on_pause(activity: *mut ffi::ANativeActivity) {
     log::debug!("Pause: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_PAUSE as i8);
+    android_app_set_activity_state(android_app, ffi::APP_CMD_PAUSE as i8);
 }
 
 unsafe extern "C" fn on_stop(activity: *mut ffi::ANativeActivity) {
     log::debug!("Stop: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_STOP as i8);
+    android_app_set_activity_state(android_app, ffi::APP_CMD_STOP as i8);
 }
 
 unsafe extern "C" fn on_configuration_changed(activity: *mut ffi::ANativeActivity) {
     log::debug!("ConfigurationChanged: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_write_cmd(android_app, ffi::APP_CMD_CONFIG_CHANGED as i8);
+    android_app_write_cmd(android_app, ffi::APP_CMD_CONFIG_CHANGED as i8);
 }
 
 unsafe extern "C" fn on_low_memory(activity: *mut ffi::ANativeActivity) {
     log::debug!("LowMemory: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_write_cmd(android_app, ffi::APP_CMD_LOW_MEMORY as i8);
+    android_app_write_cmd(android_app, ffi::APP_CMD_LOW_MEMORY as i8);
 }
 
 unsafe extern "C" fn on_window_focus_changed(activity: *mut ffi::ANativeActivity, focused: libc::c_int) {
     log::debug!("WindowFocusChanged: {:p} -- {}\n", activity, focused);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_write_cmd(android_app,
+    android_app_write_cmd(android_app,
             if focused != 0 { ffi::APP_CMD_GAINED_FOCUS as i8 } else { ffi::APP_CMD_LOST_FOCUS as i8});
 }
 
 unsafe extern "C" fn on_native_window_created(activity: *mut ffi::ANativeActivity, window: *mut ndk_sys::ANativeWindow) {
     log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_set_window(android_app, window);
+    android_app_set_window(android_app, window);
 }
 
 unsafe extern "C" fn on_native_window_destroyed(activity: *mut ffi::ANativeActivity, window: *mut ndk_sys::ANativeWindow) {
     log::debug!("NativeWindowDestroyed: {:p} -- {:p}\n", activity, window);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_set_window(android_app, ptr::null_mut());
+    android_app_set_window(android_app, ptr::null_mut());
 }
 
 unsafe extern "C" fn on_input_queue_created(activity: *mut ffi::ANativeActivity, queue: *mut ndk_sys::AInputQueue) {
     log::debug!("InputQueueCreated: {:p} -- {:p}\n", activity, queue);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_set_input(android_app, queue);
+    android_app_set_input(android_app, queue);
 }
 
 unsafe extern "C" fn on_input_queue_destroyed(activity: *mut ffi::ANativeActivity, queue: *mut ndk_sys::AInputQueue) {
     log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
-    ffi::android_app_set_input(android_app, ptr::null_mut());
+    android_app_set_input(android_app, ptr::null_mut());
 }
 
 #[no_mangle]

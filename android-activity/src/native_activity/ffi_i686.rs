@@ -8554,28 +8554,6 @@ extern "C" {
     pub fn android_app_detach_input_queue_looper(android_app: *mut android_app);
 }
 extern "C" {
-    pub fn android_app_create(
-        activity: *mut ANativeActivity,
-        savedState: *const ::std::os::raw::c_void,
-        savedStateSize: size_t,
-    ) -> *mut android_app;
-}
-extern "C" {
-    pub fn android_app_write_cmd(android_app: *mut android_app, cmd: i8);
-}
-extern "C" {
-    pub fn android_app_set_input(android_app: *mut android_app, inputQueue: *mut AInputQueue);
-}
-extern "C" {
-    pub fn android_app_set_window(android_app: *mut android_app, window: *mut ANativeWindow);
-}
-extern "C" {
-    pub fn android_app_set_activity_state(android_app: *mut android_app, cmd: i8);
-}
-extern "C" {
-    pub fn android_app_free(android_app: *mut android_app);
-}
-extern "C" {
     pub fn android_app_entry(param: *mut ::std::os::raw::c_void) -> *mut ::std::os::raw::c_void;
 }
 extern "C" {
