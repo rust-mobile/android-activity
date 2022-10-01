@@ -334,6 +334,15 @@ void android_app_post_exec_cmd(struct android_app* android_app, int8_t cmd);
 void android_app_attach_input_queue_looper(struct android_app* android_app);
 void android_app_detach_input_queue_looper(struct android_app* android_app);
 
+
+struct android_app* android_app_create(ANativeActivity* activity,
+        void* savedState, size_t savedStateSize);
+void android_app_write_cmd(struct android_app* android_app, int8_t cmd);
+void android_app_set_input(struct android_app* android_app, AInputQueue* inputQueue);
+void android_app_set_window(struct android_app* android_app, ANativeWindow* window);
+void android_app_set_activity_state(struct android_app* android_app, int8_t cmd);
+void android_app_free(struct android_app* android_app);
+
 /**
  * Dummy function that used to be used to prevent the linker from stripping app
  * glue code. No longer necessary, since __attribute__((visibility("default")))

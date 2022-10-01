@@ -479,26 +479,127 @@ impl AndroidAppInner {
     }
 }
 
-// Rust doesn't give us a clean way to directly export symbols from C/C++
-// so we rename the C/C++ symbols and re-export this entrypoint from
-// Rust...
-//
-// https://github.com/rust-lang/rfcs/issues/2771
-extern "C" {
-    pub fn ANativeActivity_onCreate_C(
-        activity: *mut std::os::raw::c_void,
-        savedState: *mut ::std::os::raw::c_void,
-        savedStateSize: usize,
-    );
+unsafe extern "C" fn on_destroy(activity: *mut ffi::ANativeActivity) {
+    log::debug!("Destroy: {:p}\n", activity);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_free(android_app);
+}
+
+unsafe extern "C" fn on_start(activity: *mut ffi::ANativeActivity) {
+    log::debug!("Start: {:p}\n", activity);
+
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_START as i8);
+}
+
+unsafe extern "C" fn on_resume(activity: *mut ffi::ANativeActivity) {
+    log::debug!("Resume: {:p}\n", activity);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_RESUME as i8);
+}
+
+unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity, out_len: *mut ffi::size_t) -> *mut libc::c_void {
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    let mut saved_state: *mut libc::c_void = ptr::null_mut();
+
+    log::debug!("SaveInstanceState: {:p}\n", activity);
+    libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+    (*android_app).stateSaved = 0;
+    ffi::android_app_write_cmd(android_app, ffi::APP_CMD_SAVE_STATE as i8);
+    while (*android_app).stateSaved == 0 {
+        libc::pthread_cond_wait(&mut (*android_app).cond as *mut _, &mut (*android_app).mutex as *mut _);
+    }
+
+    if (*android_app).savedState != ptr::null_mut() {
+        saved_state = (*android_app).savedState;
+        *out_len = (*android_app).savedStateSize;
+        (*android_app).savedState = ptr::null_mut();
+        (*android_app).savedStateSize = 0;
+    }
+
+    libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+
+    return saved_state;
+}
+
+unsafe extern "C" fn on_pause(activity: *mut ffi::ANativeActivity) {
+    log::debug!("Pause: {:p}\n", activity);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_PAUSE as i8);
+}
+
+unsafe extern "C" fn on_stop(activity: *mut ffi::ANativeActivity) {
+    log::debug!("Stop: {:p}\n", activity);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_set_activity_state(android_app, ffi::APP_CMD_STOP as i8);
+}
+
+unsafe extern "C" fn on_configuration_changed(activity: *mut ffi::ANativeActivity) {
+    log::debug!("ConfigurationChanged: {:p}\n", activity);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_write_cmd(android_app, ffi::APP_CMD_CONFIG_CHANGED as i8);
+}
+
+unsafe extern "C" fn on_low_memory(activity: *mut ffi::ANativeActivity) {
+    log::debug!("LowMemory: {:p}\n", activity);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_write_cmd(android_app, ffi::APP_CMD_LOW_MEMORY as i8);
+}
+
+unsafe extern "C" fn on_window_focus_changed(activity: *mut ffi::ANativeActivity, focused: libc::c_int) {
+    log::debug!("WindowFocusChanged: {:p} -- {}\n", activity, focused);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_write_cmd(android_app,
+            if focused != 0 { ffi::APP_CMD_GAINED_FOCUS as i8 } else { ffi::APP_CMD_LOST_FOCUS as i8});
+}
+
+unsafe extern "C" fn on_native_window_created(activity: *mut ffi::ANativeActivity, window: *mut ndk_sys::ANativeWindow) {
+    log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_set_window(android_app, window);
+}
+
+unsafe extern "C" fn on_native_window_destroyed(activity: *mut ffi::ANativeActivity, window: *mut ndk_sys::ANativeWindow) {
+    log::debug!("NativeWindowDestroyed: {:p} -- {:p}\n", activity, window);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_set_window(android_app, ptr::null_mut());
+}
+
+unsafe extern "C" fn on_input_queue_created(activity: *mut ffi::ANativeActivity, queue: *mut ndk_sys::AInputQueue) {
+    log::debug!("InputQueueCreated: {:p} -- {:p}\n", activity, queue);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_set_input(android_app, queue);
+}
+
+unsafe extern "C" fn on_input_queue_destroyed(activity: *mut ffi::ANativeActivity, queue: *mut ndk_sys::AInputQueue) {
+    log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
+    let android_app: *mut ffi::android_app = (*activity).instance.cast();
+    ffi::android_app_set_input(android_app, ptr::null_mut());
 }
 
 #[no_mangle]
 unsafe extern "C" fn ANativeActivity_onCreate(
-    activity: *mut std::os::raw::c_void,
+    activity: *mut ffi::ANativeActivity,
     saved_state: *mut std::os::raw::c_void,
     saved_state_size: usize,
 ) {
-    ANativeActivity_onCreate_C(activity, saved_state, saved_state_size);
+    log::debug!("Creating: {:p}", activity);
+
+    (*(*activity).callbacks).onDestroy = Some(on_destroy);
+    (*(*activity).callbacks).onStart = Some(on_start);
+    (*(*activity).callbacks).onResume = Some(on_resume);
+    (*(*activity).callbacks).onSaveInstanceState = Some(on_save_instance_state);
+    (*(*activity).callbacks).onPause = Some(on_pause);
+    (*(*activity).callbacks).onStop = Some(on_stop);
+    (*(*activity).callbacks).onConfigurationChanged = Some(on_configuration_changed);
+    (*(*activity).callbacks).onLowMemory = Some(on_low_memory);
+    (*(*activity).callbacks).onWindowFocusChanged = Some(on_window_focus_changed);
+    (*(*activity).callbacks).onNativeWindowCreated = Some(on_native_window_created);
+    (*(*activity).callbacks).onNativeWindowDestroyed = Some(on_native_window_destroyed);
+    (*(*activity).callbacks).onInputQueueCreated = Some(on_input_queue_created);
+    (*(*activity).callbacks).onInputQueueDestroyed = Some(on_input_queue_destroyed);
+
+    (*activity).instance = ffi::android_app_create(activity, saved_state, saved_state_size as u64) as *mut _;
 }
 
 fn android_log(level: Level, tag: &CStr, msg: &CStr) {

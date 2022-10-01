@@ -16,6 +16,7 @@ use jni_sys::*;
 use ndk_sys::AAssetManager;
 use ndk_sys::ANativeWindow;
 use ndk_sys::{AConfiguration, AInputQueue, ALooper};
+use libc::{pthread_t, pthread_mutex_t, pthread_cond_t};
 
 #[cfg(all(
     any(target_os = "android", feature = "test"),
