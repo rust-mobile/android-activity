@@ -8572,12 +8572,13 @@ extern "C" {
     pub fn android_app_detach_input_queue_looper(android_app: *mut android_app);
 }
 extern "C" {
-    pub fn android_app_entry(param: *mut ::std::os::raw::c_void) -> *mut ::std::os::raw::c_void;
+    pub fn print_cur_config(android_app: *mut android_app);
 }
 extern "C" {
-    #[doc = " This is the function that application code must implement, representing"]
-    #[doc = " the main entry to the app."]
-    pub fn _rust_glue_entry(app: *mut android_app);
+    pub fn process_cmd(app: *mut android_app, source: *mut android_poll_source);
+}
+extern "C" {
+    pub fn android_app_destroy(android_app: *mut android_app);
 }
 pub type __builtin_va_list = [__va_list_tag; 1usize];
 #[repr(C)]

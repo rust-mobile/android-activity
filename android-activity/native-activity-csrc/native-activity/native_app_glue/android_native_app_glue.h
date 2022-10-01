@@ -334,13 +334,9 @@ void android_app_post_exec_cmd(struct android_app* android_app, int8_t cmd);
 void android_app_attach_input_queue_looper(struct android_app* android_app);
 void android_app_detach_input_queue_looper(struct android_app* android_app);
 
-void* android_app_entry(void* param);
-
-/**
- * This is the function that application code must implement, representing
- * the main entry to the app.
- */
-extern void _rust_glue_entry(struct android_app* app);
+void print_cur_config(struct android_app* android_app);
+void process_cmd(struct android_app* app, __attribute__((unused)) struct android_poll_source* source);
+void android_app_destroy(struct android_app* android_app);
 
 #ifdef __cplusplus
 }

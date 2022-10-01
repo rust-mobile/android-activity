@@ -61,7 +61,7 @@ int8_t android_app_read_cmd(struct android_app* android_app) {
     return -1;
 }
 
-static void print_cur_config(struct android_app* android_app) {
+void print_cur_config(struct android_app* android_app) {
     char lang[2], country[2];
     AConfiguration_getLanguage(android_app->config, lang);
     AConfiguration_getCountry(android_app->config, country);
@@ -180,7 +180,7 @@ void android_app_post_exec_cmd(struct android_app* android_app, int8_t cmd) {
     }
 }
 
-static void android_app_destroy(struct android_app* android_app) {
+void android_app_destroy(struct android_app* android_app) {
     LOGV("android_app_destroy!");
     free_saved_state(android_app);
     pthread_mutex_lock(&android_app->mutex);
@@ -194,37 +194,9 @@ static void android_app_destroy(struct android_app* android_app) {
     // Can't touch android_app object after this.
 }
 
-static void process_cmd(struct android_app* app, __attribute__((unused)) struct android_poll_source* source) {
+void process_cmd(struct android_app* app, __attribute__((unused)) struct android_poll_source* source) {
     int8_t cmd = android_app_read_cmd(app);
     android_app_pre_exec_cmd(app, cmd);
     if (app->onAppCmd != NULL) app->onAppCmd(app, cmd);
     android_app_post_exec_cmd(app, cmd);
-}
-
-void* android_app_entry(void* param) {
-    struct android_app* android_app = (struct android_app*)param;
-
-    android_app->config = AConfiguration_new();
-    AConfiguration_fromAssetManager(android_app->config, android_app->activity->assetManager);
-
-    print_cur_config(android_app);
-
-    android_app->cmdPollSource.id = LOOPER_ID_MAIN;
-    android_app->cmdPollSource.app = android_app;
-    android_app->cmdPollSource.process = process_cmd;
-
-    ALooper* looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
-    ALooper_addFd(looper, android_app->msgread, LOOPER_ID_MAIN, ALOOPER_EVENT_INPUT, NULL,
-            &android_app->cmdPollSource);
-    android_app->looper = looper;
-
-    pthread_mutex_lock(&android_app->mutex);
-    android_app->running = 1;
-    pthread_cond_broadcast(&android_app->cond);
-    pthread_mutex_unlock(&android_app->mutex);
-
-    _rust_glue_entry(android_app);
-
-    android_app_destroy(android_app);
-    return NULL;
 }

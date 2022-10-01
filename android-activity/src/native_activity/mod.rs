@@ -479,9 +479,48 @@ impl AndroidAppInner {
     }
 }
 
+
+////////////////////////////
+// Rust-side event loop
+////////////////////////////
+
+
 extern "C" fn android_app_main(arg: *mut libc::c_void) -> *mut libc::c_void {
-    unsafe { ffi::android_app_entry(arg) as *mut _ }
+    unsafe {
+        let android_app: *mut ffi::android_app = arg.cast();
+
+        (*android_app).config = ndk_sys::AConfiguration_new();
+        ndk_sys::AConfiguration_fromAssetManager((*android_app).config, (*(*android_app).activity).assetManager);
+
+        ffi::print_cur_config(android_app);
+
+        (*android_app).cmdPollSource.id = ffi::LOOPER_ID_MAIN as i32;
+        (*android_app).cmdPollSource.app = android_app;
+        (*android_app).cmdPollSource.process = Some(ffi::process_cmd);
+
+        let looper = ndk_sys::ALooper_prepare(ndk_sys::ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as libc::c_int);
+        ndk_sys::ALooper_addFd(looper, (*android_app).msgread, ffi::LOOPER_ID_MAIN as libc::c_int, ndk_sys::ALOOPER_EVENT_INPUT as libc::c_int, None,
+                &mut (*android_app).cmdPollSource as *mut _ as *mut _);
+        (*android_app).looper = looper;
+
+        libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+        (*android_app).running = 1;
+        libc::pthread_cond_broadcast(&mut (*android_app).cond as *mut _);
+        libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+
+        _rust_glue_entry(android_app);
+
+        ffi::android_app_destroy(android_app);
+
+        ptr::null_mut()
+    }
 }
+
+
+///////////////////////////////
+// Java-side callback handling
+///////////////////////////////
+
 
 unsafe fn android_app_create(activity: *mut ffi::ANativeActivity,
     saved_state_in: *const libc::c_void, saved_state_size: libc::size_t) -> *mut ffi::android_app
@@ -575,10 +614,14 @@ unsafe fn android_app_write_cmd(android_app: *mut ffi::android_app, cmd: i8) {
             -1 => {
                 let err = std::io::Error::last_os_error();
                 if err.kind() != std::io::ErrorKind::Interrupted {
-                    panic!("Failure writing android_app cmd: {}", err);
+                    log::error!("Failure writing android_app cmd: {}", err);
+                    return;
                 }
             }
-            count => panic!("Spurious write of {count} bytes while writing android_app cmd")
+            count => {
+                log::error!("Spurious write of {count} bytes while writing android_app cmd");
+                return;
+            }
         }
     }
 }
@@ -762,8 +805,7 @@ extern "Rust" {
 // This is a spring board between android_native_app_glue and the user's
 // `app_main` function. This is run on a dedicated thread spawned
 // by android_native_app_glue.
-#[no_mangle]
-pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
+pub unsafe fn _rust_glue_entry(app: *mut ffi::android_app) {
     // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
     let mut logpipe: [RawFd; 2] = Default::default();
     libc::pipe(logpipe.as_mut_ptr());
