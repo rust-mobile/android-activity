@@ -25,8 +25,6 @@ use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
 
-mod ffi;
-
 pub mod input {
     pub use ndk::event::{
         Axis, ButtonState, EdgeFlags, KeyAction, KeyEvent, KeyEventFlags, Keycode, MetaState,
@@ -128,6 +126,73 @@ impl AndroidAppWaker {
     }
 }
 
+/// These are the original C structs / constants from android_native_app_glue.c naively
+/// ported to Rust via bindgen.
+///
+/// TODO: start integrating all this state directly into `AndroidApp`/`NativeAppGlue`
+mod ffi {
+    pub const LOOPER_ID_MAIN: ::std::os::raw::c_uint = 1;
+    pub const LOOPER_ID_INPUT: ::std::os::raw::c_uint = 2;
+    //pub const LOOPER_ID_USER: ::std::os::raw::c_uint = 3;
+
+    pub const APP_CMD_INPUT_CHANGED: ::std::os::raw::c_uint = 0;
+    pub const APP_CMD_INIT_WINDOW: ::std::os::raw::c_uint = 1;
+    pub const APP_CMD_TERM_WINDOW: ::std::os::raw::c_uint = 2;
+    pub const APP_CMD_WINDOW_RESIZED: ::std::os::raw::c_uint = 3;
+    pub const APP_CMD_WINDOW_REDRAW_NEEDED: ::std::os::raw::c_uint = 4;
+    pub const APP_CMD_CONTENT_RECT_CHANGED: ::std::os::raw::c_uint = 5;
+    pub const APP_CMD_GAINED_FOCUS: ::std::os::raw::c_uint = 6;
+    pub const APP_CMD_LOST_FOCUS: ::std::os::raw::c_uint = 7;
+    pub const APP_CMD_CONFIG_CHANGED: ::std::os::raw::c_uint = 8;
+    pub const APP_CMD_LOW_MEMORY: ::std::os::raw::c_uint = 9;
+    pub const APP_CMD_START: ::std::os::raw::c_uint = 10;
+    pub const APP_CMD_RESUME: ::std::os::raw::c_uint = 11;
+    pub const APP_CMD_SAVE_STATE: ::std::os::raw::c_uint = 12;
+    pub const APP_CMD_PAUSE: ::std::os::raw::c_uint = 13;
+    pub const APP_CMD_STOP: ::std::os::raw::c_uint = 14;
+    pub const APP_CMD_DESTROY: ::std::os::raw::c_uint = 15;
+
+    pub struct android_poll_source {
+        pub id: i32,
+        pub app: *mut android_app,
+        pub process: ::std::option::Option<
+            unsafe extern "C" fn(app: *mut android_app, source: *mut android_poll_source),
+        >,
+    }
+
+    pub struct android_app {
+        pub userData: *mut ::std::os::raw::c_void,
+        pub onAppCmd: ::std::option::Option<unsafe extern "C" fn(app: *mut android_app, cmd: i32)>,
+        pub onInputEvent: ::std::option::Option<
+            unsafe extern "C" fn(app: *mut android_app, event: *mut ndk_sys::AInputEvent) -> i32,
+        >,
+        pub activity: *mut ndk_sys::ANativeActivity,
+        pub config: *mut ndk_sys::AConfiguration,
+        pub savedState: *mut ::std::os::raw::c_void,
+        pub savedStateSize: libc::size_t,
+        pub looper: *mut ndk_sys::ALooper,
+        pub inputQueue: *mut ndk_sys::AInputQueue,
+        pub window: *mut ndk_sys::ANativeWindow,
+        pub contentRect: ndk_sys::ARect,
+        pub activityState: ::std::os::raw::c_int,
+        pub destroyRequested: ::std::os::raw::c_int,
+        pub mutex: libc::pthread_mutex_t,
+        pub cond: libc::pthread_cond_t,
+        pub msgread: ::std::os::raw::c_int,
+        pub msgwrite: ::std::os::raw::c_int,
+        pub thread: libc::pthread_t,
+        pub cmdPollSource: android_poll_source,
+        pub inputPollSource: android_poll_source,
+        pub running: ::std::os::raw::c_int,
+        pub stateSaved: ::std::os::raw::c_int,
+        pub destroyed: ::std::os::raw::c_int,
+        pub redrawNeeded: ::std::os::raw::c_int,
+        pub pendingInputQueue: *mut ndk_sys::AInputQueue,
+        pub pendingWindow: *mut ndk_sys::ANativeWindow,
+        pub pendingContentRect: ndk_sys::ARect,
+    }
+}
+
 impl AndroidApp {
     pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>) -> AndroidApp {
         // Note: we don't use from_ptr since we don't own the android_app.config
@@ -205,20 +270,20 @@ impl AndroidAppInner {
             );
             info!("pollAll id = {id}");
             match id {
-                ffi::ALOOPER_POLL_WAKE => {
+                ndk_sys::ALOOPER_POLL_WAKE => {
                     trace!("ALooper_pollAll returned POLL_WAKE");
                     callback(PollEvent::Wake);
                 }
-                ffi::ALOOPER_POLL_CALLBACK => {
+                ndk_sys::ALOOPER_POLL_CALLBACK => {
                     // ALooper_pollAll is documented to handle all callback sources internally so it should
                     // never return a _CALLBACK source id...
                     error!("Spurious ALOOPER_POLL_CALLBACK from ALopper_pollAll() (ignored)");
                 }
-                ffi::ALOOPER_POLL_TIMEOUT => {
+                ndk_sys::ALOOPER_POLL_TIMEOUT => {
                     trace!("ALooper_pollAll returned POLL_TIMEOUT");
                     callback(PollEvent::Timeout);
                 }
-                ffi::ALOOPER_POLL_ERROR => {
+                ndk_sys::ALOOPER_POLL_ERROR => {
                     // If we have an IO error with our pipe to the main Java thread that's surely
                     // not something we can recover from
                     panic!("ALooper_pollAll returned POLL_ERROR");
@@ -229,81 +294,81 @@ impl AndroidAppInner {
                             trace!("ALooper_pollAll returned ID_MAIN");
                             let source: *mut ffi::android_poll_source = source.cast();
                             if source != ptr::null_mut() {
-                                let cmd_i = ffi::android_app_read_cmd(native_app.as_ptr());
+                                if let Some(cmd_i) = android_app_read_cmd(native_app.as_ptr()) {
+                                    let cmd = match cmd_i as libc::c_uint {
+                                        // We don't forward info about the AInputQueue to apps since it's
+                                        // an implementation details that's also not compatible with
+                                        // GameActivity
+                                        ffi::APP_CMD_INPUT_CHANGED => None,
 
-                                let cmd = match cmd_i as u32 {
-                                    // We don't forward info about the AInputQueue to apps since it's
-                                    // an implementation details that's also not compatible with
-                                    // GameActivity
-                                    ffi::APP_CMD_INPUT_CHANGED => None,
-
-                                    ffi::APP_CMD_INIT_WINDOW => Some(MainEvent::InitWindow {}),
-                                    ffi::APP_CMD_TERM_WINDOW => Some(MainEvent::TerminateWindow {}),
-                                    ffi::APP_CMD_WINDOW_RESIZED => {
-                                        Some(MainEvent::WindowResized {})
-                                    }
-                                    ffi::APP_CMD_WINDOW_REDRAW_NEEDED => {
-                                        Some(MainEvent::RedrawNeeded {})
-                                    }
-                                    ffi::APP_CMD_CONTENT_RECT_CHANGED => {
-                                        Some(MainEvent::ContentRectChanged {})
-                                    }
-                                    ffi::APP_CMD_GAINED_FOCUS => Some(MainEvent::GainedFocus),
-                                    ffi::APP_CMD_LOST_FOCUS => Some(MainEvent::LostFocus),
-                                    ffi::APP_CMD_CONFIG_CHANGED => {
-                                        Some(MainEvent::ConfigChanged {})
-                                    }
-                                    ffi::APP_CMD_LOW_MEMORY => Some(MainEvent::LowMemory),
-                                    ffi::APP_CMD_START => Some(MainEvent::Start),
-                                    ffi::APP_CMD_RESUME => Some(MainEvent::Resume {
-                                        loader: StateLoader { app: &self },
-                                    }),
-                                    ffi::APP_CMD_SAVE_STATE => Some(MainEvent::SaveState {
-                                        saver: StateSaver { app: &self },
-                                    }),
-                                    ffi::APP_CMD_PAUSE => Some(MainEvent::Pause),
-                                    ffi::APP_CMD_STOP => Some(MainEvent::Stop),
-                                    ffi::APP_CMD_DESTROY => Some(MainEvent::Destroy),
-
-                                    //ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED => MainEvent::InsetsChanged {},
-                                    _ => unreachable!(),
-                                };
-
-                                trace!("Calling android_app_pre_exec_cmd({cmd_i})");
-                                ffi::android_app_pre_exec_cmd(native_app.as_ptr(), cmd_i);
-
-                                if let Some(cmd) = cmd {
-                                    trace!("Read ID_MAIN command {cmd_i} = {cmd:?}");
-                                    match cmd {
-                                        MainEvent::ConfigChanged { .. } => {
-                                            self.config.replace(Configuration::clone_from_ptr(
-                                                NonNull::new_unchecked(
-                                                    (*native_app.as_ptr()).config,
-                                                ),
-                                            ));
+                                        ffi::APP_CMD_INIT_WINDOW => Some(MainEvent::InitWindow {}),
+                                        ffi::APP_CMD_TERM_WINDOW => Some(MainEvent::TerminateWindow {}),
+                                        ffi::APP_CMD_WINDOW_RESIZED => {
+                                            Some(MainEvent::WindowResized {})
                                         }
-                                        MainEvent::InitWindow { .. } => {
-                                            let win_ptr = (*native_app.as_ptr()).window;
-                                            // It's important that we use ::clone_from_ptr() here
-                                            // because NativeWindow has a Drop implementation that
-                                            // will unconditionally _release() the native window
-                                            *self.native_window.write().unwrap() =
-                                                Some(NativeWindow::clone_from_ptr(
-                                                    NonNull::new(win_ptr).unwrap(),
+                                        ffi::APP_CMD_WINDOW_REDRAW_NEEDED => {
+                                            Some(MainEvent::RedrawNeeded {})
+                                        }
+                                        ffi::APP_CMD_CONTENT_RECT_CHANGED => {
+                                            Some(MainEvent::ContentRectChanged {})
+                                        }
+                                        ffi::APP_CMD_GAINED_FOCUS => Some(MainEvent::GainedFocus),
+                                        ffi::APP_CMD_LOST_FOCUS => Some(MainEvent::LostFocus),
+                                        ffi::APP_CMD_CONFIG_CHANGED => {
+                                            Some(MainEvent::ConfigChanged {})
+                                        }
+                                        ffi::APP_CMD_LOW_MEMORY => Some(MainEvent::LowMemory),
+                                        ffi::APP_CMD_START => Some(MainEvent::Start),
+                                        ffi::APP_CMD_RESUME => Some(MainEvent::Resume {
+                                            loader: StateLoader { app: &self },
+                                        }),
+                                        ffi::APP_CMD_SAVE_STATE => Some(MainEvent::SaveState {
+                                            saver: StateSaver { app: &self },
+                                        }),
+                                        ffi::APP_CMD_PAUSE => Some(MainEvent::Pause),
+                                        ffi::APP_CMD_STOP => Some(MainEvent::Stop),
+                                        ffi::APP_CMD_DESTROY => Some(MainEvent::Destroy),
+
+                                        //ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED => MainEvent::InsetsChanged {},
+                                        _ => unreachable!(),
+                                    };
+
+                                    trace!("Calling android_app_pre_exec_cmd({cmd_i})");
+                                    android_app_pre_exec_cmd(native_app.as_ptr(), cmd_i);
+
+                                    if let Some(cmd) = cmd {
+                                        trace!("Read ID_MAIN command {cmd_i} = {cmd:?}");
+                                        match cmd {
+                                            MainEvent::ConfigChanged { .. } => {
+                                                self.config.replace(Configuration::clone_from_ptr(
+                                                    NonNull::new_unchecked(
+                                                        (*native_app.as_ptr()).config,
+                                                    ),
                                                 ));
+                                            }
+                                            MainEvent::InitWindow { .. } => {
+                                                let win_ptr = (*native_app.as_ptr()).window;
+                                                // It's important that we use ::clone_from_ptr() here
+                                                // because NativeWindow has a Drop implementation that
+                                                // will unconditionally _release() the native window
+                                                *self.native_window.write().unwrap() =
+                                                    Some(NativeWindow::clone_from_ptr(
+                                                        NonNull::new(win_ptr).unwrap(),
+                                                    ));
+                                            }
+                                            MainEvent::TerminateWindow { .. } => {
+                                                *self.native_window.write().unwrap() = None;
+                                            }
+                                            _ => {}
                                         }
-                                        MainEvent::TerminateWindow { .. } => {
-                                            *self.native_window.write().unwrap() = None;
-                                        }
-                                        _ => {}
+
+                                        trace!("Invoking callback for ID_MAIN command = {:?}", cmd);
+                                        callback(PollEvent::Main(cmd));
                                     }
 
-                                    trace!("Invoking callback for ID_MAIN command = {:?}", cmd);
-                                    callback(PollEvent::Main(cmd));
+                                    trace!("Calling android_app_post_exec_cmd({cmd_i})");
+                                    android_app_post_exec_cmd(native_app.as_ptr(), cmd_i);
                                 }
-
-                                trace!("Calling android_app_post_exec_cmd({cmd_i})");
-                                ffi::android_app_post_exec_cmd(native_app.as_ptr(), cmd_i);
                             } else {
                                 panic!("ALooper_pollAll returned ID_MAIN event with NULL android_poll_source!");
                             }
@@ -315,7 +380,7 @@ impl AndroidAppInner {
                             // input events then we only send one `InputAvailable` per iteration of input
                             // handling. We re-attach the looper when the application calls
                             // `AndroidApp::input_events()`
-                            ffi::android_app_detach_input_queue_looper(native_app.as_ptr());
+                            android_app_detach_input_queue_looper(native_app.as_ptr());
                             callback(PollEvent::Main(MainEvent::InputAvailable))
                         }
                         _ => {
@@ -373,7 +438,7 @@ impl AndroidAppInner {
         let na = self.native_activity();
         let na_mut = na as *mut ndk_sys::ANativeActivity;
         unsafe {
-            ffi::ANativeActivity_setWindowFlags(
+            ndk_sys::ANativeActivity_setWindowFlags(
                 na_mut.cast(),
                 add_flags.bits(),
                 remove_flags.bits(),
@@ -386,11 +451,11 @@ impl AndroidAppInner {
         let na = self.native_activity();
         unsafe {
             let flags = if show_implicit {
-                ffi::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
+                ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
             } else {
                 0
             };
-            ffi::ANativeActivity_showSoftInput(na as *mut _, flags);
+            ndk_sys::ANativeActivity_showSoftInput(na as *mut _, flags);
         }
     }
 
@@ -399,11 +464,11 @@ impl AndroidAppInner {
         let na = self.native_activity();
         unsafe {
             let flags = if hide_implicit_only {
-                ffi::ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY
+                ndk_sys::ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY
             } else {
                 0
             };
-            ffi::ANativeActivity_hideSoftInput(na as *mut _, flags);
+            ndk_sys::ANativeActivity_hideSoftInput(na as *mut _, flags);
         }
     }
 
@@ -427,7 +492,7 @@ impl AndroidAppInner {
 
             // Reattach the input queue to the looper so future input will again deliver an
             // `InputAvailable` event.
-            ffi::android_app_attach_input_queue_looper(app_ptr);
+            android_app_attach_input_queue_looper(app_ptr);
 
             let queue = NonNull::new_unchecked((*app_ptr).inputQueue);
             InputQueue::from_ptr(queue)
@@ -484,6 +549,175 @@ impl AndroidAppInner {
 // Rust-side event loop
 ////////////////////////////
 
+unsafe fn free_saved_state(android_app: *mut ffi::android_app) {
+    libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+    if (*android_app).savedState != ptr::null_mut() {
+        libc::free((*android_app).savedState);
+        (*android_app).savedState = ptr::null_mut();
+        (*android_app).savedStateSize = 0;
+    }
+    libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+}
+
+unsafe fn android_app_read_cmd(android_app: *mut ffi::android_app) -> Option<i8> {
+    let mut cmd: i8 = 0;
+    loop {
+        match libc::read((*android_app).msgread, &mut cmd as *mut _ as *mut _, 1) {
+            1 => {
+                match cmd as libc::c_uint {
+                    ffi::APP_CMD_SAVE_STATE => {
+                        free_saved_state(android_app);
+                    }
+                    _ => {}
+                }
+                return Some(cmd);
+            }
+            -1 => {
+                let err = std::io::Error::last_os_error();
+                if err.kind() != std::io::ErrorKind::Interrupted {
+                    log::error!("Failure reading android_app cmd: {}", err);
+                    return None;
+                }
+            }
+            count => {
+                log::error!("Spurious read of {count} bytes while reading android_app cmd");
+                return None;
+            }
+        }
+    }
+}
+
+unsafe fn print_cur_config(android_app: *mut ffi::android_app) {
+    let mut lang = [0u8; 2];
+    ndk_sys::AConfiguration_getLanguage((*android_app).config, lang[..].as_mut_ptr());
+    let lang = if lang[0] == 0 {
+        "  ".to_owned()
+    } else {
+        std::str::from_utf8(&lang[..]).unwrap().to_owned()
+    };
+    let mut country = "  ".to_owned();
+    ndk_sys::AConfiguration_getCountry((*android_app).config, country.as_mut_ptr() as *mut _);
+
+    ndk_sys::AConfiguration_getCountry((*android_app).config, country[..].as_mut_ptr());
+
+    log::debug!("Config: mcc={} mnc={} lang={} cnt={} orien={} touch={} dens={} keys={} nav={} keysHid={} navHid={} sdk={} size={} long={} modetype={} modenight={}",
+        ndk_sys::AConfiguration_getMcc((*android_app).config),
+        ndk_sys::AConfiguration_getMnc((*android_app).config),
+        lang,
+        country,
+        ndk_sys::AConfiguration_getOrientation((*android_app).config),
+        ndk_sys::AConfiguration_getTouchscreen((*android_app).config),
+        ndk_sys::AConfiguration_getDensity((*android_app).config),
+        ndk_sys::AConfiguration_getKeyboard((*android_app).config),
+        ndk_sys::AConfiguration_getNavigation((*android_app).config),
+        ndk_sys::AConfiguration_getKeysHidden((*android_app).config),
+        ndk_sys::AConfiguration_getNavHidden((*android_app).config),
+        ndk_sys::AConfiguration_getSdkVersion((*android_app).config),
+        ndk_sys::AConfiguration_getScreenSize((*android_app).config),
+        ndk_sys::AConfiguration_getScreenLong((*android_app).config),
+        ndk_sys::AConfiguration_getUiModeType((*android_app).config),
+        ndk_sys::AConfiguration_getUiModeNight((*android_app).config));
+}
+
+unsafe fn android_app_attach_input_queue_looper(android_app: *mut ffi::android_app) {
+    if (*android_app).inputQueue != ptr::null_mut() {
+            log::debug!("Attaching input queue to looper");
+            ndk_sys::AInputQueue_attachLooper((*android_app).inputQueue,
+                    (*android_app).looper, ffi::LOOPER_ID_INPUT as libc::c_int, None,
+                    &mut (*android_app).inputPollSource as *mut _ as *mut _);
+    }
+}
+
+unsafe fn android_app_detach_input_queue_looper(android_app: *mut ffi::android_app) {
+    if (*android_app).inputQueue != ptr::null_mut() {
+        log::debug!("Detaching input queue from looper");
+        ndk_sys::AInputQueue_detachLooper((*android_app).inputQueue);
+    }
+}
+
+unsafe fn android_app_pre_exec_cmd(android_app: *mut ffi::android_app, cmd: i8) {
+    match cmd as libc::c_uint {
+        ffi::APP_CMD_INPUT_CHANGED => {
+            log::debug!("APP_CMD_INPUT_CHANGED\n");
+            libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+            if (*android_app).inputQueue != ptr::null_mut() {
+                android_app_detach_input_queue_looper(android_app);
+            }
+            (*android_app).inputQueue = (*android_app).pendingInputQueue;
+            if (*android_app).inputQueue != ptr::null_mut() {
+                android_app_attach_input_queue_looper(android_app);
+            }
+            libc::pthread_cond_broadcast(&mut (*android_app).cond as *mut _);
+            libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+        }
+        ffi::APP_CMD_INIT_WINDOW => {
+            log::debug!("APP_CMD_INIT_WINDOW");
+            libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+            (*android_app).window = (*android_app).pendingWindow;
+            libc::pthread_cond_broadcast(&mut (*android_app).cond as *mut _);
+            libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+        }
+        ffi::APP_CMD_TERM_WINDOW => {
+            log::debug!("APP_CMD_TERM_WINDOW");
+            libc::pthread_cond_broadcast(&mut (*android_app).cond as *mut _);
+        }
+        ffi::APP_CMD_RESUME | ffi::APP_CMD_START | ffi::APP_CMD_PAUSE | ffi::APP_CMD_STOP => {
+            log::debug!("activityState={}", cmd);
+            libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+            (*android_app).activityState = cmd as i32;
+            libc::pthread_cond_broadcast(&mut (*android_app).cond as *mut _);
+            libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+        }
+        ffi::APP_CMD_CONFIG_CHANGED => {
+            log::debug!("APP_CMD_CONFIG_CHANGED");
+            ndk_sys::AConfiguration_fromAssetManager((*android_app).config,
+                    (*(*android_app).activity).assetManager);
+            print_cur_config(android_app);
+        }
+        ffi::APP_CMD_DESTROY => {
+            log::debug!("APP_CMD_DESTROY");
+            (*android_app).destroyRequested = 1;
+        }
+        _ => {}
+    }
+}
+
+unsafe fn android_app_post_exec_cmd(android_app: *mut ffi::android_app, cmd: i8) {
+    match cmd as libc::c_uint {
+        ffi::APP_CMD_TERM_WINDOW => {
+            log::debug!("APP_CMD_TERM_WINDOW");
+            libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+            (*android_app).window = ptr::null_mut();
+            libc::pthread_cond_broadcast(&mut (*android_app).cond as *mut _);
+            libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+        }
+        ffi::APP_CMD_SAVE_STATE => {
+            log::debug!("APP_CMD_SAVE_STATE");
+            libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+            (*android_app).stateSaved = 1;
+            libc::pthread_cond_broadcast(&mut (*android_app).cond as *mut _);
+            libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+        }
+        ffi::APP_CMD_RESUME => {
+            free_saved_state(android_app);
+        }
+        _ => { }
+    }
+}
+
+unsafe fn android_app_destroy(android_app: *mut ffi::android_app) {
+    log::debug!("android_app_destroy!");
+    free_saved_state(android_app);
+    libc::pthread_mutex_lock(&mut (*android_app).mutex as *mut _);
+    if (*android_app).inputQueue != ptr::null_mut() {
+        ndk_sys::AInputQueue_detachLooper((*android_app).inputQueue);
+    }
+    ndk_sys::AConfiguration_delete((*android_app).config);
+    (*android_app).destroyed = 1;
+    libc::pthread_cond_broadcast(&mut (*android_app).cond as *mut _);
+    libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
+    // Can't touch android_app object after this.
+}
 
 extern "C" fn android_app_main(arg: *mut libc::c_void) -> *mut libc::c_void {
     unsafe {
@@ -492,11 +726,11 @@ extern "C" fn android_app_main(arg: *mut libc::c_void) -> *mut libc::c_void {
         (*android_app).config = ndk_sys::AConfiguration_new();
         ndk_sys::AConfiguration_fromAssetManager((*android_app).config, (*(*android_app).activity).assetManager);
 
-        ffi::print_cur_config(android_app);
+        print_cur_config(android_app);
 
         (*android_app).cmdPollSource.id = ffi::LOOPER_ID_MAIN as i32;
         (*android_app).cmdPollSource.app = android_app;
-        (*android_app).cmdPollSource.process = Some(ffi::process_cmd);
+        (*android_app).cmdPollSource.process = None;
 
         let looper = ndk_sys::ALooper_prepare(ndk_sys::ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as libc::c_int);
         ndk_sys::ALooper_addFd(looper, (*android_app).msgread, ffi::LOOPER_ID_MAIN as libc::c_int, ndk_sys::ALOOPER_EVENT_INPUT as libc::c_int, None,
@@ -510,7 +744,7 @@ extern "C" fn android_app_main(arg: *mut libc::c_void) -> *mut libc::c_void {
 
         _rust_glue_entry(android_app);
 
-        ffi::android_app_destroy(android_app);
+        android_app_destroy(android_app);
 
         ptr::null_mut()
     }
@@ -522,7 +756,7 @@ extern "C" fn android_app_main(arg: *mut libc::c_void) -> *mut libc::c_void {
 ///////////////////////////////
 
 
-unsafe fn android_app_create(activity: *mut ffi::ANativeActivity,
+unsafe fn android_app_create(activity: *mut ndk_sys::ANativeActivity,
     saved_state_in: *const libc::c_void, saved_state_size: libc::size_t) -> *mut ffi::android_app
 {
     let mut msgpipe: [libc::c_int; 2] = [ -1, -1 ];
@@ -660,7 +894,7 @@ unsafe fn android_app_set_activity_state(android_app: *mut ffi::android_app, cmd
     libc::pthread_mutex_unlock(&mut (*android_app).mutex as *mut _);
 }
 
-unsafe extern "C" fn on_destroy(activity: *mut ffi::ANativeActivity) {
+unsafe extern "C" fn on_destroy(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Destroy: {:p}\n", activity);
 
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
@@ -668,20 +902,20 @@ unsafe extern "C" fn on_destroy(activity: *mut ffi::ANativeActivity) {
     android_app_drop(android_app);
 }
 
-unsafe extern "C" fn on_start(activity: *mut ffi::ANativeActivity) {
+unsafe extern "C" fn on_start(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Start: {:p}\n", activity);
 
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_set_activity_state(android_app, ffi::APP_CMD_START as i8);
 }
 
-unsafe extern "C" fn on_resume(activity: *mut ffi::ANativeActivity) {
+unsafe extern "C" fn on_resume(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Resume: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_set_activity_state(android_app, ffi::APP_CMD_RESUME as i8);
 }
 
-unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity, out_len: *mut libc::size_t) -> *mut libc::c_void {
+unsafe extern "C" fn on_save_instance_state(activity: *mut ndk_sys::ANativeActivity, out_len: *mut ndk_sys::size_t) -> *mut libc::c_void {
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     let mut saved_state: *mut libc::c_void = ptr::null_mut();
 
@@ -695,7 +929,7 @@ unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity,
 
     if (*android_app).savedState != ptr::null_mut() {
         saved_state = (*android_app).savedState;
-        *out_len = (*android_app).savedStateSize;
+        *out_len = (*android_app).savedStateSize as _;
         (*android_app).savedState = ptr::null_mut();
         (*android_app).savedStateSize = 0;
     }
@@ -705,56 +939,56 @@ unsafe extern "C" fn on_save_instance_state(activity: *mut ffi::ANativeActivity,
     return saved_state;
 }
 
-unsafe extern "C" fn on_pause(activity: *mut ffi::ANativeActivity) {
+unsafe extern "C" fn on_pause(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Pause: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_set_activity_state(android_app, ffi::APP_CMD_PAUSE as i8);
 }
 
-unsafe extern "C" fn on_stop(activity: *mut ffi::ANativeActivity) {
+unsafe extern "C" fn on_stop(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Stop: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_set_activity_state(android_app, ffi::APP_CMD_STOP as i8);
 }
 
-unsafe extern "C" fn on_configuration_changed(activity: *mut ffi::ANativeActivity) {
+unsafe extern "C" fn on_configuration_changed(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("ConfigurationChanged: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_write_cmd(android_app, ffi::APP_CMD_CONFIG_CHANGED as i8);
 }
 
-unsafe extern "C" fn on_low_memory(activity: *mut ffi::ANativeActivity) {
+unsafe extern "C" fn on_low_memory(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("LowMemory: {:p}\n", activity);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_write_cmd(android_app, ffi::APP_CMD_LOW_MEMORY as i8);
 }
 
-unsafe extern "C" fn on_window_focus_changed(activity: *mut ffi::ANativeActivity, focused: libc::c_int) {
+unsafe extern "C" fn on_window_focus_changed(activity: *mut ndk_sys::ANativeActivity, focused: libc::c_int) {
     log::debug!("WindowFocusChanged: {:p} -- {}\n", activity, focused);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_write_cmd(android_app,
             if focused != 0 { ffi::APP_CMD_GAINED_FOCUS as i8 } else { ffi::APP_CMD_LOST_FOCUS as i8});
 }
 
-unsafe extern "C" fn on_native_window_created(activity: *mut ffi::ANativeActivity, window: *mut ndk_sys::ANativeWindow) {
+unsafe extern "C" fn on_native_window_created(activity: *mut ndk_sys::ANativeActivity, window: *mut ndk_sys::ANativeWindow) {
     log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_set_window(android_app, window);
 }
 
-unsafe extern "C" fn on_native_window_destroyed(activity: *mut ffi::ANativeActivity, window: *mut ndk_sys::ANativeWindow) {
+unsafe extern "C" fn on_native_window_destroyed(activity: *mut ndk_sys::ANativeActivity, window: *mut ndk_sys::ANativeWindow) {
     log::debug!("NativeWindowDestroyed: {:p} -- {:p}\n", activity, window);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_set_window(android_app, ptr::null_mut());
 }
 
-unsafe extern "C" fn on_input_queue_created(activity: *mut ffi::ANativeActivity, queue: *mut ndk_sys::AInputQueue) {
+unsafe extern "C" fn on_input_queue_created(activity: *mut ndk_sys::ANativeActivity, queue: *mut ndk_sys::AInputQueue) {
     log::debug!("InputQueueCreated: {:p} -- {:p}\n", activity, queue);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_set_input(android_app, queue);
 }
 
-unsafe extern "C" fn on_input_queue_destroyed(activity: *mut ffi::ANativeActivity, queue: *mut ndk_sys::AInputQueue) {
+unsafe extern "C" fn on_input_queue_destroyed(activity: *mut ndk_sys::ANativeActivity, queue: *mut ndk_sys::AInputQueue) {
     log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
     let android_app: *mut ffi::android_app = (*activity).instance.cast();
     android_app_set_input(android_app, ptr::null_mut());
@@ -762,7 +996,7 @@ unsafe extern "C" fn on_input_queue_destroyed(activity: *mut ffi::ANativeActivit
 
 #[no_mangle]
 unsafe extern "C" fn ANativeActivity_onCreate(
-    activity: *mut ffi::ANativeActivity,
+    activity: *mut ndk_sys::ANativeActivity,
     saved_state: *const libc::c_void,
     saved_state_size: libc::size_t,
 ) {
