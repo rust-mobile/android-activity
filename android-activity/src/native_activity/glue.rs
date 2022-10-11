@@ -198,15 +198,14 @@ pub struct NativeActivityState {
     pub msg_read: libc::c_int,
     pub msg_write: libc::c_int,
     pub config: super::ConfigurationRef,
-    pub saved_state: *mut libc::c_void,
-    pub saved_state_size: libc::size_t,
+    pub saved_state: Vec<u8>,
     pub input_queue: *mut ndk_sys::AInputQueue,
     pub window: Option<NativeWindow>,
     pub content_rect: ndk_sys::ARect,
     pub activity_state: State,
     pub destroy_requested: bool,
     pub running: bool,
-    pub state_saved: bool,
+    pub app_has_saved_state: bool,
     pub destroyed: bool,
     pub redraw_needed: bool,
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
@@ -222,10 +221,6 @@ impl NativeActivityState {
                 1 => {
                     let cmd = AppCmd::try_from(cmd_i);
                     return match cmd {
-                        Ok(AppCmd::SaveState) => {
-                            self.free_saved_state();
-                            Some(AppCmd::SaveState)
-                        }
                         Ok(cmd) => Some(cmd),
                         Err(_) => {
                             log::error!("Spurious, unknown NativeActivityGlue cmd: {}", cmd_i);
@@ -272,14 +267,6 @@ impl NativeActivityState {
         }
     }
 
-    fn free_saved_state(&mut self) {
-        if self.saved_state != ptr::null_mut() {
-            unsafe { libc::free(self.saved_state) };
-            self.saved_state = ptr::null_mut();
-            self.saved_state_size = 0;
-        }
-    }
-
     pub unsafe fn attach_input_queue_to_looper(
         &mut self,
         looper: *mut ndk_sys::ALooper,
@@ -310,7 +297,6 @@ impl Drop for WaitableNativeActivityState {
         log::debug!("WaitableNativeActivityState::drop!");
         unsafe {
             let mut guard = self.mutex.lock().unwrap();
-            guard.free_saved_state();
             guard.detach_input_queue_from_looper();
             guard.destroyed = true;
             self.cond.notify_one();
@@ -338,21 +324,9 @@ impl WaitableNativeActivityState {
             }
         }
 
-        // NB: The implementation for `ANativeActivity` explicitly documents that save_state must
-        // be tracked via `malloc()` and `free()`, since `ANativeActivity` may need to free state
-        // that it is given via its `onSaveInstanceState` callback.
-        let mut saved_state = ptr::null_mut();
-        unsafe {
-            if saved_state_in != ptr::null() && saved_state_size > 0 {
-                saved_state = libc::malloc(saved_state_size);
-                assert!(
-                    saved_state != ptr::null_mut(),
-                    "Failed to allocate {} bytes for restoring saved application state",
-                    saved_state_size
-                );
-                libc::memcpy(saved_state, saved_state_in, saved_state_size);
-            }
-        }
+        let saved_state = unsafe {
+            std::slice::from_raw_parts(saved_state_in as *const u8, saved_state_size as _)
+        };
 
         let config = unsafe {
             let config = ndk_sys::AConfiguration_new();
@@ -371,15 +345,14 @@ impl WaitableNativeActivityState {
                 msg_read: msgpipe[0],
                 msg_write: msgpipe[1],
                 config,
-                saved_state,
-                saved_state_size,
+                saved_state: saved_state.into(),
                 input_queue: ptr::null_mut(),
                 window: None,
                 content_rect: Rect::empty().into(),
                 activity_state: State::Init,
                 destroy_requested: false,
                 running: false,
-                state_saved: false,
+                app_has_saved_state: false,
                 destroyed: false,
                 redraw_needed: false,
                 pending_input_queue: ptr::null_mut(),
@@ -482,19 +455,38 @@ impl WaitableNativeActivityState {
         }
     }
 
-    unsafe fn request_save_state(&self) -> (*mut libc::c_void, libc::size_t) {
+    fn request_save_state(&self) -> (*mut libc::c_void, libc::size_t) {
         let mut guard = self.mutex.lock().unwrap();
 
-        guard.state_saved = false;
+        // The state_saved flag should only be set while in this method, and since
+        // it doesn't allow re-entrance and is cleared before returning then we expect
+        // this to be None
+        debug_assert!(
+            guard.app_has_saved_state == false,
+            "SaveState request clash"
+        );
         guard.write_cmd(AppCmd::SaveState);
-        while guard.state_saved == false {
+        while guard.app_has_saved_state == false {
             guard = self.cond.wait(guard).unwrap();
         }
+        guard.app_has_saved_state = false;
 
-        let saved_state = std::mem::replace(&mut guard.saved_state, ptr::null_mut());
-        let saved_state_size = std::mem::take(&mut guard.saved_state_size);
-        if saved_state != ptr::null_mut() && saved_state_size > 0 {
-            (saved_state, saved_state_size)
+        // `ANativeActivity` explicitly documents that it expects save state to be
+        // given via a `malloc()` allocated pointer since it will automatically
+        // `free()` the state after it has been converted to a buffer for the JVM.
+        if guard.saved_state.len() > 0 {
+            let saved_state_size = guard.saved_state.len() as _;
+            let saved_state_src_ptr = guard.saved_state.as_ptr();
+            unsafe {
+                let saved_state = libc::malloc(saved_state_size);
+                assert!(
+                    saved_state != ptr::null_mut(),
+                    "Failed to allocate {} bytes for restoring saved application state",
+                    saved_state_size
+                );
+                libc::memcpy(saved_state, saved_state_src_ptr as _, saved_state_size);
+                (saved_state, saved_state_size)
+            }
         } else {
             (ptr::null_mut(), 0)
         }
@@ -502,53 +494,18 @@ impl WaitableNativeActivityState {
 
     pub fn saved_state(&self) -> Option<Vec<u8>> {
         let guard = self.mutex.lock().unwrap();
-
-        unsafe {
-            if guard.saved_state != ptr::null_mut() && guard.saved_state_size > 0 {
-                let buf: &mut [u8] = std::slice::from_raw_parts_mut(
-                    guard.saved_state.cast(),
-                    guard.saved_state_size as usize,
-                );
-                let state = buf.to_vec();
-                Some(state)
-            } else {
-                None
-            }
+        if guard.saved_state.len() > 0 {
+            Some(guard.saved_state.clone())
+        } else {
+            None
         }
     }
 
     pub fn set_saved_state(&self, state: &[u8]) {
         let mut guard = self.mutex.lock().unwrap();
 
-        // ANativeActivity specifically expects the state to have been allocated
-        // via libc::malloc since it will automatically handle freeing the data.
-
-        unsafe {
-            // In case the application calls store() multiple times for some reason we
-            // make sure to free any pre-existing state...
-            if guard.saved_state != ptr::null_mut() {
-                libc::free(guard.saved_state);
-                guard.saved_state = ptr::null_mut();
-                guard.saved_state_size = 0;
-            }
-
-            let buf = libc::malloc(state.len());
-            if buf == ptr::null_mut() {
-                panic!("Failed to allocate save_state buffer");
-            }
-
-            // Since it's a byte array there's no special alignment requirement here.
-            //
-            // Since we re-define `buf` we ensure it's not possible to access the buffer
-            // via its original pointer for the lifetime of the slice.
-            {
-                let buf: &mut [u8] = std::slice::from_raw_parts_mut(buf.cast(), state.len());
-                buf.copy_from_slice(state);
-            }
-
-            guard.saved_state = buf;
-            guard.saved_state_size = state.len() as _;
-        }
+        guard.saved_state.clear();
+        guard.saved_state.extend_from_slice(state);
     }
 
     ////////////////////////////
@@ -620,12 +577,8 @@ impl WaitableNativeActivityState {
             }
             AppCmd::SaveState => {
                 let mut guard = self.mutex.lock().unwrap();
-                guard.state_saved = true;
+                guard.app_has_saved_state = true;
                 self.cond.notify_one();
-            }
-            AppCmd::Resume => {
-                let mut guard = self.mutex.lock().unwrap();
-                guard.free_saved_state();
             }
             _ => {}
         }
