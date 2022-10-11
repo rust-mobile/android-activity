@@ -67,9 +67,8 @@ impl TryFrom<i8> for AppCmd {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Default, Debug)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub enum State {
-    #[default]
     Init,
     Start,
     Resume,
