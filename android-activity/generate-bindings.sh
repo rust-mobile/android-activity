@@ -16,6 +16,10 @@ while read ARCH && read TARGET ; do
         --blocklist-item 'C?_?JNIEnv' \
         --blocklist-item '_?JavaVM' \
         --blocklist-item '_?j\w+' \
+        --blocklist-item 'size_t' \
+        --blocklist-item 'pthread_\w*' \
+        --blocklist-function 'pthread_\w' \
+        --blocklist-item 'ARect' \
         --blocklist-item 'ALooper\w*' \
         --blocklist-function 'ALooper\w*' \
         --blocklist-item 'AAsset\w*' \
@@ -33,29 +37,6 @@ while read ARCH && read TARGET ; do
         -Igame-activity-csrc \
         --sysroot="$SYSROOT" --target=$TARGET
 
-     bindgen native-activity-ffi.h -o src/native_activity/ffi_$ARCH.rs \
-        --blocklist-item 'JNI\w+' \
-        --blocklist-item 'C?_?JNIEnv' \
-        --blocklist-item '_?JavaVM' \
-        --blocklist-item '_?j\w+' \
-        --blocklist-item 'ALooper\w*' \
-        --blocklist-function 'ALooper\w*' \
-        --blocklist-item 'AAsset\w*' \
-        --blocklist-item 'AAssetManager\w*' \
-        --blocklist-function 'AAssetManager\w*' \
-        --blocklist-item 'ANativeWindow\w*' \
-        --blocklist-function 'ANativeWindow\w*' \
-        --blocklist-item 'AConfiguration\w*' \
-        --blocklist-function 'AConfiguration\w*' \
-        --blocklist-function 'android_main' \
-        --blocklist-item 'AInputQueue\w*' \
-        --blocklist-function 'AInputQueue\w*' \
-        --blocklist-item 'GameActivity_onCreate' \
-        --blocklist-function 'GameActivity_onCreate_C' \
-        --newtype-enum '\w+_(result|status)_t' \
-        -- \
-        -Inative-activity-csrc \
-        --sysroot="$SYSROOT" --target=$TARGET
 done << EOF
 arm
 arm-linux-androideabi

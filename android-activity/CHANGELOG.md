@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4] - 2022-09-20
 ### Changed
 - *Breaking*: `input_events` callback now return whether an event was handled or not to allow for fallback handling ([#31](https://github.com/rib/android-activity/issues/31))
+- The native-activity backend is now implemented in Rust only, without building on `android_native_app_glue.c` ([#35](https://github.com/rib/android-activity/pull/35))
 
 ## [0.3] - 2022-09-15
 ### Added

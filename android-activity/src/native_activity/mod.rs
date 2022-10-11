@@ -1,31 +1,23 @@
 #![cfg(any(feature = "native-activity", doc))]
 
-use std::ffi::{CStr, CString};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::ops::Deref;
-use std::os::raw;
-use std::os::unix::prelude::*;
+use std::ptr;
 use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-use std::{ptr, thread};
 
-use log::{error, info, trace, Level};
+use log::{error, info, trace};
 
 use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
 
 use ndk::asset::AssetManager;
-use ndk::configuration::Configuration;
-use ndk::input_queue::InputQueue;
 use ndk::native_window::NativeWindow;
 
 use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
 
-mod ffi;
+use self::glue::NativeActivityGlue;
 
 pub mod input {
     pub use ndk::event::{
@@ -44,9 +36,15 @@ pub mod input {
     }
 }
 
-// The only time it's safe to update the android_app->savedState pointer is
+mod glue;
+
+pub const LOOPER_ID_MAIN: libc::c_int = 1;
+pub const LOOPER_ID_INPUT: libc::c_int = 2;
+//pub const LOOPER_ID_USER: ::std::os::raw::c_uint = 3;
+
+// The only time it's safe to update the saved_state pointer is
 // while handling a SaveState event, so this API is only exposed for those
-// events...
+// events
 #[derive(Debug)]
 pub struct StateSaver<'a> {
     app: &'a AndroidAppInner,
@@ -54,37 +52,7 @@ pub struct StateSaver<'a> {
 
 impl<'a> StateSaver<'a> {
     pub fn store(&self, state: &'a [u8]) {
-        // android_native_app_glue specifically expects savedState to have been allocated
-        // via libc::malloc since it will automatically handle freeing the data once it
-        // has been handed over to the Java Activity / main thread.
-        unsafe {
-            let app_ptr = self.app.native_app.as_ptr();
-
-            // In case the application calls store() multiple times for some reason we
-            // make sure to free any pre-existing state...
-            if (*app_ptr).savedState != ptr::null_mut() {
-                libc::free((*app_ptr).savedState);
-                (*app_ptr).savedState = ptr::null_mut();
-                (*app_ptr).savedStateSize = 0;
-            }
-
-            let buf = libc::malloc(state.len());
-            if buf == ptr::null_mut() {
-                panic!("Failed to allocate save_state buffer");
-            }
-
-            // Since it's a byte array there's no special alignment requirement here.
-            //
-            // Since we re-define `buf` we ensure it's not possible to access the buffer
-            // via its original pointer for the lifetime of the slice.
-            {
-                let buf: &mut [u8] = std::slice::from_raw_parts_mut(buf.cast(), state.len());
-                buf.copy_from_slice(state);
-            }
-
-            (*app_ptr).savedState = buf;
-            (*app_ptr).savedStateSize = state.len() as _;
-        }
+        self.app.native_activity.set_saved_state(state);
     }
 }
 
@@ -94,19 +62,7 @@ pub struct StateLoader<'a> {
 }
 impl<'a> StateLoader<'a> {
     pub fn load(&self) -> Option<Vec<u8>> {
-        unsafe {
-            let app_ptr = self.app.native_app.as_ptr();
-            if (*app_ptr).savedState != ptr::null_mut() && (*app_ptr).savedStateSize > 0 {
-                let buf: &mut [u8] = std::slice::from_raw_parts_mut(
-                    (*app_ptr).savedState.cast(),
-                    (*app_ptr).savedStateSize as usize,
-                );
-                let state = buf.to_vec();
-                Some(state)
-            } else {
-                None
-            }
-        }
+        self.app.native_activity.saved_state()
     }
 }
 
@@ -129,53 +85,64 @@ impl AndroidAppWaker {
 }
 
 impl AndroidApp {
-    pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>) -> AndroidApp {
-        // Note: we don't use from_ptr since we don't own the android_app.config
-        // and need to keep in mind that the Drop handler is going to call
-        // AConfiguration_delete()
-        let config = Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
-
-        AndroidApp {
+    pub(crate) fn new(native_activity: NativeActivityGlue) -> Self {
+        let app = Self {
             inner: Arc::new(RwLock::new(AndroidAppInner {
-                native_app: NativeAppGlue { ptr },
-                config: ConfigurationRef::new(config),
-                native_window: Default::default(),
+                native_activity,
+                looper: Looper {
+                    ptr: ptr::null_mut(),
+                },
             })),
+        };
+
+        {
+            let mut guard = app.inner.write().unwrap();
+
+            let main_fd = guard.native_activity.cmd_read_fd();
+            unsafe {
+                guard.looper.ptr = ndk_sys::ALooper_prepare(
+                    ndk_sys::ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as libc::c_int,
+                );
+                ndk_sys::ALooper_addFd(
+                    guard.looper.ptr,
+                    main_fd,
+                    LOOPER_ID_MAIN,
+                    ndk_sys::ALOOPER_EVENT_INPUT as libc::c_int,
+                    None,
+                    //&mut guard.cmd_poll_source as *mut _ as *mut _);
+                    ptr::null_mut(),
+                );
+            }
         }
+
+        app
     }
 }
 
 #[derive(Debug)]
-struct NativeAppGlue {
-    ptr: NonNull<ffi::android_app>,
+struct Looper {
+    pub ptr: *mut ALooper,
 }
-impl Deref for NativeAppGlue {
-    type Target = NonNull<ffi::android_app>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.ptr
-    }
-}
-unsafe impl Send for NativeAppGlue {}
-unsafe impl Sync for NativeAppGlue {}
+unsafe impl Send for Looper {}
+unsafe impl Sync for Looper {}
 
 #[derive(Debug)]
 pub(crate) struct AndroidAppInner {
-    native_app: NativeAppGlue,
-    config: ConfigurationRef,
-    native_window: RwLock<Option<NativeWindow>>,
+    pub(crate) native_activity: NativeActivityGlue,
+    looper: Looper,
 }
 
 impl AndroidAppInner {
     pub(crate) fn native_activity(&self) -> *const ndk_sys::ANativeActivity {
-        unsafe {
-            let app_ptr = self.native_app.as_ptr();
-            (*app_ptr).activity.cast()
-        }
+        self.native_activity.activity
+    }
+
+    pub(crate) fn looper(&self) -> *mut ndk_sys::ALooper {
+        self.looper.ptr
     }
 
     pub fn native_window<'a>(&self) -> Option<NativeWindow> {
-        self.native_window.read().unwrap().clone()
+        self.native_activity.mutex.lock().unwrap().window.clone()
     }
 
     pub fn poll_events<F>(&self, timeout: Option<Duration>, mut callback: F)
@@ -185,8 +152,6 @@ impl AndroidAppInner {
         trace!("poll_events");
 
         unsafe {
-            let native_app = &self.native_app;
-
             let mut fd: i32 = 0;
             let mut events: i32 = 0;
             let mut source: *mut core::ffi::c_void = ptr::null_mut();
@@ -196,7 +161,12 @@ impl AndroidAppInner {
             } else {
                 -1
             };
+
             info!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
+            assert!(
+                ndk_sys::ALooper_forThread() != ptr::null_mut(),
+                "Application tried to poll events from non-main thread"
+            );
             let id = ALooper_pollAll(
                 timeout_milliseconds,
                 &mut fd,
@@ -205,117 +175,88 @@ impl AndroidAppInner {
             );
             info!("pollAll id = {id}");
             match id {
-                ffi::ALOOPER_POLL_WAKE => {
+                ndk_sys::ALOOPER_POLL_WAKE => {
                     trace!("ALooper_pollAll returned POLL_WAKE");
                     callback(PollEvent::Wake);
                 }
-                ffi::ALOOPER_POLL_CALLBACK => {
+                ndk_sys::ALOOPER_POLL_CALLBACK => {
                     // ALooper_pollAll is documented to handle all callback sources internally so it should
                     // never return a _CALLBACK source id...
                     error!("Spurious ALOOPER_POLL_CALLBACK from ALopper_pollAll() (ignored)");
                 }
-                ffi::ALOOPER_POLL_TIMEOUT => {
+                ndk_sys::ALOOPER_POLL_TIMEOUT => {
                     trace!("ALooper_pollAll returned POLL_TIMEOUT");
                     callback(PollEvent::Timeout);
                 }
-                ffi::ALOOPER_POLL_ERROR => {
+                ndk_sys::ALOOPER_POLL_ERROR => {
                     // If we have an IO error with our pipe to the main Java thread that's surely
                     // not something we can recover from
                     panic!("ALooper_pollAll returned POLL_ERROR");
                 }
                 id if id >= 0 => {
-                    match id as u32 {
-                        ffi::LOOPER_ID_MAIN => {
+                    match id {
+                        LOOPER_ID_MAIN => {
                             trace!("ALooper_pollAll returned ID_MAIN");
-                            let source: *mut ffi::android_poll_source = source.cast();
-                            if source != ptr::null_mut() {
-                                let cmd_i = ffi::android_app_read_cmd(native_app.as_ptr());
-
-                                let cmd = match cmd_i as u32 {
+                            if let Some(ipc_cmd) = self.native_activity.read_cmd() {
+                                let main_cmd = match ipc_cmd {
                                     // We don't forward info about the AInputQueue to apps since it's
                                     // an implementation details that's also not compatible with
                                     // GameActivity
-                                    ffi::APP_CMD_INPUT_CHANGED => None,
+                                    glue::AppCmd::InputQueueChanged => None,
 
-                                    ffi::APP_CMD_INIT_WINDOW => Some(MainEvent::InitWindow {}),
-                                    ffi::APP_CMD_TERM_WINDOW => Some(MainEvent::TerminateWindow {}),
-                                    ffi::APP_CMD_WINDOW_RESIZED => {
+                                    glue::AppCmd::InitWindow => Some(MainEvent::InitWindow {}),
+                                    glue::AppCmd::TermWindow => Some(MainEvent::TerminateWindow {}),
+                                    glue::AppCmd::WindowResized => {
                                         Some(MainEvent::WindowResized {})
                                     }
-                                    ffi::APP_CMD_WINDOW_REDRAW_NEEDED => {
+                                    glue::AppCmd::WindowRedrawNeeded => {
                                         Some(MainEvent::RedrawNeeded {})
                                     }
-                                    ffi::APP_CMD_CONTENT_RECT_CHANGED => {
+                                    glue::AppCmd::ContentRectChanged => {
                                         Some(MainEvent::ContentRectChanged {})
                                     }
-                                    ffi::APP_CMD_GAINED_FOCUS => Some(MainEvent::GainedFocus),
-                                    ffi::APP_CMD_LOST_FOCUS => Some(MainEvent::LostFocus),
-                                    ffi::APP_CMD_CONFIG_CHANGED => {
+                                    glue::AppCmd::GainedFocus => Some(MainEvent::GainedFocus),
+                                    glue::AppCmd::LostFocus => Some(MainEvent::LostFocus),
+                                    glue::AppCmd::ConfigChanged => {
                                         Some(MainEvent::ConfigChanged {})
                                     }
-                                    ffi::APP_CMD_LOW_MEMORY => Some(MainEvent::LowMemory),
-                                    ffi::APP_CMD_START => Some(MainEvent::Start),
-                                    ffi::APP_CMD_RESUME => Some(MainEvent::Resume {
+                                    glue::AppCmd::LowMemory => Some(MainEvent::LowMemory),
+                                    glue::AppCmd::Start => Some(MainEvent::Start),
+                                    glue::AppCmd::Resume => Some(MainEvent::Resume {
                                         loader: StateLoader { app: &self },
                                     }),
-                                    ffi::APP_CMD_SAVE_STATE => Some(MainEvent::SaveState {
+                                    glue::AppCmd::SaveState => Some(MainEvent::SaveState {
                                         saver: StateSaver { app: &self },
                                     }),
-                                    ffi::APP_CMD_PAUSE => Some(MainEvent::Pause),
-                                    ffi::APP_CMD_STOP => Some(MainEvent::Stop),
-                                    ffi::APP_CMD_DESTROY => Some(MainEvent::Destroy),
-
-                                    //ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED => MainEvent::InsetsChanged {},
-                                    _ => unreachable!(),
+                                    glue::AppCmd::Pause => Some(MainEvent::Pause),
+                                    glue::AppCmd::Stop => Some(MainEvent::Stop),
+                                    glue::AppCmd::Destroy => Some(MainEvent::Destroy),
                                 };
 
-                                trace!("Calling android_app_pre_exec_cmd({cmd_i})");
-                                ffi::android_app_pre_exec_cmd(native_app.as_ptr(), cmd_i);
+                                trace!("Calling pre_exec_cmd({ipc_cmd:#?})");
+                                self.native_activity.pre_exec_cmd(
+                                    ipc_cmd,
+                                    self.looper(),
+                                    LOOPER_ID_INPUT,
+                                );
 
-                                if let Some(cmd) = cmd {
-                                    trace!("Read ID_MAIN command {cmd_i} = {cmd:?}");
-                                    match cmd {
-                                        MainEvent::ConfigChanged { .. } => {
-                                            self.config.replace(Configuration::clone_from_ptr(
-                                                NonNull::new_unchecked(
-                                                    (*native_app.as_ptr()).config,
-                                                ),
-                                            ));
-                                        }
-                                        MainEvent::InitWindow { .. } => {
-                                            let win_ptr = (*native_app.as_ptr()).window;
-                                            // It's important that we use ::clone_from_ptr() here
-                                            // because NativeWindow has a Drop implementation that
-                                            // will unconditionally _release() the native window
-                                            *self.native_window.write().unwrap() =
-                                                Some(NativeWindow::clone_from_ptr(
-                                                    NonNull::new(win_ptr).unwrap(),
-                                                ));
-                                        }
-                                        MainEvent::TerminateWindow { .. } => {
-                                            *self.native_window.write().unwrap() = None;
-                                        }
-                                        _ => {}
-                                    }
-
-                                    trace!("Invoking callback for ID_MAIN command = {:?}", cmd);
-                                    callback(PollEvent::Main(cmd));
+                                if let Some(main_cmd) = main_cmd {
+                                    trace!("Invoking callback for ID_MAIN command = {main_cmd:?}");
+                                    callback(PollEvent::Main(main_cmd));
                                 }
 
-                                trace!("Calling android_app_post_exec_cmd({cmd_i})");
-                                ffi::android_app_post_exec_cmd(native_app.as_ptr(), cmd_i);
-                            } else {
-                                panic!("ALooper_pollAll returned ID_MAIN event with NULL android_poll_source!");
+                                trace!("Calling post_exec_cmd({ipc_cmd:#?})");
+                                self.native_activity.post_exec_cmd(ipc_cmd);
                             }
                         }
-                        ffi::LOOPER_ID_INPUT => {
+                        LOOPER_ID_INPUT => {
                             trace!("ALooper_pollAll returned ID_INPUT");
 
                             // To avoid spamming the application with event loop iterations notifying them of
                             // input events then we only send one `InputAvailable` per iteration of input
                             // handling. We re-attach the looper when the application calls
                             // `AndroidApp::input_events()`
-                            ffi::android_app_detach_input_queue_looper(native_app.as_ptr());
+                            self.native_activity.detach_input_queue_from_looper();
                             callback(PollEvent::Main(MainEvent::InputAvailable))
                         }
                         _ => {
@@ -332,35 +273,26 @@ impl AndroidAppInner {
 
     pub fn create_waker(&self) -> AndroidAppWaker {
         unsafe {
-            // From the application's pov we assume the app_ptr and looper pointer
-            // have static lifetimes and we can safely assume they are never NULL.
-            let app_ptr = self.native_app.as_ptr();
+            // From the application's pov we assume the looper pointer has a static
+            // lifetimes and we can safely assume it is never NULL.
             AndroidAppWaker {
-                looper: NonNull::new_unchecked((*app_ptr).looper),
+                looper: NonNull::new_unchecked(self.looper.ptr),
             }
         }
     }
 
     pub fn config(&self) -> ConfigurationRef {
-        self.config.clone()
+        self.native_activity.config()
     }
 
     pub fn content_rect(&self) -> Rect {
-        unsafe {
-            let app_ptr = self.native_app.as_ptr();
-            Rect {
-                left: (*app_ptr).contentRect.left,
-                right: (*app_ptr).contentRect.right,
-                top: (*app_ptr).contentRect.top,
-                bottom: (*app_ptr).contentRect.bottom,
-            }
-        }
+        self.native_activity.content_rect()
     }
 
     pub fn asset_manager(&self) -> AssetManager {
         unsafe {
-            let app_ptr = self.native_app.as_ptr();
-            let am_ptr = NonNull::new_unchecked((*(*app_ptr).activity).assetManager);
+            let activity_ptr = self.native_activity.activity;
+            let am_ptr = NonNull::new_unchecked((*activity_ptr).assetManager);
             AssetManager::from_ptr(am_ptr)
         }
     }
@@ -373,7 +305,7 @@ impl AndroidAppInner {
         let na = self.native_activity();
         let na_mut = na as *mut ndk_sys::ANativeActivity;
         unsafe {
-            ffi::ANativeActivity_setWindowFlags(
+            ndk_sys::ANativeActivity_setWindowFlags(
                 na_mut.cast(),
                 add_flags.bits(),
                 remove_flags.bits(),
@@ -386,11 +318,11 @@ impl AndroidAppInner {
         let na = self.native_activity();
         unsafe {
             let flags = if show_implicit {
-                ffi::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
+                ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
             } else {
                 0
             };
-            ffi::ANativeActivity_showSoftInput(na as *mut _, flags);
+            ndk_sys::ANativeActivity_showSoftInput(na as *mut _, flags);
         }
     }
 
@@ -399,11 +331,11 @@ impl AndroidAppInner {
         let na = self.native_activity();
         unsafe {
             let flags = if hide_implicit_only {
-                ffi::ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY
+                ndk_sys::ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY
             } else {
                 0
             };
-            ffi::ANativeActivity_hideSoftInput(na as *mut _, flags);
+            ndk_sys::ANativeActivity_hideSoftInput(na as *mut _, flags);
         }
     }
 
@@ -419,18 +351,15 @@ impl AndroidAppInner {
     where
         F: FnMut(&input::InputEvent) -> InputStatus,
     {
-        let queue = unsafe {
-            let app_ptr = self.native_app.as_ptr();
-            if (*app_ptr).inputQueue == ptr::null_mut() {
-                return;
-            }
-
-            // Reattach the input queue to the looper so future input will again deliver an
-            // `InputAvailable` event.
-            ffi::android_app_attach_input_queue_looper(app_ptr);
-
-            let queue = NonNull::new_unchecked((*app_ptr).inputQueue);
-            InputQueue::from_ptr(queue)
+        // Get the InputQueue for the NativeActivity (if there is one) and also ensure
+        // the queue is re-attached to our event Looper (so new input events will again
+        // trigger a wake up)
+        let queue = self
+            .native_activity
+            .looper_attached_input_queue(self.looper(), LOOPER_ID_INPUT);
+        let queue = match queue {
+            Some(queue) => queue,
+            None => return,
         };
 
         // Note: we basically ignore errors from get_event() currently. Looking
@@ -477,105 +406,4 @@ impl AndroidAppInner {
         let na = self.native_activity();
         unsafe { util::try_get_path_from_ptr((*na).obbPath) }
     }
-}
-
-// Rust doesn't give us a clean way to directly export symbols from C/C++
-// so we rename the C/C++ symbols and re-export this entrypoint from
-// Rust...
-//
-// https://github.com/rust-lang/rfcs/issues/2771
-extern "C" {
-    pub fn ANativeActivity_onCreate_C(
-        activity: *mut std::os::raw::c_void,
-        savedState: *mut ::std::os::raw::c_void,
-        savedStateSize: usize,
-    );
-}
-
-#[no_mangle]
-unsafe extern "C" fn ANativeActivity_onCreate(
-    activity: *mut std::os::raw::c_void,
-    saved_state: *mut std::os::raw::c_void,
-    saved_state_size: usize,
-) {
-    ANativeActivity_onCreate_C(activity, saved_state, saved_state_size);
-}
-
-fn android_log(level: Level, tag: &CStr, msg: &CStr) {
-    let prio = match level {
-        Level::Error => ndk_sys::android_LogPriority::ANDROID_LOG_ERROR,
-        Level::Warn => ndk_sys::android_LogPriority::ANDROID_LOG_WARN,
-        Level::Info => ndk_sys::android_LogPriority::ANDROID_LOG_INFO,
-        Level::Debug => ndk_sys::android_LogPriority::ANDROID_LOG_DEBUG,
-        Level::Trace => ndk_sys::android_LogPriority::ANDROID_LOG_VERBOSE,
-    };
-    unsafe {
-        ndk_sys::__android_log_write(prio.0 as raw::c_int, tag.as_ptr(), msg.as_ptr());
-    }
-}
-
-extern "Rust" {
-    pub fn android_main(app: AndroidApp);
-}
-
-// This is a spring board between android_native_app_glue and the user's
-// `app_main` function. This is run on a dedicated thread spawned
-// by android_native_app_glue.
-#[no_mangle]
-pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
-    // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
-    let mut logpipe: [RawFd; 2] = Default::default();
-    libc::pipe(logpipe.as_mut_ptr());
-    libc::dup2(logpipe[1], libc::STDOUT_FILENO);
-    libc::dup2(logpipe[1], libc::STDERR_FILENO);
-    thread::spawn(move || {
-        let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-        let file = File::from_raw_fd(logpipe[0]);
-        let mut reader = BufReader::new(file);
-        let mut buffer = String::new();
-        loop {
-            buffer.clear();
-            if let Ok(len) = reader.read_line(&mut buffer) {
-                if len == 0 {
-                    break;
-                } else if let Ok(msg) = CString::new(buffer.clone()) {
-                    android_log(Level::Info, tag, &msg);
-                }
-            }
-        }
-    });
-
-    let app = AndroidApp::from_ptr(NonNull::new(app).unwrap());
-
-    let na = app.native_activity();
-    let jvm = (*na).vm;
-    let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
-    ndk_context::initialize_android_context(jvm.cast(), activity.cast());
-
-    // Since this is a newly spawned thread then the JVM hasn't been attached
-    // to the thread yet. Attach before calling the applications main function
-    // so they can safely make JNI calls
-    let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
-    if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
-        attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
-    }
-
-    // XXX: If we were in control of the Java Activity subclass then
-    // we could potentially run the android_main function via a Java native method
-    // springboard (e.g. call an Activity subclass method that calls a jni native
-    // method that then just calls android_main()) that would make sure there was
-    // a Java frame at the base of our call stack which would then be recognised
-    // when calling FindClass to lookup a suitable classLoader, instead of
-    // defaulting to the system loader. Without this then it's difficult for native
-    // code to look up non-standard Java classes.
-    android_main(app);
-
-    // Since this is a newly spawned thread then the JVM hasn't been attached
-    // to the thread yet. Attach before calling the applications main function
-    // so they can safely make JNI calls
-    if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
-        detach_current_thread(jvm);
-    }
-
-    ndk_context::release_android_context();
 }

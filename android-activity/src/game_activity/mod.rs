@@ -71,7 +71,7 @@ impl<'a> StateSaver<'a> {
             }
 
             (*app_ptr).savedState = buf;
-            (*app_ptr).savedStateSize = state.len() as ffi::size_t;
+            (*app_ptr).savedStateSize = state.len() as _;
         }
     }
 }
@@ -549,7 +549,7 @@ extern "C" {
     pub fn GameActivity_onCreate_C(
         activity: *mut ffi::GameActivity,
         savedState: *mut ::std::os::raw::c_void,
-        savedStateSize: ffi::size_t,
+        savedStateSize: libc::size_t,
     );
 }
 
@@ -582,7 +582,7 @@ pub unsafe extern "C" fn Java_com_google_androidgamesdk_GameActivity_loadNativeC
 pub unsafe extern "C" fn GameActivity_onCreate(
     activity: *mut ffi::GameActivity,
     saved_state: *mut ::std::os::raw::c_void,
-    saved_state_size: ffi::size_t,
+    saved_state_size: libc::size_t,
 ) {
     GameActivity_onCreate_C(activity, saved_state, saved_state_size);
 }

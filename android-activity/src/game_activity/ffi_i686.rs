@@ -21,13 +21,10 @@ pub const __ANDROID_API_O_MR1__: u32 = 27;
 pub const __ANDROID_API_P__: u32 = 28;
 pub const __ANDROID_API_Q__: u32 = 29;
 pub const __ANDROID_API_R__: u32 = 30;
-pub const __ANDROID_API_S__: u32 = 31;
-pub const __ANDROID_API_T__: u32 = 33;
-pub const __ANDROID_NDK__: u32 = 1;
-pub const __NDK_MAJOR__: u32 = 25;
-pub const __NDK_MINOR__: u32 = 0;
+pub const __NDK_MAJOR__: u32 = 21;
+pub const __NDK_MINOR__: u32 = 1;
 pub const __NDK_BETA__: u32 = 0;
-pub const __NDK_BUILD__: u32 = 8775105;
+pub const __NDK_BUILD__: u32 = 6352462;
 pub const __NDK_CANARY__: u32 = 0;
 pub const INT8_MIN: i32 = -128;
 pub const INT8_MAX: u32 = 127;
@@ -65,11 +62,7 @@ pub const PTRDIFF_MAX: u32 = 2147483647;
 pub const SIZE_MAX: u32 = 4294967295;
 pub const __BITS_PER_LONG: u32 = 32;
 pub const __FD_SETSIZE: u32 = 1024;
-pub const __GNUC_VA_LIST: u32 = 1;
 pub const AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT: u32 = 8;
-pub const true_: u32 = 1;
-pub const false_: u32 = 0;
-pub const __bool_true_false_are_defined: u32 = 1;
 pub const __PRI_64_prefix: &[u8; 3usize] = b"ll\0";
 pub const PRId8: &[u8; 2usize] = b"d\0";
 pub const PRId16: &[u8; 2usize] = b"d\0";
@@ -192,6 +185,10 @@ pub const SCNxLEAST64: &[u8; 4usize] = b"llx\0";
 pub const SCNxFAST8: &[u8; 4usize] = b"hhx\0";
 pub const SCNxFAST64: &[u8; 4usize] = b"llx\0";
 pub const SCNxMAX: &[u8; 3usize] = b"jx\0";
+pub const __GNUC_VA_LIST: u32 = 1;
+pub const true_: u32 = 1;
+pub const false_: u32 = 0;
+pub const __bool_true_false_are_defined: u32 = 1;
 pub const GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT: u32 = 48;
 pub const GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT: u32 = 8;
 pub const GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT: u32 = 8;
@@ -438,20 +435,18 @@ pub const SIGPWR: u32 = 30;
 pub const SIGSYS: u32 = 31;
 pub const SIGUNUSED: u32 = 31;
 pub const __SIGRTMIN: u32 = 32;
-pub const SA_RESTORER: u32 = 67108864;
-pub const MINSIGSTKSZ: u32 = 2048;
-pub const SIGSTKSZ: u32 = 8192;
 pub const SA_NOCLDSTOP: u32 = 1;
 pub const SA_NOCLDWAIT: u32 = 2;
 pub const SA_SIGINFO: u32 = 4;
-pub const SA_UNSUPPORTED: u32 = 1024;
-pub const SA_EXPOSE_TAGBITS: u32 = 2048;
 pub const SA_ONSTACK: u32 = 134217728;
 pub const SA_RESTART: u32 = 268435456;
 pub const SA_NODEFER: u32 = 1073741824;
 pub const SA_RESETHAND: u32 = 2147483648;
 pub const SA_NOMASK: u32 = 1073741824;
 pub const SA_ONESHOT: u32 = 2147483648;
+pub const SA_RESTORER: u32 = 67108864;
+pub const MINSIGSTKSZ: u32 = 2048;
+pub const SIGSTKSZ: u32 = 8192;
 pub const SIG_BLOCK: u32 = 0;
 pub const SIG_UNBLOCK: u32 = 1;
 pub const SIG_SETMASK: u32 = 2;
@@ -501,9 +496,7 @@ pub const SEGV_PKUERR: u32 = 4;
 pub const SEGV_ACCADI: u32 = 5;
 pub const SEGV_ADIDERR: u32 = 6;
 pub const SEGV_ADIPERR: u32 = 7;
-pub const SEGV_MTEAERR: u32 = 8;
-pub const SEGV_MTESERR: u32 = 9;
-pub const NSIGSEGV: u32 = 9;
+pub const NSIGSEGV: u32 = 7;
 pub const BUS_ADRALN: u32 = 1;
 pub const BUS_ADRERR: u32 = 2;
 pub const BUS_OBJERR: u32 = 3;
@@ -515,8 +508,7 @@ pub const TRAP_TRACE: u32 = 2;
 pub const TRAP_BRANCH: u32 = 3;
 pub const TRAP_HWBKPT: u32 = 4;
 pub const TRAP_UNK: u32 = 5;
-pub const TRAP_PERF: u32 = 6;
-pub const NSIGTRAP: u32 = 6;
+pub const NSIGTRAP: u32 = 5;
 pub const CLD_EXITED: u32 = 1;
 pub const CLD_KILLED: u32 = 2;
 pub const CLD_DUMPED: u32 = 3;
@@ -532,8 +524,7 @@ pub const POLL_PRI: u32 = 5;
 pub const POLL_HUP: u32 = 6;
 pub const NSIGPOLL: u32 = 6;
 pub const SYS_SECCOMP: u32 = 1;
-pub const SYS_USER_DISPATCH: u32 = 2;
-pub const NSIGSYS: u32 = 2;
+pub const NSIGSYS: u32 = 1;
 pub const EMT_TAGOVF: u32 = 1;
 pub const NSIGEMT: u32 = 1;
 pub const SIGEV_SIGNAL: u32 = 0;
@@ -579,12 +570,6 @@ pub const CLONE_NEWUSER: u32 = 268435456;
 pub const CLONE_NEWPID: u32 = 536870912;
 pub const CLONE_NEWNET: u32 = 1073741824;
 pub const CLONE_IO: u32 = 2147483648;
-pub const CLONE_CLEAR_SIGHAND: u64 = 4294967296;
-pub const CLONE_INTO_CGROUP: u64 = 8589934592;
-pub const CLONE_NEWTIME: u32 = 128;
-pub const CLONE_ARGS_SIZE_VER0: u32 = 64;
-pub const CLONE_ARGS_SIZE_VER1: u32 = 80;
-pub const CLONE_ARGS_SIZE_VER2: u32 = 88;
 pub const SCHED_NORMAL: u32 = 0;
 pub const SCHED_FIFO: u32 = 1;
 pub const SCHED_RR: u32 = 2;
@@ -626,7 +611,6 @@ extern "C" {
 extern "C" {
     pub fn android_get_device_api_level() -> ::std::os::raw::c_int;
 }
-pub type size_t = ::std::os::raw::c_uint;
 pub type wchar_t = ::std::os::raw::c_int;
 #[repr(C)]
 #[repr(align(8))]
@@ -788,7 +772,6 @@ fn bindgen_test_layout___kernel_fsid_t() {
 }
 pub type __kernel_off_t = __kernel_long_t;
 pub type __kernel_loff_t = ::std::os::raw::c_longlong;
-pub type __kernel_old_time_t = __kernel_long_t;
 pub type __kernel_time_t = __kernel_long_t;
 pub type __kernel_time64_t = ::std::os::raw::c_longlong;
 pub type __kernel_clock_t = __kernel_long_t;
@@ -806,236 +789,6 @@ pub type __be64 = __u64;
 pub type __sum16 = __u16;
 pub type __wsum = __u32;
 pub type __poll_t = ::std::os::raw::c_uint;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct pthread_attr_t {
-    pub flags: u32,
-    pub stack_base: *mut ::std::os::raw::c_void,
-    pub stack_size: size_t,
-    pub guard_size: size_t,
-    pub sched_policy: i32,
-    pub sched_priority: i32,
-}
-#[test]
-fn bindgen_test_layout_pthread_attr_t() {
-    assert_eq!(
-        ::std::mem::size_of::<pthread_attr_t>(),
-        24usize,
-        concat!("Size of: ", stringify!(pthread_attr_t))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<pthread_attr_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(pthread_attr_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_attr_t>())).flags as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_attr_t),
-            "::",
-            stringify!(flags)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_attr_t>())).stack_base as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_attr_t),
-            "::",
-            stringify!(stack_base)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_attr_t>())).stack_size as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_attr_t),
-            "::",
-            stringify!(stack_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_attr_t>())).guard_size as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_attr_t),
-            "::",
-            stringify!(guard_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_attr_t>())).sched_policy as *const _ as usize },
-        16usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_attr_t),
-            "::",
-            stringify!(sched_policy)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_attr_t>())).sched_priority as *const _ as usize },
-        20usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_attr_t),
-            "::",
-            stringify!(sched_priority)
-        )
-    );
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct pthread_barrier_t {
-    pub __private: [i32; 8usize],
-}
-#[test]
-fn bindgen_test_layout_pthread_barrier_t() {
-    assert_eq!(
-        ::std::mem::size_of::<pthread_barrier_t>(),
-        32usize,
-        concat!("Size of: ", stringify!(pthread_barrier_t))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<pthread_barrier_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(pthread_barrier_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_barrier_t>())).__private as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_barrier_t),
-            "::",
-            stringify!(__private)
-        )
-    );
-}
-pub type pthread_barrierattr_t = ::std::os::raw::c_int;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct pthread_cond_t {
-    pub __private: [i32; 1usize],
-}
-#[test]
-fn bindgen_test_layout_pthread_cond_t() {
-    assert_eq!(
-        ::std::mem::size_of::<pthread_cond_t>(),
-        4usize,
-        concat!("Size of: ", stringify!(pthread_cond_t))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<pthread_cond_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(pthread_cond_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_cond_t>())).__private as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_cond_t),
-            "::",
-            stringify!(__private)
-        )
-    );
-}
-pub type pthread_condattr_t = ::std::os::raw::c_long;
-pub type pthread_key_t = ::std::os::raw::c_int;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct pthread_mutex_t {
-    pub __private: [i32; 1usize],
-}
-#[test]
-fn bindgen_test_layout_pthread_mutex_t() {
-    assert_eq!(
-        ::std::mem::size_of::<pthread_mutex_t>(),
-        4usize,
-        concat!("Size of: ", stringify!(pthread_mutex_t))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<pthread_mutex_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(pthread_mutex_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_mutex_t>())).__private as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_mutex_t),
-            "::",
-            stringify!(__private)
-        )
-    );
-}
-pub type pthread_mutexattr_t = ::std::os::raw::c_long;
-pub type pthread_once_t = ::std::os::raw::c_int;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct pthread_rwlock_t {
-    pub __private: [i32; 10usize],
-}
-#[test]
-fn bindgen_test_layout_pthread_rwlock_t() {
-    assert_eq!(
-        ::std::mem::size_of::<pthread_rwlock_t>(),
-        40usize,
-        concat!("Size of: ", stringify!(pthread_rwlock_t))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<pthread_rwlock_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(pthread_rwlock_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_rwlock_t>())).__private as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_rwlock_t),
-            "::",
-            stringify!(__private)
-        )
-    );
-}
-pub type pthread_rwlockattr_t = ::std::os::raw::c_long;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct pthread_spinlock_t {
-    pub __private: [i32; 2usize],
-}
-#[test]
-fn bindgen_test_layout_pthread_spinlock_t() {
-    assert_eq!(
-        ::std::mem::size_of::<pthread_spinlock_t>(),
-        8usize,
-        concat!("Size of: ", stringify!(pthread_spinlock_t))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<pthread_spinlock_t>(),
-        4usize,
-        concat!("Alignment of ", stringify!(pthread_spinlock_t))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<pthread_spinlock_t>())).__private as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(pthread_spinlock_t),
-            "::",
-            stringify!(__private)
-        )
-    );
-}
-pub type pthread_t = ::std::os::raw::c_long;
 pub type __gid_t = __kernel_gid32_t;
 pub type gid_t = __gid_t;
 pub type __uid_t = __kernel_uid32_t;
@@ -1396,158 +1149,6 @@ pub const ALOOPER_EVENT_ERROR: ::std::os::raw::c_uint = 4;
 pub const ALOOPER_EVENT_HANGUP: ::std::os::raw::c_uint = 8;
 pub const ALOOPER_EVENT_INVALID: ::std::os::raw::c_uint = 16;
 pub type _bindgen_ty_5 = ::std::os::raw::c_uint;
-pub type va_list = __builtin_va_list;
-pub type __gnuc_va_list = __builtin_va_list;
-#[repr(C)]
-pub struct JavaVMAttachArgs {
-    pub version: jint,
-    pub name: *const ::std::os::raw::c_char,
-    pub group: jobject,
-}
-#[test]
-fn bindgen_test_layout_JavaVMAttachArgs() {
-    assert_eq!(
-        ::std::mem::size_of::<JavaVMAttachArgs>(),
-        12usize,
-        concat!("Size of: ", stringify!(JavaVMAttachArgs))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<JavaVMAttachArgs>(),
-        4usize,
-        concat!("Alignment of ", stringify!(JavaVMAttachArgs))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<JavaVMAttachArgs>())).version as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMAttachArgs),
-            "::",
-            stringify!(version)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<JavaVMAttachArgs>())).name as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMAttachArgs),
-            "::",
-            stringify!(name)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<JavaVMAttachArgs>())).group as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMAttachArgs),
-            "::",
-            stringify!(group)
-        )
-    );
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct JavaVMOption {
-    pub optionString: *const ::std::os::raw::c_char,
-    pub extraInfo: *mut ::std::os::raw::c_void,
-}
-#[test]
-fn bindgen_test_layout_JavaVMOption() {
-    assert_eq!(
-        ::std::mem::size_of::<JavaVMOption>(),
-        8usize,
-        concat!("Size of: ", stringify!(JavaVMOption))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<JavaVMOption>(),
-        4usize,
-        concat!("Alignment of ", stringify!(JavaVMOption))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<JavaVMOption>())).optionString as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMOption),
-            "::",
-            stringify!(optionString)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<JavaVMOption>())).extraInfo as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMOption),
-            "::",
-            stringify!(extraInfo)
-        )
-    );
-}
-#[repr(C)]
-pub struct JavaVMInitArgs {
-    pub version: jint,
-    pub nOptions: jint,
-    pub options: *mut JavaVMOption,
-    pub ignoreUnrecognized: jboolean,
-}
-#[test]
-fn bindgen_test_layout_JavaVMInitArgs() {
-    assert_eq!(
-        ::std::mem::size_of::<JavaVMInitArgs>(),
-        16usize,
-        concat!("Size of: ", stringify!(JavaVMInitArgs))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<JavaVMInitArgs>(),
-        4usize,
-        concat!("Alignment of ", stringify!(JavaVMInitArgs))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<JavaVMInitArgs>())).version as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMInitArgs),
-            "::",
-            stringify!(version)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<JavaVMInitArgs>())).nOptions as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMInitArgs),
-            "::",
-            stringify!(nOptions)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<JavaVMInitArgs>())).options as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMInitArgs),
-            "::",
-            stringify!(options)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<JavaVMInitArgs>())).ignoreUnrecognized as *const _ as usize
-        },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(JavaVMInitArgs),
-            "::",
-            stringify!(ignoreUnrecognized)
-        )
-    );
-}
 pub const AKEY_STATE_UNKNOWN: ::std::os::raw::c_int = -1;
 pub const AKEY_STATE_UP: ::std::os::raw::c_int = 0;
 pub const AKEY_STATE_DOWN: ::std::os::raw::c_int = 1;
@@ -1579,10 +1180,6 @@ pub struct AInputEvent {
 }
 pub const AINPUT_EVENT_TYPE_KEY: ::std::os::raw::c_uint = 1;
 pub const AINPUT_EVENT_TYPE_MOTION: ::std::os::raw::c_uint = 2;
-pub const AINPUT_EVENT_TYPE_FOCUS: ::std::os::raw::c_uint = 3;
-pub const AINPUT_EVENT_TYPE_CAPTURE: ::std::os::raw::c_uint = 4;
-pub const AINPUT_EVENT_TYPE_DRAG: ::std::os::raw::c_uint = 5;
-pub const AINPUT_EVENT_TYPE_TOUCH_MODE: ::std::os::raw::c_uint = 6;
 pub type _bindgen_ty_8 = ::std::os::raw::c_uint;
 pub const AKEY_EVENT_ACTION_DOWN: ::std::os::raw::c_uint = 0;
 pub const AKEY_EVENT_ACTION_UP: ::std::os::raw::c_uint = 1;
@@ -1683,13 +1280,7 @@ pub const AMOTION_EVENT_TOOL_TYPE_FINGER: ::std::os::raw::c_uint = 1;
 pub const AMOTION_EVENT_TOOL_TYPE_STYLUS: ::std::os::raw::c_uint = 2;
 pub const AMOTION_EVENT_TOOL_TYPE_MOUSE: ::std::os::raw::c_uint = 3;
 pub const AMOTION_EVENT_TOOL_TYPE_ERASER: ::std::os::raw::c_uint = 4;
-pub const AMOTION_EVENT_TOOL_TYPE_PALM: ::std::os::raw::c_uint = 5;
 pub type _bindgen_ty_16 = ::std::os::raw::c_uint;
-pub const AMotionClassification_AMOTION_EVENT_CLASSIFICATION_NONE: AMotionClassification = 0;
-pub const AMotionClassification_AMOTION_EVENT_CLASSIFICATION_AMBIGUOUS_GESTURE:
-    AMotionClassification = 1;
-pub const AMotionClassification_AMOTION_EVENT_CLASSIFICATION_DEEP_PRESS: AMotionClassification = 2;
-pub type AMotionClassification = u32;
 pub const AINPUT_SOURCE_CLASS_MASK: ::std::os::raw::c_uint = 255;
 pub const AINPUT_SOURCE_CLASS_NONE: ::std::os::raw::c_uint = 0;
 pub const AINPUT_SOURCE_CLASS_BUTTON: ::std::os::raw::c_uint = 1;
@@ -1711,8 +1302,6 @@ pub const AINPUT_SOURCE_MOUSE_RELATIVE: ::std::os::raw::c_uint = 131076;
 pub const AINPUT_SOURCE_TOUCHPAD: ::std::os::raw::c_uint = 1048584;
 pub const AINPUT_SOURCE_TOUCH_NAVIGATION: ::std::os::raw::c_uint = 2097152;
 pub const AINPUT_SOURCE_JOYSTICK: ::std::os::raw::c_uint = 16777232;
-pub const AINPUT_SOURCE_HDMI: ::std::os::raw::c_uint = 33554433;
-pub const AINPUT_SOURCE_SENSOR: ::std::os::raw::c_uint = 67108864;
 pub const AINPUT_SOURCE_ROTARY_ENCODER: ::std::os::raw::c_uint = 4194304;
 pub const AINPUT_SOURCE_ANY: ::std::os::raw::c_uint = 4294967040;
 pub type _bindgen_ty_18 = ::std::os::raw::c_uint;
@@ -1740,9 +1329,6 @@ extern "C" {
     pub fn AInputEvent_getSource(event: *const AInputEvent) -> i32;
 }
 extern "C" {
-    pub fn AInputEvent_release(event: *const AInputEvent);
-}
-extern "C" {
     pub fn AKeyEvent_getAction(key_event: *const AInputEvent) -> i32;
 }
 extern "C" {
@@ -1765,9 +1351,6 @@ extern "C" {
 }
 extern "C" {
     pub fn AKeyEvent_getEventTime(key_event: *const AInputEvent) -> i64;
-}
-extern "C" {
-    pub fn AKeyEvent_fromJava(env: *mut JNIEnv, keyEvent: jobject) -> *const AInputEvent;
 }
 extern "C" {
     pub fn AMotionEvent_getAction(motion_event: *const AInputEvent) -> i32;
@@ -1965,15 +1548,6 @@ extern "C" {
         history_index: size_t,
     ) -> f32;
 }
-extern "C" {
-    pub fn AMotionEvent_getActionButton(motion_event: *const AInputEvent) -> i32;
-}
-extern "C" {
-    pub fn AMotionEvent_getClassification(motion_event: *const AInputEvent) -> i32;
-}
-extern "C" {
-    pub fn AMotionEvent_fromJava(env: *mut JNIEnv, motionEvent: jobject) -> *const AInputEvent;
-}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct AInputQueue {
@@ -2006,9 +1580,6 @@ extern "C" {
         event: *mut AInputEvent,
         handled: ::std::os::raw::c_int,
     );
-}
-extern "C" {
-    pub fn AInputQueue_fromJava(env: *mut JNIEnv, inputQueue: jobject) -> *mut AInputQueue;
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -2084,114 +1655,12 @@ extern "C" {
     ) -> uintmax_t;
 }
 pub const ADataSpace_ADATASPACE_UNKNOWN: ADataSpace = 0;
-pub const ADataSpace_STANDARD_MASK: ADataSpace = 4128768;
-pub const ADataSpace_STANDARD_UNSPECIFIED: ADataSpace = 0;
-pub const ADataSpace_STANDARD_BT709: ADataSpace = 65536;
-pub const ADataSpace_STANDARD_BT601_625: ADataSpace = 131072;
-pub const ADataSpace_STANDARD_BT601_625_UNADJUSTED: ADataSpace = 196608;
-pub const ADataSpace_STANDARD_BT601_525: ADataSpace = 262144;
-pub const ADataSpace_STANDARD_BT601_525_UNADJUSTED: ADataSpace = 327680;
-pub const ADataSpace_STANDARD_BT2020: ADataSpace = 393216;
-pub const ADataSpace_STANDARD_BT2020_CONSTANT_LUMINANCE: ADataSpace = 458752;
-pub const ADataSpace_STANDARD_BT470M: ADataSpace = 524288;
-pub const ADataSpace_STANDARD_FILM: ADataSpace = 589824;
-pub const ADataSpace_STANDARD_DCI_P3: ADataSpace = 655360;
-pub const ADataSpace_STANDARD_ADOBE_RGB: ADataSpace = 720896;
-pub const ADataSpace_TRANSFER_MASK: ADataSpace = 130023424;
-pub const ADataSpace_TRANSFER_UNSPECIFIED: ADataSpace = 0;
-pub const ADataSpace_TRANSFER_LINEAR: ADataSpace = 4194304;
-pub const ADataSpace_TRANSFER_SRGB: ADataSpace = 8388608;
-pub const ADataSpace_TRANSFER_SMPTE_170M: ADataSpace = 12582912;
-pub const ADataSpace_TRANSFER_GAMMA2_2: ADataSpace = 16777216;
-pub const ADataSpace_TRANSFER_GAMMA2_6: ADataSpace = 20971520;
-pub const ADataSpace_TRANSFER_GAMMA2_8: ADataSpace = 25165824;
-pub const ADataSpace_TRANSFER_ST2084: ADataSpace = 29360128;
-pub const ADataSpace_TRANSFER_HLG: ADataSpace = 33554432;
-pub const ADataSpace_RANGE_MASK: ADataSpace = 939524096;
-pub const ADataSpace_RANGE_UNSPECIFIED: ADataSpace = 0;
-pub const ADataSpace_RANGE_FULL: ADataSpace = 134217728;
-pub const ADataSpace_RANGE_LIMITED: ADataSpace = 268435456;
-pub const ADataSpace_RANGE_EXTENDED: ADataSpace = 402653184;
 pub const ADataSpace_ADATASPACE_SCRGB_LINEAR: ADataSpace = 406913024;
 pub const ADataSpace_ADATASPACE_SRGB: ADataSpace = 142671872;
 pub const ADataSpace_ADATASPACE_SCRGB: ADataSpace = 411107328;
 pub const ADataSpace_ADATASPACE_DISPLAY_P3: ADataSpace = 143261696;
 pub const ADataSpace_ADATASPACE_BT2020_PQ: ADataSpace = 163971072;
-pub const ADataSpace_ADATASPACE_BT2020_ITU_PQ: ADataSpace = 298188800;
-pub const ADataSpace_ADATASPACE_ADOBE_RGB: ADataSpace = 151715840;
-pub const ADataSpace_ADATASPACE_JFIF: ADataSpace = 146931712;
-pub const ADataSpace_ADATASPACE_BT601_625: ADataSpace = 281149440;
-pub const ADataSpace_ADATASPACE_BT601_525: ADataSpace = 281280512;
-pub const ADataSpace_ADATASPACE_BT2020: ADataSpace = 147193856;
-pub const ADataSpace_ADATASPACE_BT709: ADataSpace = 281083904;
-pub const ADataSpace_ADATASPACE_DCI_P3: ADataSpace = 155844608;
-pub const ADataSpace_ADATASPACE_SRGB_LINEAR: ADataSpace = 138477568;
-pub const ADataSpace_ADATASPACE_BT2020_HLG: ADataSpace = 168165376;
-pub const ADataSpace_ADATASPACE_BT2020_ITU_HLG: ADataSpace = 302383104;
-pub const ADataSpace_DEPTH: ADataSpace = 4096;
-pub const ADataSpace_DYNAMIC_DEPTH: ADataSpace = 4098;
 pub type ADataSpace = ::std::os::raw::c_uint;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct ARect {
-    pub left: i32,
-    pub top: i32,
-    pub right: i32,
-    pub bottom: i32,
-}
-#[test]
-fn bindgen_test_layout_ARect() {
-    assert_eq!(
-        ::std::mem::size_of::<ARect>(),
-        16usize,
-        concat!("Size of: ", stringify!(ARect))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<ARect>(),
-        4usize,
-        concat!("Alignment of ", stringify!(ARect))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ARect>())).left as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ARect),
-            "::",
-            stringify!(left)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ARect>())).top as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ARect),
-            "::",
-            stringify!(top)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ARect>())).right as *const _ as usize },
-        8usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ARect),
-            "::",
-            stringify!(right)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<ARect>())).bottom as *const _ as usize },
-        12usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(ARect),
-            "::",
-            stringify!(bottom)
-        )
-    );
-}
 pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM: AHardwareBuffer_Format = 1;
 pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM: AHardwareBuffer_Format = 2;
 pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_R8G8B8_UNORM: AHardwareBuffer_Format = 3;
@@ -2210,8 +1679,6 @@ pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_D32_FLOAT_S8_UINT: AHard
     52;
 pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_S8_UINT: AHardwareBuffer_Format = 53;
 pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_Y8Cb8Cr8_420: AHardwareBuffer_Format = 35;
-pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_YCbCr_P010: AHardwareBuffer_Format = 54;
-pub const AHardwareBuffer_Format_AHARDWAREBUFFER_FORMAT_R8_UNORM: AHardwareBuffer_Format = 56;
 pub type AHardwareBuffer_Format = ::std::os::raw::c_uint;
 pub const AHardwareBuffer_UsageFlags_AHARDWAREBUFFER_USAGE_CPU_READ_NEVER:
     AHardwareBuffer_UsageFlags = 0;
@@ -2521,6 +1988,15 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
+    pub fn AHardwareBuffer_lockPlanes(
+        buffer: *mut AHardwareBuffer,
+        usage: u64,
+        fence: i32,
+        rect: *const ARect,
+        outPlanes: *mut AHardwareBuffer_Planes,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn AHardwareBuffer_unlock(
         buffer: *mut AHardwareBuffer,
         fence: *mut i32,
@@ -2539,15 +2015,6 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn AHardwareBuffer_lockPlanes(
-        buffer: *mut AHardwareBuffer,
-        usage: u64,
-        fence: i32,
-        rect: *const ARect,
-        outPlanes: *mut AHardwareBuffer_Planes,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
     pub fn AHardwareBuffer_isSupported(desc: *const AHardwareBuffer_Desc) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -2561,11 +2028,157 @@ extern "C" {
         outBytesPerStride: *mut i32,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
-    pub fn AHardwareBuffer_getId(
-        buffer: *const AHardwareBuffer,
-        outId: *mut u64,
-    ) -> ::std::os::raw::c_int;
+pub type va_list = __builtin_va_list;
+pub type __gnuc_va_list = __builtin_va_list;
+#[repr(C)]
+pub struct JavaVMAttachArgs {
+    pub version: jint,
+    pub name: *const ::std::os::raw::c_char,
+    pub group: jobject,
+}
+#[test]
+fn bindgen_test_layout_JavaVMAttachArgs() {
+    assert_eq!(
+        ::std::mem::size_of::<JavaVMAttachArgs>(),
+        12usize,
+        concat!("Size of: ", stringify!(JavaVMAttachArgs))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<JavaVMAttachArgs>(),
+        4usize,
+        concat!("Alignment of ", stringify!(JavaVMAttachArgs))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<JavaVMAttachArgs>())).version as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMAttachArgs),
+            "::",
+            stringify!(version)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<JavaVMAttachArgs>())).name as *const _ as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMAttachArgs),
+            "::",
+            stringify!(name)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<JavaVMAttachArgs>())).group as *const _ as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMAttachArgs),
+            "::",
+            stringify!(group)
+        )
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct JavaVMOption {
+    pub optionString: *const ::std::os::raw::c_char,
+    pub extraInfo: *mut ::std::os::raw::c_void,
+}
+#[test]
+fn bindgen_test_layout_JavaVMOption() {
+    assert_eq!(
+        ::std::mem::size_of::<JavaVMOption>(),
+        8usize,
+        concat!("Size of: ", stringify!(JavaVMOption))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<JavaVMOption>(),
+        4usize,
+        concat!("Alignment of ", stringify!(JavaVMOption))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<JavaVMOption>())).optionString as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMOption),
+            "::",
+            stringify!(optionString)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<JavaVMOption>())).extraInfo as *const _ as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMOption),
+            "::",
+            stringify!(extraInfo)
+        )
+    );
+}
+#[repr(C)]
+pub struct JavaVMInitArgs {
+    pub version: jint,
+    pub nOptions: jint,
+    pub options: *mut JavaVMOption,
+    pub ignoreUnrecognized: jboolean,
+}
+#[test]
+fn bindgen_test_layout_JavaVMInitArgs() {
+    assert_eq!(
+        ::std::mem::size_of::<JavaVMInitArgs>(),
+        16usize,
+        concat!("Size of: ", stringify!(JavaVMInitArgs))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<JavaVMInitArgs>(),
+        4usize,
+        concat!("Alignment of ", stringify!(JavaVMInitArgs))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<JavaVMInitArgs>())).version as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMInitArgs),
+            "::",
+            stringify!(version)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<JavaVMInitArgs>())).nOptions as *const _ as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMInitArgs),
+            "::",
+            stringify!(nOptions)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<JavaVMInitArgs>())).options as *const _ as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMInitArgs),
+            "::",
+            stringify!(options)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<JavaVMInitArgs>())).ignoreUnrecognized as *const _ as usize
+        },
+        12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(JavaVMInitArgs),
+            "::",
+            stringify!(ignoreUnrecognized)
+        )
+    );
 }
 pub const GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_CAPTION_BAR: GameCommonInsetsType = 0;
 pub const GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_DISPLAY_CUTOUT: GameCommonInsetsType = 1;
@@ -6205,40 +5818,40 @@ fn bindgen_test_layout___kernel_itimerspec() {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct __kernel_old_timespec {
-    pub tv_sec: __kernel_old_time_t,
-    pub tv_nsec: ::std::os::raw::c_long,
+pub struct __kernel_old_timeval {
+    pub tv_sec: __kernel_long_t,
+    pub tv_usec: __kernel_long_t,
 }
 #[test]
-fn bindgen_test_layout___kernel_old_timespec() {
+fn bindgen_test_layout___kernel_old_timeval() {
     assert_eq!(
-        ::std::mem::size_of::<__kernel_old_timespec>(),
+        ::std::mem::size_of::<__kernel_old_timeval>(),
         8usize,
-        concat!("Size of: ", stringify!(__kernel_old_timespec))
+        concat!("Size of: ", stringify!(__kernel_old_timeval))
     );
     assert_eq!(
-        ::std::mem::align_of::<__kernel_old_timespec>(),
+        ::std::mem::align_of::<__kernel_old_timeval>(),
         4usize,
-        concat!("Alignment of ", stringify!(__kernel_old_timespec))
+        concat!("Alignment of ", stringify!(__kernel_old_timeval))
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<__kernel_old_timespec>())).tv_sec as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<__kernel_old_timeval>())).tv_sec as *const _ as usize },
         0usize,
         concat!(
             "Offset of field: ",
-            stringify!(__kernel_old_timespec),
+            stringify!(__kernel_old_timeval),
             "::",
             stringify!(tv_sec)
         )
     );
     assert_eq!(
-        unsafe { &(*(::std::ptr::null::<__kernel_old_timespec>())).tv_nsec as *const _ as usize },
+        unsafe { &(*(::std::ptr::null::<__kernel_old_timeval>())).tv_usec as *const _ as usize },
         4usize,
         concat!(
             "Offset of field: ",
-            stringify!(__kernel_old_timespec),
+            stringify!(__kernel_old_timeval),
             "::",
-            stringify!(tv_nsec)
+            stringify!(tv_usec)
         )
     );
 }
@@ -6284,7 +5897,7 @@ fn bindgen_test_layout___kernel_sock_timeval() {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct timespec {
-    pub tv_sec: __kernel_old_time_t,
+    pub tv_sec: __kernel_time_t,
     pub tv_nsec: ::std::os::raw::c_long,
 }
 #[test]
@@ -6323,7 +5936,7 @@ fn bindgen_test_layout_timespec() {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct timeval {
-    pub tv_sec: __kernel_old_time_t,
+    pub tv_sec: __kernel_time_t,
     pub tv_usec: __kernel_suseconds_t,
 }
 #[test]
@@ -6356,6 +5969,45 @@ fn bindgen_test_layout_timeval() {
             stringify!(timeval),
             "::",
             stringify!(tv_usec)
+        )
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct timezone {
+    pub tz_minuteswest: ::std::os::raw::c_int,
+    pub tz_dsttime: ::std::os::raw::c_int,
+}
+#[test]
+fn bindgen_test_layout_timezone() {
+    assert_eq!(
+        ::std::mem::size_of::<timezone>(),
+        8usize,
+        concat!("Size of: ", stringify!(timezone))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<timezone>(),
+        4usize,
+        concat!("Alignment of ", stringify!(timezone))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<timezone>())).tz_minuteswest as *const _ as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(timezone),
+            "::",
+            stringify!(tz_minuteswest)
+        )
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<timezone>())).tz_dsttime as *const _ as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(timezone),
+            "::",
+            stringify!(tz_dsttime)
         )
     );
 }
@@ -6434,45 +6086,6 @@ fn bindgen_test_layout_itimerval() {
             stringify!(itimerval),
             "::",
             stringify!(it_value)
-        )
-    );
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct timezone {
-    pub tz_minuteswest: ::std::os::raw::c_int,
-    pub tz_dsttime: ::std::os::raw::c_int,
-}
-#[test]
-fn bindgen_test_layout_timezone() {
-    assert_eq!(
-        ::std::mem::size_of::<timezone>(),
-        8usize,
-        concat!("Size of: ", stringify!(timezone))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<timezone>(),
-        4usize,
-        concat!("Alignment of ", stringify!(timezone))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<timezone>())).tz_minuteswest as *const _ as usize },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(timezone),
-            "::",
-            stringify!(tz_minuteswest)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<timezone>())).tz_dsttime as *const _ as usize },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(timezone),
-            "::",
-            stringify!(tz_dsttime)
         )
     );
 }
@@ -6597,7 +6210,6 @@ fn bindgen_test_layout___kernel_sigaction() {
     );
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
 pub struct sigaltstack {
     pub ss_sp: *mut ::std::os::raw::c_void,
     pub ss_flags: ::std::os::raw::c_int,
@@ -6939,11 +6551,9 @@ pub struct __sifields__bindgen_ty_5 {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union __sifields__bindgen_ty_5__bindgen_ty_1 {
-    pub _trapno: ::std::os::raw::c_int,
     pub _addr_lsb: ::std::os::raw::c_short,
     pub _addr_bnd: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1,
     pub _addr_pkey: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2,
-    pub _perf: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -7061,57 +6671,6 @@ fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2() {
         )
     );
 }
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3 {
-    pub _data: ::std::os::raw::c_ulong,
-    pub _type: __u32,
-}
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3() {
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3>(),
-        8usize,
-        concat!(
-            "Size of: ",
-            stringify!(__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3)
-        )
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3>(),
-        4usize,
-        concat!(
-            "Alignment of ",
-            stringify!(__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3>()))._data
-                as *const _ as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3),
-            "::",
-            stringify!(_data)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3>()))._type
-                as *const _ as usize
-        },
-        4usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3),
-            "::",
-            stringify!(_type)
-        )
-    );
-}
 #[test]
 fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1() {
     assert_eq!(
@@ -7128,19 +6687,6 @@ fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1() {
         concat!(
             "Alignment of ",
             stringify!(__sifields__bindgen_ty_5__bindgen_ty_1)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<__sifields__bindgen_ty_5__bindgen_ty_1>()))._trapno as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__sifields__bindgen_ty_5__bindgen_ty_1),
-            "::",
-            stringify!(_trapno)
         )
     );
     assert_eq!(
@@ -7180,19 +6726,6 @@ fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1() {
             stringify!(__sifields__bindgen_ty_5__bindgen_ty_1),
             "::",
             stringify!(_addr_pkey)
-        )
-    );
-    assert_eq!(
-        unsafe {
-            &(*(::std::ptr::null::<__sifields__bindgen_ty_5__bindgen_ty_1>()))._perf as *const _
-                as usize
-        },
-        0usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(__sifields__bindgen_ty_5__bindgen_ty_1),
-            "::",
-            stringify!(_perf)
         )
     );
 }
@@ -8807,7 +8340,6 @@ fn bindgen_test_layout_mcontext_t() {
     );
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
 pub struct ucontext {
     pub uc_flags: ::std::os::raw::c_ulong,
     pub uc_link: *mut ucontext,
@@ -9130,26 +8662,6 @@ extern "C" {
     pub fn psignal(__signal: ::std::os::raw::c_int, __msg: *const ::std::os::raw::c_char);
 }
 extern "C" {
-    pub fn pthread_kill(
-        __pthread: pthread_t,
-        __signal: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_sigmask(
-        __how: ::std::os::raw::c_int,
-        __new_set: *const sigset_t,
-        __old_set: *mut sigset_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_sigmask64(
-        __how: ::std::os::raw::c_int,
-        __new_set: *const sigset64_t,
-        __old_set: *mut sigset64_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
     pub fn sigqueue(
         __pid: pid_t,
         __signal: ::std::os::raw::c_int,
@@ -9221,7 +8733,7 @@ extern "C" {
 }
 extern "C" {
     pub fn select(
-        __max_fd_plus_one: ::std::os::raw::c_int,
+        __fd_count: ::std::os::raw::c_int,
         __read_fds: *mut fd_set,
         __write_fds: *mut fd_set,
         __exception_fds: *mut fd_set,
@@ -9230,7 +8742,7 @@ extern "C" {
 }
 extern "C" {
     pub fn pselect(
-        __max_fd_plus_one: ::std::os::raw::c_int,
+        __fd_count: ::std::os::raw::c_int,
         __read_fds: *mut fd_set,
         __write_fds: *mut fd_set,
         __exception_fds: *mut fd_set,
@@ -9240,7 +8752,7 @@ extern "C" {
 }
 extern "C" {
     pub fn pselect64(
-        __max_fd_plus_one: ::std::os::raw::c_int,
+        __fd_count: ::std::os::raw::c_int,
         __read_fds: *mut fd_set,
         __write_fds: *mut fd_set,
         __exception_fds: *mut fd_set,
@@ -9601,15 +9113,12 @@ pub struct clone_args {
     pub stack: __u64,
     pub stack_size: __u64,
     pub tls: __u64,
-    pub set_tid: __u64,
-    pub set_tid_size: __u64,
-    pub cgroup: __u64,
 }
 #[test]
 fn bindgen_test_layout_clone_args() {
     assert_eq!(
         ::std::mem::size_of::<clone_args>(),
-        88usize,
+        64usize,
         concat!("Size of: ", stringify!(clone_args))
     );
     assert_eq!(
@@ -9697,36 +9206,6 @@ fn bindgen_test_layout_clone_args() {
             stringify!(tls)
         )
     );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<clone_args>())).set_tid as *const _ as usize },
-        64usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(clone_args),
-            "::",
-            stringify!(set_tid)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<clone_args>())).set_tid_size as *const _ as usize },
-        72usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(clone_args),
-            "::",
-            stringify!(set_tid_size)
-        )
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<clone_args>())).cgroup as *const _ as usize },
-        80usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(clone_args),
-            "::",
-            stringify!(cgroup)
-        )
-    );
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -9794,506 +9273,6 @@ pub type _bindgen_ty_23 = ::std::os::raw::c_uint;
 pub const PTHREAD_RWLOCK_PREFER_READER_NP: ::std::os::raw::c_uint = 0;
 pub const PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP: ::std::os::raw::c_uint = 1;
 pub type _bindgen_ty_24 = ::std::os::raw::c_uint;
-extern "C" {
-    pub fn pthread_atfork(
-        __prepare: ::std::option::Option<unsafe extern "C" fn()>,
-        __parent: ::std::option::Option<unsafe extern "C" fn()>,
-        __child: ::std::option::Option<unsafe extern "C" fn()>,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_destroy(__attr: *mut pthread_attr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_getdetachstate(
-        __attr: *const pthread_attr_t,
-        __state: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_getguardsize(
-        __attr: *const pthread_attr_t,
-        __size: *mut size_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_getinheritsched(
-        __attr: *const pthread_attr_t,
-        __flag: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_getschedparam(
-        __attr: *const pthread_attr_t,
-        __param: *mut sched_param,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_getschedpolicy(
-        __attr: *const pthread_attr_t,
-        __policy: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_getscope(
-        __attr: *const pthread_attr_t,
-        __scope: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_getstack(
-        __attr: *const pthread_attr_t,
-        __addr: *mut *mut ::std::os::raw::c_void,
-        __size: *mut size_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_getstacksize(
-        __attr: *const pthread_attr_t,
-        __size: *mut size_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_init(__attr: *mut pthread_attr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_setdetachstate(
-        __attr: *mut pthread_attr_t,
-        __state: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_setguardsize(
-        __attr: *mut pthread_attr_t,
-        __size: size_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_setinheritsched(
-        __attr: *mut pthread_attr_t,
-        __flag: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_setschedparam(
-        __attr: *mut pthread_attr_t,
-        __param: *const sched_param,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_setschedpolicy(
-        __attr: *mut pthread_attr_t,
-        __policy: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_setscope(
-        __attr: *mut pthread_attr_t,
-        __scope: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_setstack(
-        __attr: *mut pthread_attr_t,
-        __addr: *mut ::std::os::raw::c_void,
-        __size: size_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_attr_setstacksize(
-        __addr: *mut pthread_attr_t,
-        __size: size_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_condattr_destroy(__attr: *mut pthread_condattr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_condattr_getclock(
-        __attr: *const pthread_condattr_t,
-        __clock: *mut clockid_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_condattr_getpshared(
-        __attr: *const pthread_condattr_t,
-        __shared: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_condattr_init(__attr: *mut pthread_condattr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_condattr_setclock(
-        __attr: *mut pthread_condattr_t,
-        __clock: clockid_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_condattr_setpshared(
-        __attr: *mut pthread_condattr_t,
-        __shared: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_cond_broadcast(__cond: *mut pthread_cond_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_cond_clockwait(
-        __cond: *mut pthread_cond_t,
-        __mutex: *mut pthread_mutex_t,
-        __clock: clockid_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_cond_destroy(__cond: *mut pthread_cond_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_cond_init(
-        __cond: *mut pthread_cond_t,
-        __attr: *const pthread_condattr_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_cond_signal(__cond: *mut pthread_cond_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_cond_timedwait(
-        __cond: *mut pthread_cond_t,
-        __mutex: *mut pthread_mutex_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_cond_timedwait_monotonic_np(
-        __cond: *mut pthread_cond_t,
-        __mutex: *mut pthread_mutex_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_cond_wait(
-        __cond: *mut pthread_cond_t,
-        __mutex: *mut pthread_mutex_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_create(
-        __pthread_ptr: *mut pthread_t,
-        __attr: *const pthread_attr_t,
-        __start_routine: ::std::option::Option<
-            unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void) -> *mut ::std::os::raw::c_void,
-        >,
-        arg1: *mut ::std::os::raw::c_void,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_detach(__pthread: pthread_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_exit(__return_value: *mut ::std::os::raw::c_void);
-}
-extern "C" {
-    pub fn pthread_equal(__lhs: pthread_t, __rhs: pthread_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_getattr_np(
-        __pthread: pthread_t,
-        __attr: *mut pthread_attr_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_getcpuclockid(
-        __pthread: pthread_t,
-        __clock: *mut clockid_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_getschedparam(
-        __pthread: pthread_t,
-        __policy: *mut ::std::os::raw::c_int,
-        __param: *mut sched_param,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_getspecific(__key: pthread_key_t) -> *mut ::std::os::raw::c_void;
-}
-extern "C" {
-    pub fn pthread_gettid_np(__pthread: pthread_t) -> pid_t;
-}
-extern "C" {
-    pub fn pthread_join(
-        __pthread: pthread_t,
-        __return_value_ptr: *mut *mut ::std::os::raw::c_void,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_key_create(
-        __key_ptr: *mut pthread_key_t,
-        __key_destructor: ::std::option::Option<
-            unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void),
-        >,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_key_delete(__key: pthread_key_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutexattr_destroy(__attr: *mut pthread_mutexattr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutexattr_getpshared(
-        __attr: *const pthread_mutexattr_t,
-        __shared: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutexattr_gettype(
-        __attr: *const pthread_mutexattr_t,
-        __type: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutexattr_getprotocol(
-        __attr: *const pthread_mutexattr_t,
-        __protocol: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutexattr_init(__attr: *mut pthread_mutexattr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutexattr_setpshared(
-        __attr: *mut pthread_mutexattr_t,
-        __shared: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutexattr_settype(
-        __attr: *mut pthread_mutexattr_t,
-        __type: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutexattr_setprotocol(
-        __attr: *mut pthread_mutexattr_t,
-        __protocol: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutex_clocklock(
-        __mutex: *mut pthread_mutex_t,
-        __clock: clockid_t,
-        __abstime: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutex_destroy(__mutex: *mut pthread_mutex_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutex_init(
-        __mutex: *mut pthread_mutex_t,
-        __attr: *const pthread_mutexattr_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutex_lock(__mutex: *mut pthread_mutex_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutex_timedlock(
-        __mutex: *mut pthread_mutex_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutex_timedlock_monotonic_np(
-        __mutex: *mut pthread_mutex_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutex_trylock(__mutex: *mut pthread_mutex_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_mutex_unlock(__mutex: *mut pthread_mutex_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_once(
-        __once: *mut pthread_once_t,
-        __init_routine: ::std::option::Option<unsafe extern "C" fn()>,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlockattr_init(__attr: *mut pthread_rwlockattr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlockattr_destroy(__attr: *mut pthread_rwlockattr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlockattr_getpshared(
-        __attr: *const pthread_rwlockattr_t,
-        __shared: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlockattr_setpshared(
-        __attr: *mut pthread_rwlockattr_t,
-        __shared: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlockattr_getkind_np(
-        __attr: *const pthread_rwlockattr_t,
-        __kind: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlockattr_setkind_np(
-        __attr: *mut pthread_rwlockattr_t,
-        __kind: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_clockrdlock(
-        __rwlock: *mut pthread_rwlock_t,
-        __clock: clockid_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_clockwrlock(
-        __rwlock: *mut pthread_rwlock_t,
-        __clock: clockid_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_destroy(__rwlock: *mut pthread_rwlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_init(
-        __rwlock: *mut pthread_rwlock_t,
-        __attr: *const pthread_rwlockattr_t,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_rdlock(__rwlock: *mut pthread_rwlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_timedrdlock(
-        __rwlock: *mut pthread_rwlock_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_timedrdlock_monotonic_np(
-        __rwlock: *mut pthread_rwlock_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_timedwrlock(
-        __rwlock: *mut pthread_rwlock_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_timedwrlock_monotonic_np(
-        __rwlock: *mut pthread_rwlock_t,
-        __timeout: *const timespec,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_tryrdlock(__rwlock: *mut pthread_rwlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_trywrlock(__rwlock: *mut pthread_rwlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_unlock(__rwlock: *mut pthread_rwlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_rwlock_wrlock(__rwlock: *mut pthread_rwlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_barrierattr_init(__attr: *mut pthread_barrierattr_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_barrierattr_destroy(__attr: *mut pthread_barrierattr_t)
-        -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_barrierattr_getpshared(
-        __attr: *const pthread_barrierattr_t,
-        __shared: *mut ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_barrierattr_setpshared(
-        __attr: *mut pthread_barrierattr_t,
-        __shared: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_barrier_init(
-        __barrier: *mut pthread_barrier_t,
-        __attr: *const pthread_barrierattr_t,
-        __count: ::std::os::raw::c_uint,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_barrier_destroy(__barrier: *mut pthread_barrier_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_barrier_wait(__barrier: *mut pthread_barrier_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_spin_destroy(__spinlock: *mut pthread_spinlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_spin_init(
-        __spinlock: *mut pthread_spinlock_t,
-        __shared: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_spin_lock(__spinlock: *mut pthread_spinlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_spin_trylock(__spinlock: *mut pthread_spinlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_spin_unlock(__spinlock: *mut pthread_spinlock_t) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_self() -> pthread_t;
-}
-extern "C" {
-    pub fn pthread_setname_np(
-        __pthread: pthread_t,
-        __name: *const ::std::os::raw::c_char,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_setschedparam(
-        __pthread: pthread_t,
-        __policy: ::std::os::raw::c_int,
-        __param: *const sched_param,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_setschedprio(
-        __pthread: pthread_t,
-        __priority: ::std::os::raw::c_int,
-    ) -> ::std::os::raw::c_int;
-}
-extern "C" {
-    pub fn pthread_setspecific(
-        __key: pthread_key_t,
-        __value: *const ::std::os::raw::c_void,
-    ) -> ::std::os::raw::c_int;
-}
 pub type __pthread_cleanup_func_t =
     ::std::option::Option<unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void)>;
 #[repr(C)]
@@ -10592,7 +9571,6 @@ pub type android_motion_event_filter =
 #[doc = " See the sample named \"native-activity\" that comes with the NDK with a"]
 #[doc = " full usage example.  Also look at the documentation of GameActivity."]
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
 pub struct android_app {
     #[doc = " An optional pointer to application-defined state."]
     pub userData: *mut ::std::os::raw::c_void,
