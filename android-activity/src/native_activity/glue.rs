@@ -362,7 +362,7 @@ impl WaitableNativeActivityState {
             let config = super::ConfigurationRef::new(Configuration::from_ptr(
                 NonNull::new_unchecked(config),
             ));
-            log::debug!("Config: {:#?}", config);
+            eprintln!("Config: {:#?}", config);
             config
         };
 
@@ -787,8 +787,6 @@ extern "C" fn ANativeActivity_onCreate(
     saved_state: *const libc::c_void,
     saved_state_size: libc::size_t,
 ) {
-    log::debug!("Creating: {:p}", activity);
-
     // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
     unsafe {
         let mut logpipe: [RawFd; 2] = Default::default();
@@ -812,6 +810,11 @@ extern "C" fn ANativeActivity_onCreate(
             }
         });
     }
+
+    eprintln!(
+        "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
+        activity, saved_state, saved_state_size
+    );
 
     // Conceptually we associate a glue reference with the JVM main thread, and another
     // reference with the Rust main thread
