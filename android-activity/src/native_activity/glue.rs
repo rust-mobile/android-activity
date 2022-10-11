@@ -650,28 +650,40 @@ fn android_log(level: Level, tag: &CStr, msg: &CStr) {
     }
 }
 
+unsafe fn try_with_waitable_activity_ref(
+    activity: *mut ndk_sys::ANativeActivity,
+    closure: impl FnOnce(Arc<WaitableNativeActivityState>),
+) {
+    assert!(!(*activity).instance.is_null());
+    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
+    let weak_ref = Weak::from_raw(weak_ptr);
+    if let Some(waitable_activity) = weak_ref.upgrade() {
+        closure(waitable_activity);
+    } else {
+        log::error!("Ignoring spurious JVM callback after last activity reference was dropped!")
+    }
+    let _ = weak_ref.into_raw();
+}
+
 unsafe extern "C" fn on_destroy(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Destroy: {:p}\n", activity);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.notify_destroyed()
-    }
+    });
 }
 
 unsafe extern "C" fn on_start(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Start: {:p}\n", activity);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_activity_state(State::Start);
-    }
+    });
 }
 
 unsafe extern "C" fn on_resume(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Resume: {:p}\n", activity);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_activity_state(State::Resume);
-    }
+    });
 }
 
 unsafe extern "C" fn on_save_instance_state(
@@ -679,47 +691,44 @@ unsafe extern "C" fn on_save_instance_state(
     out_len: *mut ndk_sys::size_t,
 ) -> *mut libc::c_void {
     log::debug!("SaveInstanceState: {:p}\n", activity);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    *out_len = 0;
+    let mut ret = ptr::null_mut();
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         let (state, len) = waitable_activity.request_save_state();
         *out_len = len as ndk_sys::size_t;
-        state
-    } else {
-        *out_len = 0;
-        ptr::null_mut()
-    }
+        ret = state
+    });
+
+    log::debug!("Saved state = {:p}, len = {}", ret, *out_len);
+    ret
 }
 
 unsafe extern "C" fn on_pause(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Pause: {:p}\n", activity);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_activity_state(State::Pause);
-    }
+    });
 }
 
 unsafe extern "C" fn on_stop(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("Stop: {:p}\n", activity);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_activity_state(State::Stop);
-    }
+    });
 }
 
 unsafe extern "C" fn on_configuration_changed(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("ConfigurationChanged: {:p}\n", activity);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.notify_config_changed();
-    }
+    });
 }
 
 unsafe extern "C" fn on_low_memory(activity: *mut ndk_sys::ANativeActivity) {
     log::debug!("LowMemory: {:p}\n", activity);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.notify_low_memory();
-    }
+    });
 }
 
 unsafe extern "C" fn on_window_focus_changed(
@@ -727,10 +736,9 @@ unsafe extern "C" fn on_window_focus_changed(
     focused: libc::c_int,
 ) {
     log::debug!("WindowFocusChanged: {:p} -- {}\n", activity, focused);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.notify_focus_changed(focused != 0);
-    }
+    });
 }
 
 unsafe extern "C" fn on_native_window_created(
@@ -738,13 +746,12 @@ unsafe extern "C" fn on_native_window_created(
     window: *mut ndk_sys::ANativeWindow,
 ) {
     log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         // It's important that we use ::clone_from_ptr() here because NativeWindow
         // has a Drop implementation that will unconditionally _release() the native window
         let window = NativeWindow::clone_from_ptr(NonNull::new_unchecked(window));
         waitable_activity.set_window(Some(window));
-    }
+    });
 }
 
 unsafe extern "C" fn on_native_window_destroyed(
@@ -752,10 +759,9 @@ unsafe extern "C" fn on_native_window_destroyed(
     window: *mut ndk_sys::ANativeWindow,
 ) {
     log::debug!("NativeWindowDestroyed: {:p} -- {:p}\n", activity, window);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_window(None);
-    }
+    });
 }
 
 unsafe extern "C" fn on_input_queue_created(
@@ -763,10 +769,9 @@ unsafe extern "C" fn on_input_queue_created(
     queue: *mut ndk_sys::AInputQueue,
 ) {
     log::debug!("InputQueueCreated: {:p} -- {:p}\n", activity, queue);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_input(queue);
-    }
+    });
 }
 
 unsafe extern "C" fn on_input_queue_destroyed(
@@ -774,10 +779,9 @@ unsafe extern "C" fn on_input_queue_destroyed(
     queue: *mut ndk_sys::AInputQueue,
 ) {
     log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
-    let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
-    if let Some(waitable_activity) = Weak::from_raw(weak_ptr).upgrade() {
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_input(ptr::null_mut());
-    }
+    });
 }
 
 /// This is the native entrypoint for our cdylib library that `ANativeActivity` will look for via `dlsym`
