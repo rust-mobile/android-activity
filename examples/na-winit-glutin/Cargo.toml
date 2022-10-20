@@ -1,0 +1,70 @@
+[package]
+name = "na-winit-glutin"
+version = "0.1.0"
+edition = "2021"
+
+
+[features]
+default = ["egl", "glx", "x11", "wayland", "wgl"]
+
+desktop = []
+
+egl = ["glutin/egl"]
+glx = ["glutin/glx", "glutin/x11", "winit/x11", "x11"]
+wgl = ["glutin/wgl"]
+x11 = ["glutin/x11", "winit/x11"]
+wayland = ["glutin/wayland", "winit/wayland", "winit/wayland-dlopen", "winit/wayland-csd-adwaita-notitle"]
+
+
+[dependencies]
+log = "0.4"
+winit = { version = "0.27", features = ["android-native-activity"] }
+glutin = { git = "https://github.com/rust-windowing/glutin" }
+raw-window-handle = "0.5.0"
+
+[target.'cfg(not(target_os = "android"))'.dependencies]
+env_logger = "0.9"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.11.0"
+
+[build-dependencies]
+gl_generator = "0.14"
+cfg_aliases = "0.1.1"
+
+[patch.crates-io]
+
+# This branch of Winit has an updated Android backend based on android-activity
+# Note: The winit branches are current misnamed:
+# - "android-activity" is based on Winit 0.27 (required for Egui compatibility)
+# - "android-activity-0.27" is based on Winit master
+# The -0.27 branch is currently associated with a pull request so we'll just
+# stick with these names for now
+winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
+#winit = { path = "../../../winit" }
+
+# Note:
+# Since android-activity is responsible for invoking the `android_main`
+# entrypoint for a native Rust application there can only be a single
+# implementation of the crate linked with the application.
+#
+# By default the Winit-based examples use released versions of android-activity
+# to help keep the version in sync with the Winit backend.
+#
+# If you'd like to build this example against the local checkout of
+# android-activity you should specify a patch here to make sure you also affect
+# the version that Winit uses.
+#
+# Note: also check that the local android-activity/Cargo.toml version matches
+# the android-activity version that Winit depends on (in case you need to check
+# out a release branch locally to be compatible)
+#android-activity = { path = "../../android-activity" }
+
+[lib]
+#name="main"
+crate_type=["cdylib"]
+
+[[bin]]
+path="src/lib.rs"
+name="test-winit-glutin"
+required-features = [ "desktop" ]
