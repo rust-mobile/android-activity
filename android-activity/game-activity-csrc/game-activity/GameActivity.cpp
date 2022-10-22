@@ -890,6 +890,7 @@ static struct {
 
     jmethodID getPointerCount;
     jmethodID getPointerId;
+    jmethodID getToolType;
     jmethodID getRawX;
     jmethodID getRawY;
     jmethodID getXPrecision;
@@ -941,6 +942,8 @@ extern "C" int GameActivityMotionEvent_fromJava(
             env->GetMethodID(motionEventClass, "getPointerCount", "()I");
         gMotionEventClassInfo.getPointerId =
             env->GetMethodID(motionEventClass, "getPointerId", "(I)I");
+        gMotionEventClassInfo.getToolType =
+            env->GetMethodID(motionEventClass, "getToolType", "(I)I");
         if (sdkVersion >= 29) {
             gMotionEventClassInfo.getRawX =
                 env->GetMethodID(motionEventClass, "getRawX", "(I)F");
@@ -1001,6 +1004,8 @@ extern "C" int GameActivityMotionEvent_fromJava(
         out_event->pointers[i] = {
             /*id=*/env->CallIntMethod(motionEvent,
                                       gMotionEventClassInfo.getPointerId, i),
+            /*toolType=*/env->CallIntMethod(motionEvent,
+                                            gMotionEventClassInfo.getToolType, i),
             /*axisValues=*/{0},
             /*rawX=*/gMotionEventClassInfo.getRawX
                 ? env->CallFloatMethod(motionEvent,

@@ -2664,6 +2664,7 @@ fn bindgen_test_layout_GameActivity() {
 #[derive(Debug, Copy, Clone)]
 pub struct GameActivityPointerAxes {
     pub id: i32,
+    pub toolType: i32,
     pub axisValues: [f32; 48usize],
     pub rawX: f32,
     pub rawY: f32,
@@ -2672,7 +2673,7 @@ pub struct GameActivityPointerAxes {
 fn bindgen_test_layout_GameActivityPointerAxes() {
     assert_eq!(
         ::std::mem::size_of::<GameActivityPointerAxes>(),
-        204usize,
+        208usize,
         concat!("Size of: ", stringify!(GameActivityPointerAxes))
     );
     assert_eq!(
@@ -2692,9 +2693,21 @@ fn bindgen_test_layout_GameActivityPointerAxes() {
     );
     assert_eq!(
         unsafe {
-            &(*(::std::ptr::null::<GameActivityPointerAxes>())).axisValues as *const _ as usize
+            &(*(::std::ptr::null::<GameActivityPointerAxes>())).toolType as *const _ as usize
         },
         4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(GameActivityPointerAxes),
+            "::",
+            stringify!(toolType)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            &(*(::std::ptr::null::<GameActivityPointerAxes>())).axisValues as *const _ as usize
+        },
+        8usize,
         concat!(
             "Offset of field: ",
             stringify!(GameActivityPointerAxes),
@@ -2704,7 +2717,7 @@ fn bindgen_test_layout_GameActivityPointerAxes() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<GameActivityPointerAxes>())).rawX as *const _ as usize },
-        196usize,
+        200usize,
         concat!(
             "Offset of field: ",
             stringify!(GameActivityPointerAxes),
@@ -2714,7 +2727,7 @@ fn bindgen_test_layout_GameActivityPointerAxes() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<GameActivityPointerAxes>())).rawY as *const _ as usize },
-        200usize,
+        204usize,
         concat!(
             "Offset of field: ",
             stringify!(GameActivityPointerAxes),
@@ -2839,7 +2852,7 @@ pub struct GameActivityMotionEvent {
 fn bindgen_test_layout_GameActivityMotionEvent() {
     assert_eq!(
         ::std::mem::size_of::<GameActivityMotionEvent>(),
-        1700usize,
+        1732usize,
         concat!("Size of: ", stringify!(GameActivityMotionEvent))
     );
     assert_eq!(
@@ -3001,7 +3014,7 @@ fn bindgen_test_layout_GameActivityMotionEvent() {
         unsafe {
             &(*(::std::ptr::null::<GameActivityMotionEvent>())).precisionX as *const _ as usize
         },
-        1688usize,
+        1720usize,
         concat!(
             "Offset of field: ",
             stringify!(GameActivityMotionEvent),
@@ -3013,7 +3026,7 @@ fn bindgen_test_layout_GameActivityMotionEvent() {
         unsafe {
             &(*(::std::ptr::null::<GameActivityMotionEvent>())).precisionY as *const _ as usize
         },
-        1692usize,
+        1724usize,
         concat!(
             "Offset of field: ",
             stringify!(GameActivityMotionEvent),
@@ -3025,7 +3038,7 @@ fn bindgen_test_layout_GameActivityMotionEvent() {
         unsafe {
             &(*(::std::ptr::null::<GameActivityMotionEvent>())).historicalStart as *const _ as usize
         },
-        1696usize,
+        1728usize,
         concat!(
             "Offset of field: ",
             stringify!(GameActivityMotionEvent),
@@ -3037,7 +3050,7 @@ fn bindgen_test_layout_GameActivityMotionEvent() {
         unsafe {
             &(*(::std::ptr::null::<GameActivityMotionEvent>())).historicalCount as *const _ as usize
         },
-        1698usize,
+        1730usize,
         concat!(
             "Offset of field: ",
             stringify!(GameActivityMotionEvent),
@@ -9433,7 +9446,7 @@ pub struct android_input_buffer {
 fn bindgen_test_layout_android_input_buffer() {
     assert_eq!(
         ::std::mem::size_of::<android_input_buffer>(),
-        40232usize,
+        40744usize,
         concat!("Size of: ", stringify!(android_input_buffer))
     );
     assert_eq!(
@@ -9457,7 +9470,7 @@ fn bindgen_test_layout_android_input_buffer() {
         unsafe {
             &(*(::std::ptr::null::<android_input_buffer>())).motionEventsCount as *const _ as usize
         },
-        27200usize,
+        27712usize,
         concat!(
             "Offset of field: ",
             stringify!(android_input_buffer),
@@ -9470,7 +9483,7 @@ fn bindgen_test_layout_android_input_buffer() {
             &(*(::std::ptr::null::<android_input_buffer>())).historicalAxisSamples as *const _
                 as usize
         },
-        27208usize,
+        27720usize,
         concat!(
             "Offset of field: ",
             stringify!(android_input_buffer),
@@ -9483,7 +9496,7 @@ fn bindgen_test_layout_android_input_buffer() {
             &(*(::std::ptr::null::<android_input_buffer>())).historicalSamplesCount as *const _
                 as usize
         },
-        40008usize,
+        40520usize,
         concat!(
             "Offset of field: ",
             stringify!(android_input_buffer),
@@ -9493,7 +9506,7 @@ fn bindgen_test_layout_android_input_buffer() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_input_buffer>())).keyEvents as *const _ as usize },
-        40016usize,
+        40528usize,
         concat!(
             "Offset of field: ",
             stringify!(android_input_buffer),
@@ -9505,7 +9518,7 @@ fn bindgen_test_layout_android_input_buffer() {
         unsafe {
             &(*(::std::ptr::null::<android_input_buffer>())).keyEventsCount as *const _ as usize
         },
-        40224usize,
+        40736usize,
         concat!(
             "Offset of field: ",
             stringify!(android_input_buffer),
@@ -9636,7 +9649,7 @@ pub struct android_app {
 fn bindgen_test_layout_android_app() {
     assert_eq!(
         ::std::mem::size_of::<android_app>(),
-        80608usize,
+        81632usize,
         concat!("Size of: ", stringify!(android_app))
     );
     assert_eq!(
@@ -9766,7 +9779,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).currentInputBuffer as *const _ as usize },
-        80520usize,
+        81544usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9776,7 +9789,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).textInputState as *const _ as usize },
-        80524usize,
+        81548usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9786,7 +9799,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).mutex as *const _ as usize },
-        80528usize,
+        81552usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9796,7 +9809,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).cond as *const _ as usize },
-        80532usize,
+        81556usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9806,7 +9819,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).msgread as *const _ as usize },
-        80536usize,
+        81560usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9816,7 +9829,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).msgwrite as *const _ as usize },
-        80540usize,
+        81564usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9826,7 +9839,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).thread as *const _ as usize },
-        80544usize,
+        81568usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9836,7 +9849,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).cmdPollSource as *const _ as usize },
-        80548usize,
+        81572usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9846,7 +9859,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).running as *const _ as usize },
-        80560usize,
+        81584usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9856,7 +9869,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).stateSaved as *const _ as usize },
-        80564usize,
+        81588usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9866,7 +9879,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).destroyed as *const _ as usize },
-        80568usize,
+        81592usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9876,7 +9889,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).redrawNeeded as *const _ as usize },
-        80572usize,
+        81596usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9886,7 +9899,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).pendingWindow as *const _ as usize },
-        80576usize,
+        81600usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9896,7 +9909,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).pendingContentRect as *const _ as usize },
-        80580usize,
+        81604usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9906,7 +9919,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).keyEventFilter as *const _ as usize },
-        80596usize,
+        81620usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9916,7 +9929,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).motionEventFilter as *const _ as usize },
-        80600usize,
+        81624usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9928,7 +9941,7 @@ fn bindgen_test_layout_android_app() {
         unsafe {
             &(*(::std::ptr::null::<android_app>())).inputAvailableWakeUp as *const _ as usize
         },
-        80604usize,
+        81628usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
@@ -9938,7 +9951,7 @@ fn bindgen_test_layout_android_app() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<android_app>())).inputSwapPending as *const _ as usize },
-        80605usize,
+        81629usize,
         concat!(
             "Offset of field: ",
             stringify!(android_app),
