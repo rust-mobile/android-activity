@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
-winit = "0.27"
+winit = { version = "0.27", features = ["android-game-activity"]}
 wgpu = "0.13.0"
 pollster = "0.2"
 
@@ -16,7 +16,6 @@ env_logger = "0.9"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
-android-activity = { version = "0.4.0-beta.1", features = [ "game-activity" ] }
 
 [patch.crates-io]
 
@@ -26,7 +25,7 @@ android-activity = { version = "0.4.0-beta.1", features = [ "game-activity" ] }
 # - "android-activity-0.27" is based on Winit master
 # The -0.27 branch is currently associated with a pull request so we'll just
 # stick with these names for now
-winit = { git = "https://github.com/rib/winit", branch = "android-activity-0.27" }
+winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
 #winit = { path = "../../../winit" }
 
 # Note:
