@@ -2,7 +2,7 @@ use eframe::egui;
 use eframe::{NativeOptions, Renderer};
 
 #[cfg(target_os = "android")]
-use android_activity::AndroidApp;
+use winit::platform::android::activity::AndroidApp;
 
 #[derive(Default)]
 struct DemoApp {

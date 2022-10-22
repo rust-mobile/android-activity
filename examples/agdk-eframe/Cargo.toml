@@ -8,8 +8,8 @@ resolver = "2"
 
 [dependencies]
 log = "0.4"
-winit = "0.27.2"
-wgpu = "0.13.0"
+winit = { version = "0.27.2", features = [ "android-game-activity" ] }
+wgpu = "0.14.0"
 pollster = "0.2"
 egui = "0.19"
 eframe = { version = "0.19", features = [ "wgpu" ] }
@@ -20,7 +20,6 @@ env_logger = "0.9"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11.0"
-android-activity = { version = "0.4.0-beta.1", features = [ "game-activity" ] }
 
 [patch.crates-io]
 
