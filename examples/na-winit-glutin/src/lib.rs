@@ -330,11 +330,8 @@ impl App {
                 );
             }
             None => {
-                let not_current_context = Self::create_compatible_gl_context(
-                    glutin_display,
-                    raw_window_handle,
-                    &config,
-                );
+                let not_current_context =
+                    Self::create_compatible_gl_context(glutin_display, raw_window_handle, &config);
                 self.context = Some(
                     not_current_context
                         .make_current(&surface_state.surface)

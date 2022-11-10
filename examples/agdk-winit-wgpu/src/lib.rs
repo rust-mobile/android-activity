@@ -152,7 +152,8 @@ impl App {
     }
 
     fn configure_surface_swapchain(&mut self) {
-        if let (Some(render_state), Some(surface_state)) = (&self.render_state, &self.surface_state) {
+        if let (Some(render_state), Some(surface_state)) = (&self.render_state, &self.surface_state)
+        {
             let swapchain_format = render_state.target_format;
             let size = surface_state.window.inner_size();
 
@@ -163,6 +164,7 @@ impl App {
                 height: size.height,
                 present_mode: wgpu::PresentMode::Mailbox,
                 //present_mode: wgpu::PresentMode::Fifo,
+                alpha_mode: wgpu::CompositeAlphaMode::Inherit,
             };
 
             trace!("WGPU: Configuring surface swapchain: format = {swapchain_format:?}, size = {size:?}");
@@ -269,8 +271,6 @@ fn run(event_loop: EventLoop<()>) {
 }
 
 fn _main(event_loop: EventLoop<()>) {
-
-
     run(event_loop);
 }
 

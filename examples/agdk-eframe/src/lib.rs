@@ -6,7 +6,7 @@ use winit::platform::android::activity::AndroidApp;
 
 #[derive(Default)]
 struct DemoApp {
-    demo_windows: egui_demo_lib::DemoWindows
+    demo_windows: egui_demo_lib::DemoWindows,
 }
 
 impl eframe::App for DemoApp {
@@ -17,7 +17,11 @@ impl eframe::App for DemoApp {
 
 fn _main(mut options: NativeOptions) {
     options.renderer = Renderer::Wgpu;
-    eframe::run_native("My egui App", options, Box::new(|_cc| Box::new(DemoApp::default())));
+    eframe::run_native(
+        "My egui App",
+        options,
+        Box::new(|_cc| Box::new(DemoApp::default())),
+    );
 }
 
 #[cfg(target_os = "android")]

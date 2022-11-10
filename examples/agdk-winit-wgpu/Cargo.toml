@@ -7,8 +7,8 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
-winit = { version = "0.27", features = ["android-game-activity"]}
-wgpu = "0.13.0"
+winit = { git = "https://github.com/rust-windowing/winit", features = ["android-game-activity"]}
+wgpu = "0.14.0"
 pollster = "0.2"
 
 [target.'cfg(not(target_os = "android"))'.dependencies]
@@ -19,29 +19,19 @@ android_logger = "0.11.0"
 
 [patch.crates-io]
 
-# This branch of Winit has an updated Android backend based on android-activity
-# Note: The winit branches are current misnamed:
-# - "android-activity" is based on Winit 0.27 (required for Egui compatibility)
-# - "android-activity-0.27" is based on Winit master
-# The -0.27 branch is currently associated with a pull request so we'll just
-# stick with these names for now
-winit = { git = "https://github.com/rib/winit", branch = "android-activity" }
-#winit = { path = "../../../winit" }
-
 # Note:
 # Since android-activity is responsible for invoking the `android_main`
 # entrypoint for a native Rust application there can only be a single
 # implementation of the crate linked with the application.
 #
-# By default the Winit-based examples use released versions of android-activity
-# to help keep the version in sync with the Winit backend.
-#
-# If you'd like to build this example against the local checkout of
-# android-activity you should specify a patch here to make sure you also affect
-# the version that Winit uses.
+# To avoid conflicts it's generally recommend to rely on Winit to pull
+# in a compatible version of android-activity but if you'd like to build
+# this example against the local checkout of android-activity you should
+# specify a patch here to make sure you also affect the version that Winit
+# uses.
 #
 # Note: also check that the local android-activity/Cargo.toml version matches
-# the android-activity version that Winit depends on (in case you need to check
+# the version of android-activity that Winit depends on (in case you need to check
 # out a release branch locally to be compatible)
 #android-activity = { path = "../../android-activity" }
 
