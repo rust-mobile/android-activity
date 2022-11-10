@@ -64,6 +64,7 @@ fn android_main(app: AndroidApp) {
 
             app.input_events(|event| {
                 info!("Input Event: {event:?}");
+                InputStatus::Unhandled
             });
         });
     }

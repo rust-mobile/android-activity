@@ -6,6 +6,13 @@ use ndk::configuration::{
     ScreenSize, Touchscreen, UiModeNight, UiModeType,
 };
 
+/// A (cheaply clonable) reference to this application's [`ndk::configuration::Configuration`]
+///
+/// This provides a thread-safe way to access the latest configuration state for
+/// an application without deeply copying the large [`ndk::configuration::Configuration`] struct.
+///
+/// If the application is notified of configuration changes then those changes
+/// will become visible via pre-existing configuration references.
 #[derive(Clone)]
 pub struct ConfigurationRef {
     config: Arc<RwLock<Configuration>>,

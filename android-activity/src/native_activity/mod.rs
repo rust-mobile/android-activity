@@ -42,30 +42,37 @@ pub const LOOPER_ID_MAIN: libc::c_int = 1;
 pub const LOOPER_ID_INPUT: libc::c_int = 2;
 //pub const LOOPER_ID_USER: ::std::os::raw::c_uint = 3;
 
-// The only time it's safe to update the saved_state pointer is
-// while handling a SaveState event, so this API is only exposed for those
-// events
+/// An interface for saving application state during [MainEvent::SaveState] events
+///
+/// This interface is only available temporarily while handling a [MainEvent::SaveState] event.
 #[derive(Debug)]
 pub struct StateSaver<'a> {
     app: &'a AndroidAppInner,
 }
 
 impl<'a> StateSaver<'a> {
+    /// Stores the given `state` such that it will be available to load the next
+    /// time that the application resumes.
     pub fn store(&self, state: &'a [u8]) {
         self.app.native_activity.set_saved_state(state);
     }
 }
 
+/// An interface for loading application state during [MainEvent::Resume] events
+///
+/// This interface is only available temporarily while handling a [MainEvent::Resume] event.
 #[derive(Debug)]
 pub struct StateLoader<'a> {
     app: &'a AndroidAppInner,
 }
 impl<'a> StateLoader<'a> {
+    /// Returns whatever state was saved during the last [MainEvent::SaveState] event or `None`
     pub fn load(&self) -> Option<Vec<u8>> {
         self.app.native_activity.saved_state()
     }
 }
 
+/// A means to wake up the main thread while it is blocked waiting for I/O
 #[derive(Clone)]
 pub struct AndroidAppWaker {
     // The looper pointer is owned by the android_app and effectively
@@ -77,6 +84,13 @@ unsafe impl Send for AndroidAppWaker {}
 unsafe impl Sync for AndroidAppWaker {}
 
 impl AndroidAppWaker {
+
+    /// Interrupts the main thread if it is blocked within [`AndroidApp::poll_events()`]
+    ///
+    /// If [`AndroidApp::poll_events()`] is interrupted it will invoke the poll
+    /// callback with a [PollEvent::Wake][wake_event] event.
+    ///
+    /// [wake_event]: crate::PollEvent::Wake
     pub fn wake(&self) {
         unsafe {
             ALooper_wake(self.looper.as_ptr());

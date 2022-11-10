@@ -655,9 +655,6 @@ pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
     // code to look up non-standard Java classes.
     android_main(app);
 
-    // Since this is a newly spawned thread then the JVM hasn't been attached
-    // to the thread yet. Attach before calling the applications main function
-    // so they can safely make JNI calls
     if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
         detach_current_thread(jvm);
     }
