@@ -12,8 +12,6 @@ use std::{
     sync::{Arc, Condvar, Mutex, Weak},
 };
 
-use libc;
-
 use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 use ndk_sys::ANativeActivity;
@@ -160,7 +158,7 @@ impl NativeActivityGlue {
     ) -> Option<InputQueue> {
         let mut guard = self.mutex.lock().unwrap();
 
-        if guard.input_queue == ptr::null_mut() {
+        if guard.input_queue.is_null() {
             return None;
         }
 
@@ -272,7 +270,7 @@ impl NativeActivityState {
         looper: *mut ndk_sys::ALooper,
         ident: libc::c_int,
     ) {
-        if self.input_queue != ptr::null_mut() {
+        if !self.input_queue.is_null() {
             log::trace!("Attaching input queue to looper");
             ndk_sys::AInputQueue_attachLooper(
                 self.input_queue,
@@ -285,7 +283,7 @@ impl NativeActivityState {
     }
 
     pub unsafe fn detach_input_queue_from_looper(&mut self) {
-        if self.input_queue != ptr::null_mut() {
+        if !self.input_queue.is_null() {
             log::trace!("Detaching input queue from looper");
             ndk_sys::AInputQueue_detachLooper(self.input_queue);
         }
@@ -461,12 +459,9 @@ impl WaitableNativeActivityState {
         // The state_saved flag should only be set while in this method, and since
         // it doesn't allow re-entrance and is cleared before returning then we expect
         // this to be None
-        debug_assert!(
-            guard.app_has_saved_state == false,
-            "SaveState request clash"
-        );
+        debug_assert!(!guard.app_has_saved_state, "SaveState request clash");
         guard.write_cmd(AppCmd::SaveState);
-        while guard.app_has_saved_state == false {
+        while !guard.app_has_saved_state {
             guard = self.cond.wait(guard).unwrap();
         }
         guard.app_has_saved_state = false;
@@ -474,13 +469,13 @@ impl WaitableNativeActivityState {
         // `ANativeActivity` explicitly documents that it expects save state to be
         // given via a `malloc()` allocated pointer since it will automatically
         // `free()` the state after it has been converted to a buffer for the JVM.
-        if guard.saved_state.len() > 0 {
+        if !guard.saved_state.is_empty() {
             let saved_state_size = guard.saved_state.len() as _;
             let saved_state_src_ptr = guard.saved_state.as_ptr();
             unsafe {
                 let saved_state = libc::malloc(saved_state_size);
                 assert!(
-                    saved_state != ptr::null_mut(),
+                    !saved_state.is_null(),
                     "Failed to allocate {} bytes for restoring saved application state",
                     saved_state_size
                 );
@@ -494,7 +489,7 @@ impl WaitableNativeActivityState {
 
     pub fn saved_state(&self) -> Option<Vec<u8>> {
         let guard = self.mutex.lock().unwrap();
-        if guard.saved_state.len() > 0 {
+        if !guard.saved_state.is_empty() {
             Some(guard.saved_state.clone())
         } else {
             None
@@ -530,7 +525,7 @@ impl WaitableNativeActivityState {
                 let mut guard = self.mutex.lock().unwrap();
                 guard.detach_input_queue_from_looper();
                 guard.input_queue = guard.pending_input_queue;
-                if guard.input_queue != ptr::null_mut() {
+                if !guard.input_queue.is_null() {
                     guard.attach_input_queue_to_looper(looper, input_queue_ident);
                 }
                 self.cond.notify_one();

@@ -84,7 +84,6 @@ unsafe impl Send for AndroidAppWaker {}
 unsafe impl Sync for AndroidAppWaker {}
 
 impl AndroidAppWaker {
-
     /// Interrupts the main thread if it is blocked within [`AndroidApp::poll_events()`]
     ///
     /// If [`AndroidApp::poll_events()`] is interrupted it will invoke the poll
@@ -155,7 +154,7 @@ impl AndroidAppInner {
         self.looper.ptr
     }
 
-    pub fn native_window<'a>(&self) -> Option<NativeWindow> {
+    pub fn native_window(&self) -> Option<NativeWindow> {
         self.native_activity.mutex.lock().unwrap().window.clone()
     }
 
@@ -178,7 +177,7 @@ impl AndroidAppInner {
 
             info!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
             assert!(
-                ndk_sys::ALooper_forThread() != ptr::null_mut(),
+                !ndk_sys::ALooper_forThread().is_null(),
                 "Application tried to poll events from non-main thread"
             );
             let id = ALooper_pollAll(
@@ -237,10 +236,10 @@ impl AndroidAppInner {
                                     glue::AppCmd::LowMemory => Some(MainEvent::LowMemory),
                                     glue::AppCmd::Start => Some(MainEvent::Start),
                                     glue::AppCmd::Resume => Some(MainEvent::Resume {
-                                        loader: StateLoader { app: &self },
+                                        loader: StateLoader { app: self },
                                     }),
                                     glue::AppCmd::SaveState => Some(MainEvent::SaveState {
-                                        saver: StateSaver { app: &self },
+                                        saver: StateSaver { app: self },
                                     }),
                                     glue::AppCmd::Pause => Some(MainEvent::Pause),
                                     glue::AppCmd::Stop => Some(MainEvent::Stop),
@@ -361,7 +360,7 @@ impl AndroidAppInner {
         // NOP - The InputQueue API doesn't let us optimize which axis values are read
     }
 
-    pub fn input_events<'b, F>(&self, mut callback: F)
+    pub fn input_events<F>(&self, mut callback: F)
     where
         F: FnMut(&input::InputEvent) -> InputStatus,
     {
@@ -395,13 +394,7 @@ impl AndroidAppInner {
                     input::InputEvent::MotionEvent(e) => ndk::event::InputEvent::MotionEvent(e),
                     input::InputEvent::KeyEvent(e) => ndk::event::InputEvent::KeyEvent(e),
                 };
-                queue.finish_event(
-                    ndk_event,
-                    match handled {
-                        InputStatus::Handled => true,
-                        _ => false,
-                    },
-                );
+                queue.finish_event(ndk_event, matches!(handled, InputStatus::Handled));
             }
         }
     }

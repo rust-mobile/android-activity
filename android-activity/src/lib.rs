@@ -134,13 +134,13 @@ impl Rect {
     }
 }
 
-impl Into<ndk_sys::ARect> for Rect {
-    fn into(self) -> ndk_sys::ARect {
-        ndk_sys::ARect {
-            left: self.left,
-            right: self.right,
-            top: self.top,
-            bottom: self.bottom,
+impl From<Rect> for ndk_sys::ARect {
+    fn from(rect: Rect) -> Self {
+        Self {
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
         }
     }
 }
@@ -156,9 +156,8 @@ impl From<ndk_sys::ARect> for Rect {
     }
 }
 
-pub use activity_impl::StateSaver;
 pub use activity_impl::StateLoader;
-
+pub use activity_impl::StateSaver;
 
 /// An application event delivered during [`AndroidApp::poll_events`]
 #[non_exhaustive]
@@ -464,14 +463,13 @@ impl Hash for AndroidApp {
     }
 }
 
-
 impl AndroidApp {
     /// Queries the current [`NativeWindow`] for the application.
     ///
     /// This will only return `Some(window)` between
     /// [`MainEvent::InitWindow`] and [`MainEvent::TerminateWindow`]
     /// events.
-    pub fn native_window<'a>(&self) -> Option<NativeWindow> {
+    pub fn native_window(&self) -> Option<NativeWindow> {
         self.inner.read().unwrap().native_window()
     }
 
@@ -590,7 +588,7 @@ impl AndroidApp {
     ///
     /// To reduce overhead, by default only [`input::Axis::X`] and [`input::Axis::Y`] are enabled
     /// and other axis should be enabled explicitly via [`Self::enable_motion_axis`].
-    pub fn input_events<'b, F>(&self, callback: F)
+    pub fn input_events<F>(&self, callback: F)
     where
         F: FnMut(&input::InputEvent) -> InputStatus,
     {
@@ -603,7 +601,8 @@ impl AndroidApp {
     pub fn sdk_version() -> i32 {
         let mut prop = android_properties::getprop("ro.build.version.sdk");
         if let Some(val) = prop.value() {
-            i32::from_str_radix(&val, 10).expect("Failed to parse ro.build.version.sdk property")
+            val.parse::<i32>()
+                .expect("Failed to parse ro.build.version.sdk property")
         } else {
             panic!("Couldn't read ro.build.version.sdk system property");
         }

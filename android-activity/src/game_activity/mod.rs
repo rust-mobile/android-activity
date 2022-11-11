@@ -50,14 +50,14 @@ impl<'a> StateSaver<'a> {
 
             // In case the application calls store() multiple times for some reason we
             // make sure to free any pre-existing state...
-            if (*app_ptr).savedState != ptr::null_mut() {
+            if !(*app_ptr).savedState.is_null() {
                 libc::free((*app_ptr).savedState);
                 (*app_ptr).savedState = ptr::null_mut();
                 (*app_ptr).savedStateSize = 0;
             }
 
             let buf = libc::malloc(state.len());
-            if buf == ptr::null_mut() {
+            if buf.is_null() {
                 panic!("Failed to allocate save_state buffer");
             }
 
@@ -84,7 +84,7 @@ impl<'a> StateLoader<'a> {
     pub fn load(&self) -> Option<Vec<u8>> {
         unsafe {
             let app_ptr = self.app.native_app.as_ptr();
-            if (*app_ptr).savedState != ptr::null_mut() && (*app_ptr).savedStateSize > 0 {
+            if !(*app_ptr).savedState.is_null() && (*app_ptr).savedStateSize > 0 {
                 let buf: &mut [u8] = std::slice::from_raw_parts_mut(
                     (*app_ptr).savedState.cast(),
                     (*app_ptr).savedStateSize as usize,
@@ -155,7 +155,7 @@ pub struct AndroidAppInner {
 }
 
 impl AndroidAppInner {
-    pub fn native_window<'a>(&self) -> Option<NativeWindow> {
+    pub fn native_window(&self) -> Option<NativeWindow> {
         self.native_window.read().unwrap().clone()
     }
 
@@ -214,7 +214,7 @@ impl AndroidAppInner {
                         ffi::NativeAppGlueLooperId_LOOPER_ID_MAIN => {
                             trace!("ALooper_pollAll returned ID_MAIN");
                             let source: *mut ffi::android_poll_source = source.cast();
-                            if source != ptr::null_mut() {
+                            if !source.is_null() {
                                 let cmd_i = ffi::android_app_read_cmd(native_app.as_ptr());
 
                                 let cmd = match cmd_i as u32 {
@@ -248,11 +248,11 @@ impl AndroidAppInner {
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_START => MainEvent::Start,
                                     ffi::NativeAppGlueAppCmd_APP_CMD_RESUME => MainEvent::Resume {
-                                        loader: StateLoader { app: &self },
+                                        loader: StateLoader { app: self },
                                     },
                                     ffi::NativeAppGlueAppCmd_APP_CMD_SAVE_STATE => {
                                         MainEvent::SaveState {
-                                            saver: StateSaver { app: &self },
+                                            saver: StateSaver { app: self },
                                         }
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_PAUSE => MainEvent::Pause,
@@ -391,14 +391,14 @@ impl AndroidAppInner {
         }
     }
 
-    pub fn input_events<'b, F>(&self, mut callback: F)
+    pub fn input_events<F>(&self, mut callback: F)
     where
         F: FnMut(&InputEvent) -> InputStatus,
     {
         let buf = unsafe {
             let app_ptr = self.native_app.as_ptr();
             let input_buffer = ffi::android_app_swap_input_buffers(app_ptr);
-            if input_buffer == ptr::null_mut() {
+            if input_buffer.is_null() {
                 return;
             }
             InputBuffer::from_ptr(NonNull::new_unchecked(input_buffer))
@@ -496,7 +496,7 @@ impl<'a> InputBuffer<'a> {
     // XXX: It's really not ideal here that Rust iterators can't yield values
     // that borrow from the iterator, so we implicitly have to copy the
     // events as we iterate...
-    pub fn motion_events_iter<'b>(&'b self) -> MotionEventsIterator<'b> {
+    pub fn motion_events_iter(&self) -> MotionEventsIterator {
         unsafe {
             let count = (*self.ptr.as_ptr()).motionEventsCount as usize;
             MotionEventsIterator {
@@ -507,7 +507,7 @@ impl<'a> InputBuffer<'a> {
         }
     }
 
-    pub fn key_events_iter<'b>(&'b self) -> KeyEventsIterator<'b> {
+    pub fn key_events_iter(&self) -> KeyEventsIterator {
         unsafe {
             let count = (*self.ptr.as_ptr()).keyEventsCount as usize;
             KeyEventsIterator {
