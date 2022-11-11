@@ -17,26 +17,10 @@ use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
 
-use self::glue::NativeActivityGlue;
-
-pub mod input {
-    pub use ndk::event::{
-        Axis, ButtonState, EdgeFlags, KeyAction, KeyEvent, KeyEventFlags, Keycode, MetaState,
-        MotionAction, MotionEvent, MotionEventFlags, Pointer, Source,
-    };
-
-    // We use our own wrapper type for input events to have better consistency
-    // with GameActivity and ensure the enum can be extended without needing a
-    // semver bump
-    #[derive(Debug)]
-    #[non_exhaustive]
-    pub enum InputEvent {
-        MotionEvent(self::MotionEvent),
-        KeyEvent(self::KeyEvent),
-    }
-}
+pub mod input;
 
 mod glue;
+use self::glue::NativeActivityGlue;
 
 pub const LOOPER_ID_MAIN: libc::c_int = 1;
 pub const LOOPER_ID_INPUT: libc::c_int = 2;
@@ -385,14 +369,22 @@ impl AndroidAppInner {
         while let Ok(Some(event)) = queue.get_event() {
             if let Some(ndk_event) = queue.pre_dispatch(event) {
                 let event = match ndk_event {
-                    ndk::event::InputEvent::MotionEvent(e) => input::InputEvent::MotionEvent(e),
-                    ndk::event::InputEvent::KeyEvent(e) => input::InputEvent::KeyEvent(e),
+                    ndk::event::InputEvent::MotionEvent(e) => {
+                        input::InputEvent::MotionEvent(input::MotionEvent::new(e))
+                    }
+                    ndk::event::InputEvent::KeyEvent(e) => {
+                        input::InputEvent::KeyEvent(input::KeyEvent::new(e))
+                    }
                 };
                 let handled = callback(&event);
 
                 let ndk_event = match event {
-                    input::InputEvent::MotionEvent(e) => ndk::event::InputEvent::MotionEvent(e),
-                    input::InputEvent::KeyEvent(e) => ndk::event::InputEvent::KeyEvent(e),
+                    input::InputEvent::MotionEvent(e) => {
+                        ndk::event::InputEvent::MotionEvent(e.into_ndk_event())
+                    }
+                    input::InputEvent::KeyEvent(e) => {
+                        ndk::event::InputEvent::KeyEvent(e.into_ndk_event())
+                    }
                 };
                 queue.finish_event(ndk_event, matches!(handled, InputStatus::Handled));
             }

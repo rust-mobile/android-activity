@@ -106,7 +106,7 @@ mod game_activity;
 #[cfg(feature = "game-activity")]
 use game_activity as activity_impl;
 
-pub use activity_impl::input;
+pub mod input;
 
 mod config;
 pub use config::ConfigurationRef;

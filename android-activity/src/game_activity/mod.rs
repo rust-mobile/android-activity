@@ -404,10 +404,12 @@ impl AndroidAppInner {
             InputBuffer::from_ptr(NonNull::new_unchecked(input_buffer))
         };
 
-        for key_event in buf.key_events_iter() {
+        let mut keys_iter = KeyEventsLendingIterator::new(&buf);
+        while let Some(key_event) = keys_iter.next() {
             callback(&InputEvent::KeyEvent(key_event));
         }
-        for motion_event in buf.motion_events_iter() {
+        let mut motion_iter = MotionEventsLendingIterator::new(&buf);
+        while let Some(motion_event) = motion_iter.next() {
             callback(&InputEvent::MotionEvent(motion_event));
         }
     }
@@ -434,46 +436,58 @@ impl AndroidAppInner {
     }
 }
 
-struct MotionEventsIterator<'a> {
+struct MotionEventsLendingIterator<'a> {
     pos: usize,
     count: usize,
     buffer: &'a InputBuffer<'a>,
 }
 
-impl<'a> Iterator for MotionEventsIterator<'a> {
-    type Item = MotionEvent;
-
-    fn next(&mut self) -> Option<Self::Item> {
+// A kind of lending iterator but since our MSRV is 1.60 we can't handle this
+// via a generic trait. The iteration of motion events is entirely private
+// though so this is ok for now.
+impl<'a> MotionEventsLendingIterator<'a> {
+    fn new(buffer: &'a InputBuffer<'a>) -> Self {
+        Self {
+            pos: 0,
+            count: buffer.motion_events_count(),
+            buffer,
+        }
+    }
+    fn next(&mut self) -> Option<MotionEvent<'a>> {
         if self.pos < self.count {
-            unsafe {
-                let ga_event = (*self.buffer.ptr.as_ptr()).motionEvents[self.pos];
-                let event = MotionEvent::new(ga_event);
-                self.pos += 1;
-                Some(event)
-            }
+            let ga_event = unsafe { &(*self.buffer.ptr.as_ptr()).motionEvents[self.pos] };
+            let event = MotionEvent::new(ga_event);
+            self.pos += 1;
+            Some(event)
         } else {
             None
         }
     }
 }
 
-struct KeyEventsIterator<'a> {
+struct KeyEventsLendingIterator<'a> {
     pos: usize,
     count: usize,
     buffer: &'a InputBuffer<'a>,
 }
 
-impl<'a> Iterator for KeyEventsIterator<'a> {
-    type Item = KeyEvent;
-
-    fn next(&mut self) -> Option<Self::Item> {
+// A kind of lending iterator but since our MSRV is 1.60 we can't handle this
+// via a generic trait. The iteration of key events is entirely private
+// though so this is ok for now.
+impl<'a> KeyEventsLendingIterator<'a> {
+    fn new(buffer: &'a InputBuffer<'a>) -> Self {
+        Self {
+            pos: 0,
+            count: buffer.key_events_count(),
+            buffer,
+        }
+    }
+    fn next(&mut self) -> Option<KeyEvent<'a>> {
         if self.pos < self.count {
-            unsafe {
-                let ga_event = (*self.buffer.ptr.as_ptr()).keyEvents[self.pos];
-                let event = KeyEvent::new(ga_event);
-                self.pos += 1;
-                Some(event)
-            }
+            let ga_event = unsafe { &(*self.buffer.ptr.as_ptr()).keyEvents[self.pos] };
+            let event = KeyEvent::new(ga_event);
+            self.pos += 1;
+            Some(event)
         } else {
             None
         }
@@ -493,29 +507,12 @@ impl<'a> InputBuffer<'a> {
         }
     }
 
-    // XXX: It's really not ideal here that Rust iterators can't yield values
-    // that borrow from the iterator, so we implicitly have to copy the
-    // events as we iterate...
-    pub fn motion_events_iter(&self) -> MotionEventsIterator {
-        unsafe {
-            let count = (*self.ptr.as_ptr()).motionEventsCount as usize;
-            MotionEventsIterator {
-                pos: 0,
-                count,
-                buffer: self,
-            }
-        }
+    pub fn motion_events_count(&self) -> usize {
+        unsafe { (*self.ptr.as_ptr()).motionEventsCount as usize }
     }
 
-    pub fn key_events_iter(&self) -> KeyEventsIterator {
-        unsafe {
-            let count = (*self.ptr.as_ptr()).keyEventsCount as usize;
-            KeyEventsIterator {
-                pos: 0,
-                count,
-                buffer: self,
-            }
-        }
+    pub fn key_events_count(&self) -> usize {
+        unsafe { (*self.ptr.as_ptr()).keyEventsCount as usize }
     }
 }
 
