@@ -50,14 +50,14 @@ impl<'a> StateSaver<'a> {
 
             // In case the application calls store() multiple times for some reason we
             // make sure to free any pre-existing state...
-            if (*app_ptr).savedState != ptr::null_mut() {
+            if !(*app_ptr).savedState.is_null() {
                 libc::free((*app_ptr).savedState);
                 (*app_ptr).savedState = ptr::null_mut();
                 (*app_ptr).savedStateSize = 0;
             }
 
             let buf = libc::malloc(state.len());
-            if buf == ptr::null_mut() {
+            if buf.is_null() {
                 panic!("Failed to allocate save_state buffer");
             }
 
@@ -84,7 +84,7 @@ impl<'a> StateLoader<'a> {
     pub fn load(&self) -> Option<Vec<u8>> {
         unsafe {
             let app_ptr = self.app.native_app.as_ptr();
-            if (*app_ptr).savedState != ptr::null_mut() && (*app_ptr).savedStateSize > 0 {
+            if !(*app_ptr).savedState.is_null() && (*app_ptr).savedStateSize > 0 {
                 let buf: &mut [u8] = std::slice::from_raw_parts_mut(
                     (*app_ptr).savedState.cast(),
                     (*app_ptr).savedStateSize as usize,
@@ -155,7 +155,7 @@ pub struct AndroidAppInner {
 }
 
 impl AndroidAppInner {
-    pub fn native_window<'a>(&self) -> Option<NativeWindow> {
+    pub fn native_window(&self) -> Option<NativeWindow> {
         self.native_window.read().unwrap().clone()
     }
 
@@ -214,7 +214,7 @@ impl AndroidAppInner {
                         ffi::NativeAppGlueLooperId_LOOPER_ID_MAIN => {
                             trace!("ALooper_pollAll returned ID_MAIN");
                             let source: *mut ffi::android_poll_source = source.cast();
-                            if source != ptr::null_mut() {
+                            if !source.is_null() {
                                 let cmd_i = ffi::android_app_read_cmd(native_app.as_ptr());
 
                                 let cmd = match cmd_i as u32 {
@@ -248,11 +248,11 @@ impl AndroidAppInner {
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_START => MainEvent::Start,
                                     ffi::NativeAppGlueAppCmd_APP_CMD_RESUME => MainEvent::Resume {
-                                        loader: StateLoader { app: &self },
+                                        loader: StateLoader { app: self },
                                     },
                                     ffi::NativeAppGlueAppCmd_APP_CMD_SAVE_STATE => {
                                         MainEvent::SaveState {
-                                            saver: StateSaver { app: &self },
+                                            saver: StateSaver { app: self },
                                         }
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_PAUSE => MainEvent::Pause,
@@ -391,23 +391,25 @@ impl AndroidAppInner {
         }
     }
 
-    pub fn input_events<'b, F>(&self, mut callback: F)
+    pub fn input_events<F>(&self, mut callback: F)
     where
         F: FnMut(&InputEvent) -> InputStatus,
     {
         let buf = unsafe {
             let app_ptr = self.native_app.as_ptr();
             let input_buffer = ffi::android_app_swap_input_buffers(app_ptr);
-            if input_buffer == ptr::null_mut() {
+            if input_buffer.is_null() {
                 return;
             }
             InputBuffer::from_ptr(NonNull::new_unchecked(input_buffer))
         };
 
-        for key_event in buf.key_events_iter() {
+        let mut keys_iter = KeyEventsLendingIterator::new(&buf);
+        while let Some(key_event) = keys_iter.next() {
             callback(&InputEvent::KeyEvent(key_event));
         }
-        for motion_event in buf.motion_events_iter() {
+        let mut motion_iter = MotionEventsLendingIterator::new(&buf);
+        while let Some(motion_event) = motion_iter.next() {
             callback(&InputEvent::MotionEvent(motion_event));
         }
     }
@@ -434,46 +436,58 @@ impl AndroidAppInner {
     }
 }
 
-struct MotionEventsIterator<'a> {
+struct MotionEventsLendingIterator<'a> {
     pos: usize,
     count: usize,
     buffer: &'a InputBuffer<'a>,
 }
 
-impl<'a> Iterator for MotionEventsIterator<'a> {
-    type Item = MotionEvent;
-
-    fn next(&mut self) -> Option<Self::Item> {
+// A kind of lending iterator but since our MSRV is 1.60 we can't handle this
+// via a generic trait. The iteration of motion events is entirely private
+// though so this is ok for now.
+impl<'a> MotionEventsLendingIterator<'a> {
+    fn new(buffer: &'a InputBuffer<'a>) -> Self {
+        Self {
+            pos: 0,
+            count: buffer.motion_events_count(),
+            buffer,
+        }
+    }
+    fn next(&mut self) -> Option<MotionEvent<'a>> {
         if self.pos < self.count {
-            unsafe {
-                let ga_event = (*self.buffer.ptr.as_ptr()).motionEvents[self.pos];
-                let event = MotionEvent::new(ga_event);
-                self.pos += 1;
-                Some(event)
-            }
+            let ga_event = unsafe { &(*self.buffer.ptr.as_ptr()).motionEvents[self.pos] };
+            let event = MotionEvent::new(ga_event);
+            self.pos += 1;
+            Some(event)
         } else {
             None
         }
     }
 }
 
-struct KeyEventsIterator<'a> {
+struct KeyEventsLendingIterator<'a> {
     pos: usize,
     count: usize,
     buffer: &'a InputBuffer<'a>,
 }
 
-impl<'a> Iterator for KeyEventsIterator<'a> {
-    type Item = KeyEvent;
-
-    fn next(&mut self) -> Option<Self::Item> {
+// A kind of lending iterator but since our MSRV is 1.60 we can't handle this
+// via a generic trait. The iteration of key events is entirely private
+// though so this is ok for now.
+impl<'a> KeyEventsLendingIterator<'a> {
+    fn new(buffer: &'a InputBuffer<'a>) -> Self {
+        Self {
+            pos: 0,
+            count: buffer.key_events_count(),
+            buffer,
+        }
+    }
+    fn next(&mut self) -> Option<KeyEvent<'a>> {
         if self.pos < self.count {
-            unsafe {
-                let ga_event = (*self.buffer.ptr.as_ptr()).keyEvents[self.pos];
-                let event = KeyEvent::new(ga_event);
-                self.pos += 1;
-                Some(event)
-            }
+            let ga_event = unsafe { &(*self.buffer.ptr.as_ptr()).keyEvents[self.pos] };
+            let event = KeyEvent::new(ga_event);
+            self.pos += 1;
+            Some(event)
         } else {
             None
         }
@@ -493,29 +507,12 @@ impl<'a> InputBuffer<'a> {
         }
     }
 
-    // XXX: It's really not ideal here that Rust iterators can't yield values
-    // that borrow from the iterator, so we implicitly have to copy the
-    // events as we iterate...
-    pub fn motion_events_iter<'b>(&'b self) -> MotionEventsIterator<'b> {
-        unsafe {
-            let count = (*self.ptr.as_ptr()).motionEventsCount as usize;
-            MotionEventsIterator {
-                pos: 0,
-                count,
-                buffer: self,
-            }
-        }
+    pub fn motion_events_count(&self) -> usize {
+        unsafe { (*self.ptr.as_ptr()).motionEventsCount as usize }
     }
 
-    pub fn key_events_iter<'b>(&'b self) -> KeyEventsIterator<'b> {
-        unsafe {
-            let count = (*self.ptr.as_ptr()).keyEventsCount as usize;
-            KeyEventsIterator {
-                pos: 0,
-                count,
-                buffer: self,
-            }
-        }
+    pub fn key_events_count(&self) -> usize {
+        unsafe { (*self.ptr.as_ptr()).keyEventsCount as usize }
     }
 }
 
@@ -655,9 +652,6 @@ pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
     // code to look up non-standard Java classes.
     android_main(app);
 
-    // Since this is a newly spawned thread then the JVM hasn't been attached
-    // to the thread yet. Attach before calling the applications main function
-    // so they can safely make JNI calls
     if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
         detach_current_thread(jvm);
     }

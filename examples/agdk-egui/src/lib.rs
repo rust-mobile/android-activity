@@ -1,7 +1,7 @@
 use winit::event_loop::{EventLoop, EventLoopBuilder, EventLoopWindowTarget};
 
 #[cfg(target_os = "android")]
-use android_activity::AndroidApp;
+use winit::platform::android::activity::AndroidApp;
 
 use winit::event_loop::ControlFlow;
 

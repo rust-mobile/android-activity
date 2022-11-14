@@ -13,91 +13,19 @@
 // The `Class` was also bound differently to `android-ndk-rs` considering how the class is defined
 // by masking bits from the `Source`.
 
-use crate::game_activity::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::{convert::TryInto, ops::Deref};
 
-use bitflags::bitflags;
+use crate::game_activity::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
+use crate::input::{Class, Source};
 
 // Note: try to keep this wrapper API compatible with the AInputEvent API if possible
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]
-pub enum InputEvent {
-    MotionEvent(MotionEvent),
-    KeyEvent(KeyEvent),
-}
-
-/// An enum representing the source of an [`MotionEvent`] or [`KeyEvent`]
-///
-/// See [the InputDevice docs](https://developer.android.com/reference/android/view/InputDevice#SOURCE_ANY)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
-#[repr(i32)]
-pub enum Source {
-    BluetoothStylus = 0x0000c002,
-    Dpad = 0x00000201,
-    /// Either a gamepad or a joystick
-    Gamepad = 0x00000401,
-    Hdmi = 0x02000001,
-    /// Either a gamepad or a joystick
-    Joystick = 0x01000010,
-    /// Pretty much any device with buttons. Query the keyboard type to determine
-    /// if it has alphabetic keys and can be used for text entry.
-    Keyboard = 0x00000101,
-    /// A pointing device, such as a mouse or trackpad
-    Mouse = 0x00002002,
-    /// A pointing device, such as a mouse or trackpad whose relative motions should be treated as navigation events
-    MouseRelative = 0x00020004,
-    /// An input device akin to a scroll wheel
-    RotaryEncoder = 0x00400000,
-    Sensor = 0x04000000,
-    Stylus = 0x00004002,
-    Touchpad = 0x00100008,
-    Touchscreen = 0x00001002,
-    TouchNavigation = 0x00200000,
-    Trackball = 0x00010004,
-
-    Unknown = 0,
-}
-
-bitflags! {
-    struct SourceFlags: u32 {
-        const CLASS_MASK = 0x000000ff;
-
-        const BUTTON = 0x00000001;
-        const POINTER = 0x00000002;
-        const TRACKBALL = 0x00000004;
-        const POSITION = 0x00000008;
-        const JOYSTICK = 0x00000010;
-        const NONE = 0;
-    }
-}
-
-/// An enum representing the class of a [`MotionEvent`] or [`KeyEvent`] source
-///
-/// See [the InputDevice docs](https://developer.android.com/reference/android/view/InputDevice#SOURCE_CLASS_MASK)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Class {
-    None,
-    Button,
-    Pointer,
-    Trackball,
-    Position,
-    Joystick,
-}
-
-impl From<i32> for Class {
-    fn from(source: i32) -> Self {
-        let class = SourceFlags::from_bits_truncate(source as u32);
-        match class {
-            SourceFlags::BUTTON => Class::Button,
-            SourceFlags::POINTER => Class::Pointer,
-            SourceFlags::TRACKBALL => Class::Trackball,
-            SourceFlags::POSITION => Class::Position,
-            SourceFlags::JOYSTICK => Class::Joystick,
-            _ => Class::None,
-        }
-    }
+pub enum InputEvent<'a> {
+    MotionEvent(MotionEvent<'a>),
+    KeyEvent(KeyEvent<'a>),
 }
 
 /// A bitfield representing the state of modifier keys during an event.
@@ -182,15 +110,15 @@ impl MetaState {
 /// For general discussion of motion events in Android, see [the relevant
 /// javadoc](https://developer.android.com/reference/android/view/MotionEvent).
 #[derive(Clone, Debug)]
-pub struct MotionEvent {
-    ga_event: GameActivityMotionEvent,
+pub struct MotionEvent<'a> {
+    ga_event: &'a GameActivityMotionEvent,
 }
 
-impl Deref for MotionEvent {
+impl<'a> Deref for MotionEvent<'a> {
     type Target = GameActivityMotionEvent;
 
     fn deref(&self) -> &Self::Target {
-        &self.ga_event
+        self.ga_event
     }
 }
 
@@ -269,6 +197,20 @@ pub enum Axis {
     Generic16 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_16,
 }
 
+/// The tool type of a pointer.
+///
+/// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-48)
+#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
+#[repr(u32)]
+pub enum ToolType {
+    Unknown = ndk_sys::AMOTION_EVENT_TOOL_TYPE_UNKNOWN,
+    Finger = ndk_sys::AMOTION_EVENT_TOOL_TYPE_FINGER,
+    Stylus = ndk_sys::AMOTION_EVENT_TOOL_TYPE_STYLUS,
+    Mouse = ndk_sys::AMOTION_EVENT_TOOL_TYPE_MOUSE,
+    Eraser = ndk_sys::AMOTION_EVENT_TOOL_TYPE_ERASER,
+    Palm = ndk_sys::AMOTION_EVENT_TOOL_TYPE_PALM,
+}
+
 /// A bitfield representing the state of buttons during a motion event.
 ///
 /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-33)
@@ -344,8 +286,8 @@ impl MotionEventFlags {
     }
 }
 
-impl MotionEvent {
-    pub(crate) fn new(ga_event: GameActivityMotionEvent) -> Self {
+impl<'a> MotionEvent<'a> {
+    pub(crate) fn new(ga_event: &'a GameActivityMotionEvent) -> Self {
         Self { ga_event }
     }
 
@@ -353,14 +295,15 @@ impl MotionEvent {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        self.source.try_into().unwrap_or(Source::Unknown)
+        let source = self.source as u32;
+        source.try_into().unwrap_or(Source::Unknown)
     }
 
     /// Get the class of the event source.
     ///
     #[inline]
     pub fn class(&self) -> Class {
-        Class::from(self.source)
+        Class::from(self.source())
     }
 
     /// Get the device id associated with the event.
@@ -555,7 +498,7 @@ impl MotionEvent {
 /// A view into the data of a specific pointer in a motion event.
 #[derive(Debug)]
 pub struct Pointer<'a> {
-    event: &'a MotionEvent,
+    event: &'a MotionEvent<'a>,
     index: usize,
 }
 
@@ -633,12 +576,19 @@ impl<'a> Pointer<'a> {
     pub fn touch_minor(&self) -> f32 {
         self.axis_value(Axis::TouchMinor)
     }
+
+    #[inline]
+    pub fn tool_type(&self) -> ToolType {
+        let pointer = &self.event.pointers[self.index];
+        let tool_type = pointer.toolType as u32;
+        tool_type.try_into().unwrap()
+    }
 }
 
 /// An iterator over the pointers in a [`MotionEvent`].
 #[derive(Debug)]
 pub struct PointersIter<'a> {
-    event: &'a MotionEvent,
+    event: &'a MotionEvent<'a>,
     next_index: usize,
     count: usize,
 }
@@ -983,15 +933,15 @@ impl ExactSizeIterator for HistoricalPointersIter<'_> {
 /// For general discussion of key events in Android, see [the relevant
 /// javadoc](https://developer.android.com/reference/android/view/KeyEvent).
 #[derive(Debug, Clone)]
-pub struct KeyEvent {
-    ga_event: GameActivityKeyEvent,
+pub struct KeyEvent<'a> {
+    ga_event: &'a GameActivityKeyEvent,
 }
 
-impl Deref for KeyEvent {
+impl<'a> Deref for KeyEvent<'a> {
     type Target = GameActivityKeyEvent;
 
     fn deref(&self) -> &Self::Target {
-        &self.ga_event
+        self.ga_event
     }
 }
 
@@ -1303,8 +1253,8 @@ pub enum Keycode {
     ProfileSwitch = ndk_sys::AKEYCODE_PROFILE_SWITCH,
 }
 
-impl KeyEvent {
-    pub(crate) fn new(ga_event: GameActivityKeyEvent) -> Self {
+impl<'a> KeyEvent<'a> {
+    pub(crate) fn new(ga_event: &'a GameActivityKeyEvent) -> Self {
         Self { ga_event }
     }
 
@@ -1312,14 +1262,15 @@ impl KeyEvent {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        self.source.try_into().unwrap_or(Source::Unknown)
+        let source = self.source as u32;
+        source.try_into().unwrap_or(Source::Unknown)
     }
 
     /// Get the class of the event source.
     ///
     #[inline]
     pub fn class(&self) -> Class {
-        Class::from(self.source)
+        Class::from(self.source())
     }
 
     /// Get the device id associated with the event.
@@ -1440,7 +1391,7 @@ impl KeyEventFlags {
     }
 }
 
-impl KeyEvent {
+impl<'a> KeyEvent<'a> {
     /// Flags associated with this [`KeyEvent`].
     ///
     /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getflags)

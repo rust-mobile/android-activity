@@ -137,6 +137,7 @@ typedef struct GameActivity {
  */
 typedef struct GameActivityPointerAxes {
     int32_t id;
+    int32_t toolType;
     float axisValues[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT];
     float rawX;
     float rawY;

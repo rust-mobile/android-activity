@@ -1,3 +1,62 @@
+//! A glue layer for building standalone, Rust applications on Android
+//!
+//! This crate provides a "glue" layer for building native Rust
+//! applications on Android, supporting multiple [`Activity`] base classes.
+//! It's comparable to [`android_native_app_glue.c`][ndk_concepts]
+//! for C/C++ applications.
+//!
+//! Currently the crate supports two `Activity` base classes:
+//! 1. [`NativeActivity`] - Built in to Android, this doesn't require compiling any Java or Kotlin code.
+//! 2. [`GameActivity`] - From the Android Game Development Kit, it has more
+//!    sophisticated input handling support than `NativeActivity`. `GameActivity`
+//!    is also based on the `AndroidAppCompat` class which can help with supporting
+//!    a wider range of devices.
+//!
+//! Standalone applications based on this crate need to be built as `cdylib` libraries, like:
+//! ```
+//! [lib]
+//! crate_type=["cdylib"]
+//! ```
+//!
+//! and implement a `#[no_mangle]` `android_main` entry point like this:
+//! ```rust
+//! #[no_mangle]
+//! fn android_main(app: AndroidApp) {
+//!
+//! }
+//! ```
+//!
+//! Once your application's `Activity` class has loaded and it calls `onCreate` then
+//! `android-activity` will spawn a dedicated thread to run your `android_main` function,
+//! separate from the Java thread that created the corresponding `Activity`.
+//!
+//! [`AndroidApp`] provides an interface to query state for the application as
+//! well as monitor events, such as lifecycle and input events, that are
+//! marshalled between the Java thread that owns the `Activity` and the native
+//! thread that runs the `android_main()` code.
+//!
+//! # Main Thread Initialization
+//!
+//! Before `android_main()` is called, the following application state
+//! is also initialized:
+//!
+//! 1. An I/O thread is spawned that will handle redirecting standard input
+//!    and output to the Android log, visible via `logcat`.
+//! 2. A `JavaVM` and `Activity` instance will be associated with the [`ndk_context`] crate
+//!    so that other, independent, Rust crates are able to find a JavaVM
+//!    for making JNI calls.
+//! 3. The `JavaVM` will be attached to the native thread
+//! 4. A [Looper] is attached to the Rust native thread.
+//!
+//!
+//! These are undone after `android_main()` returns
+//!
+//! [`Activity`]: https://developer.android.com/reference/android/app/Activity
+//! [`NativeActivity`]: https://developer.android.com/reference/android/app/NativeActivity
+//! [ndk_concepts]: https://developer.android.com/ndk/guides/concepts#naa
+//! [`GameActivity`]: https://developer.android.com/games/agdk/integrate-game-activity
+//! [Looper]: https://developer.android.com/reference/android/os/Looper
+
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -47,20 +106,14 @@ mod game_activity;
 #[cfg(feature = "game-activity")]
 use game_activity as activity_impl;
 
-pub use activity_impl::input;
+pub mod input;
 
 mod config;
 pub use config::ConfigurationRef;
 
 mod util;
 
-// Note: unlike in ndk-glue this has signed components (consistent
-// with Android's ARect) which generally allows for representing
-// rectangles with a negative/off-screen origin. Even though this
-// is currently just used to represent the content rect (that probably
-// wouldn't have any negative components) we keep the generality
-// since this is a primitive type that could potentially be used
-// for more things in the future.
+/// A rectangle with integer edge coordinates. Used to represent window insets, for example.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Rect {
     pub left: i32,
@@ -81,13 +134,13 @@ impl Rect {
     }
 }
 
-impl Into<ndk_sys::ARect> for Rect {
-    fn into(self) -> ndk_sys::ARect {
-        ndk_sys::ARect {
-            left: self.left,
-            right: self.right,
-            top: self.top,
-            bottom: self.bottom,
+impl From<Rect> for ndk_sys::ARect {
+    fn from(rect: Rect) -> Self {
+        Self {
+            left: rect.left,
+            right: rect.right,
+            top: rect.top,
+            bottom: rect.bottom,
         }
     }
 }
@@ -103,9 +156,10 @@ impl From<ndk_sys::ARect> for Rect {
     }
 }
 
-pub type StateSaver<'a> = activity_impl::StateSaver<'a>;
-pub type StateLoader<'a> = activity_impl::StateLoader<'a>;
+pub use activity_impl::StateLoader;
+pub use activity_impl::StateSaver;
 
+/// An application event delivered during [`AndroidApp::poll_events`]
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum MainEvent<'a> {
@@ -197,6 +251,7 @@ pub enum MainEvent<'a> {
     InsetsChanged {},
 }
 
+/// An event delivered during [`AndroidApp::poll_events`]
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum PollEvent<'a> {
@@ -205,6 +260,9 @@ pub enum PollEvent<'a> {
     Main(MainEvent<'a>),
 }
 
+/// Indicates whether an application has handled or ignored an event
+///
+/// If an event is not handled by an application then some default handling may happen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputStatus {
     Handled,
@@ -380,6 +438,13 @@ bitflags! {
     }
 }
 
+/// The top-level state and interface for a native Rust application
+///
+/// `AndroidApp` provides an interface to query state for the application as
+/// well as monitor events, such as lifecycle and input events, that are
+/// marshalled between the Java thread that owns the `Activity` and the native
+/// thread that runs the `android_main()` code.
+///
 #[derive(Debug, Clone)]
 pub struct AndroidApp {
     pub(crate) inner: Arc<RwLock<AndroidAppInner>>,
@@ -404,11 +469,11 @@ impl AndroidApp {
     /// This will only return `Some(window)` between
     /// [`MainEvent::InitWindow`] and [`MainEvent::TerminateWindow`]
     /// events.
-    pub fn native_window<'a>(&self) -> Option<NativeWindow> {
+    pub fn native_window(&self) -> Option<NativeWindow> {
         self.inner.read().unwrap().native_window()
     }
 
-    /// Polls for any events associated with this AndroidApp and processes those events
+    /// Polls for any events associated with this [AndroidApp] and processes those events
     /// (such as lifecycle events) via the given `callback`.
     ///
     /// It's important to use this API for polling, and not call [`ALooper_pollAll`] directly since
@@ -419,6 +484,11 @@ impl AndroidApp {
     /// set to `None` once the callback returns, and this is also synchronized with the Java
     /// main thread. The [`MainEvent::SaveState`] event is also synchronized with the
     /// Java main thread.
+    ///
+    /// # Panics
+    ///
+    /// This must only be called from your `android_main()` thread and it may panic if called
+    /// from another thread.
     ///
     /// [`ALooper_pollAll`]: ndk::looper::ThreadLooper::poll_all
     pub fn poll_events<F>(&self, timeout: Option<Duration>, callback: F)
@@ -518,7 +588,7 @@ impl AndroidApp {
     ///
     /// To reduce overhead, by default only [`input::Axis::X`] and [`input::Axis::Y`] are enabled
     /// and other axis should be enabled explicitly via [`Self::enable_motion_axis`].
-    pub fn input_events<'b, F>(&self, callback: F)
+    pub fn input_events<F>(&self, callback: F)
     where
         F: FnMut(&input::InputEvent) -> InputStatus,
     {
@@ -531,7 +601,8 @@ impl AndroidApp {
     pub fn sdk_version() -> i32 {
         let mut prop = android_properties::getprop("ro.build.version.sdk");
         if let Some(val) = prop.value() {
-            i32::from_str_radix(&val, 10).expect("Failed to parse ro.build.version.sdk property")
+            val.parse::<i32>()
+                .expect("Failed to parse ro.build.version.sdk property")
         } else {
             panic!("Couldn't read ro.build.version.sdk system property");
         }
