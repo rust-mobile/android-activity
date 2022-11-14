@@ -4,16 +4,5 @@ members = [
 ]
 
 exclude = [
-    "examples/agdk-mainloop",
-    "examples/agdk-winit-wgpu",
-    "examples/agdk-eframe",
-    "examples/agdk-egui",
-    "examples/agdk-oboe",
-    "examples/agdk-cpal",
-    "examples/na-mainloop",
-    "examples/na-winit-wgpu",
-    "examples/na-subclass-jni",
-    "examples/na-openxr-info",
-    "examples/na-openxr-wgpu",
-    "examples/na-winit-glutin"
+    "examples",
 ]

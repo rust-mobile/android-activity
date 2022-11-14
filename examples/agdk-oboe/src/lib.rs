@@ -1,4 +1,4 @@
-use android_activity::{AndroidApp, MainEvent, PollEvent, InputStatus};
+use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
 use log::info;
 
 mod audio;

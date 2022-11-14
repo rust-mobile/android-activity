@@ -47,16 +47,16 @@ impl App {
 
 impl App {
     fn create_surface<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
-        let window = winit::window::Window::new(&event_loop).unwrap();
-        trace!("WGPU: creating surface for native window");
+        let window = winit::window::Window::new(event_loop).unwrap();
+        log::info!("WGPU: creating surface for native window");
         let surface = unsafe { self.instance.create_surface(&window) };
         self.surface_state = Some(SurfaceState { window, surface });
     }
 
     async fn init_render_state(adapter: &Adapter, target_format: TextureFormat) -> RenderState {
-        trace!("Initializing render state");
+        log::info!("Initializing render state");
 
-        trace!("WGPU: requesting device");
+        log::info!("WGPU: requesting device");
         // Create the logical device and command queue
         let (device, queue) = adapter
             .request_device(
@@ -72,21 +72,21 @@ impl App {
             .await
             .expect("Failed to create device");
 
-        trace!("WGPU: loading shader");
+        log::info!("WGPU: loading shader");
         // Load the shaders from disk
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
         });
 
-        trace!("WGPU: creating pipeline layout");
+        log::info!("WGPU: creating pipeline layout");
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
 
-        trace!("WGPU: creating render pipeline");
+        log::info!("WGPU: creating render pipeline");
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: None,
             layout: Some(&pipeline_layout),
@@ -125,7 +125,7 @@ impl App {
     async fn ensure_render_state_for_surface(&mut self) {
         if let Some(surface_state) = &self.surface_state {
             if self.adapter.is_none() {
-                trace!("WGPU: requesting a suitable adapter (compatible with our surface)");
+                log::info!("WGPU: requesting a suitable adapter (compatible with our surface)");
                 let adapter = self
                     .instance
                     .request_adapter(&wgpu::RequestAdapterOptions {
@@ -142,8 +142,8 @@ impl App {
             let adapter = self.adapter.as_ref().unwrap();
 
             if self.render_state.is_none() {
-                trace!("WGPU: finding supported swapchain format");
-                let swapchain_format = surface_state.surface.get_supported_formats(&adapter)[0];
+                log::info!("WGPU: finding supported swapchain format");
+                let swapchain_format = surface_state.surface.get_supported_formats(adapter)[0];
 
                 let rs = Self::init_render_state(adapter, swapchain_format).await;
                 self.render_state = Some(rs);
@@ -152,7 +152,8 @@ impl App {
     }
 
     fn configure_surface_swapchain(&mut self) {
-        if let (Some(render_state), Some(surface_state)) = (&self.render_state, &self.surface_state) {
+        if let (Some(render_state), Some(surface_state)) = (&self.render_state, &self.surface_state)
+        {
             let swapchain_format = render_state.target_format;
             let size = surface_state.window.inner_size();
 
@@ -163,9 +164,10 @@ impl App {
                 height: size.height,
                 present_mode: wgpu::PresentMode::Mailbox,
                 //present_mode: wgpu::PresentMode::Fifo,
+                alpha_mode: wgpu::CompositeAlphaMode::Inherit,
             };
 
-            trace!("WGPU: Configuring surface swapchain: format = {swapchain_format:?}, size = {size:?}");
+            log::info!("WGPU: Configuring surface swapchain: format = {swapchain_format:?}, size = {size:?}");
             surface_state
                 .surface
                 .configure(&render_state.device, &config);
@@ -180,7 +182,7 @@ impl App {
     }
 
     fn resume<T>(&mut self, event_loop: &EventLoopWindowTarget<T>) {
-        trace!("Resumed, creating render state...");
+        log::info!("Resumed, creating render state...");
         self.create_surface(event_loop);
         pollster::block_on(self.ensure_render_state_for_surface());
         self.configure_surface_swapchain();
@@ -189,7 +191,7 @@ impl App {
 }
 
 fn run(event_loop: EventLoop<()>) {
-    trace!("Running mainloop...");
+    log::info!("Running mainloop...");
 
     // doesn't need to be re-considered later
     let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -198,7 +200,7 @@ fn run(event_loop: EventLoop<()>) {
 
     let mut app = App::new(instance);
     event_loop.run(move |event, event_loop, control_flow| {
-        trace!("Received Winit event: {event:?}");
+        log::info!("Received Winit event: {event:?}");
 
         *control_flow = ControlFlow::Wait;
         match event {
@@ -206,7 +208,7 @@ fn run(event_loop: EventLoop<()>) {
                 app.resume(event_loop);
             }
             Event::Suspended => {
-                trace!("Suspended, dropping render state...");
+                log::info!("Suspended, dropping render state...");
                 app.render_state = None;
             }
             Event::WindowEvent {
@@ -219,7 +221,7 @@ fn run(event_loop: EventLoop<()>) {
                 app.queue_redraw();
             }
             Event::RedrawRequested(_) => {
-                trace!("Handling Redraw Request");
+                log::info!("Handling Redraw Request");
 
                 if let Some(ref surface_state) = app.surface_state {
                     if let Some(ref rs) = app.render_state {
@@ -263,14 +265,15 @@ fn run(event_loop: EventLoop<()>) {
                 event: WindowEvent::CloseRequested,
                 ..
             } => *control_flow = ControlFlow::Exit,
+            Event::WindowEvent { event: _, .. } => {
+                log::info!("Window event {:#?}", event);
+            }
             _ => {}
         }
     });
 }
 
 fn _main(event_loop: EventLoop<()>) {
-
-
     run(event_loop);
 }
 
@@ -280,7 +283,7 @@ fn _main(event_loop: EventLoop<()>) {
 fn android_main(app: AndroidApp) {
     use winit::platform::android::EventLoopBuilderExtAndroid;
 
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
+    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
 
     let event_loop = EventLoopBuilder::new().with_android_app(app).build();
     _main(event_loop);
@@ -290,7 +293,7 @@ fn android_main(app: AndroidApp) {
 #[cfg(not(target_os = "android"))]
 fn main() {
     env_logger::builder()
-        .filter_level(log::LevelFilter::Warn) // Default Log Level
+        .filter_level(log::LevelFilter::Info) // Default Log Level
         .parse_default_env()
         .init();
 
