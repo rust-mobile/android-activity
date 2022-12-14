@@ -333,7 +333,7 @@ impl WaitableNativeActivityState {
             let config = super::ConfigurationRef::new(Configuration::from_ptr(
                 NonNull::new_unchecked(config),
             ));
-            eprintln!("Config: {:#?}", config);
+            log::trace!("Config: {:#?}", config);
             config
         };
 
@@ -762,9 +762,11 @@ extern "C" fn ANativeActivity_onCreate(
         });
     }
 
-    eprintln!(
+    log::trace!(
         "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
-        activity, saved_state, saved_state_size
+        activity,
+        saved_state,
+        saved_state_size
     );
 
     // Conceptually we associate a glue reference with the JVM main thread, and another

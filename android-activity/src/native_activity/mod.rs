@@ -5,7 +5,7 @@ use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use log::{error, info, trace};
+use log::{error, trace};
 
 use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
@@ -159,7 +159,7 @@ impl AndroidAppInner {
                 -1
             };
 
-            info!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
+            trace!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
             assert!(
                 !ndk_sys::ALooper_forThread().is_null(),
                 "Application tried to poll events from non-main thread"
@@ -170,7 +170,7 @@ impl AndroidAppInner {
                 &mut events,
                 &mut source as *mut *mut core::ffi::c_void,
             );
-            info!("pollAll id = {id}");
+            trace!("pollAll id = {id}");
             match id {
                 ndk_sys::ALOOPER_POLL_WAKE => {
                     trace!("ALooper_pollAll returned POLL_WAKE");
