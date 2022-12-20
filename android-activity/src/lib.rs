@@ -72,14 +72,14 @@ compile_error!("android-activity only supports compiling for Android");
 
 #[cfg(all(feature = "game-activity", feature = "native-activity"))]
 compile_error!(
-    "The \"game-activity\" and \"native-activity\" features cannot be enabled at the same time"
+    r#"The "game-activity" and "native-activity" features cannot be enabled at the same time"#
 );
 #[cfg(all(
     not(any(feature = "game-activity", feature = "native-activity")),
     not(doc)
 ))]
 compile_error!(
-    r#"Either \"game-activity\" or \"native-activity\" must be enabled as features
+    r#"Either "game-activity" or "native-activity" must be enabled as features
 
 If you have set one of these features then this error indicates that Cargo is trying to
 link together multiple implementations of android-activity (with incompatible versions)
@@ -92,8 +92,7 @@ You can use `cargo tree` (e.g. via `cargo ndk -t arm64-v8a tree`) to identify wh
 versions have been resolved.
 
 You may need to add a `[patch]` into your Cargo.toml to ensure a specific version of
-android-activity is used across all of your application's crates.
-"#
+android-activity is used across all of your application's crates."#
 );
 
 #[cfg(any(feature = "native-activity", doc))]
