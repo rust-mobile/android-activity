@@ -78,7 +78,7 @@ adb logcat example:V *:S
 
 # Full Examples
 
-See [this collection of examples](https://github.com/rib/android-activity/tree/main/examples) (based on both `GameActivity` and `NativeActivity`).
+See [this collection of examples](https://github.com/rust-mobile/rust-android-examples) (based on both `GameActivity` and `NativeActivity`).
 
 Each example is a standalone project that may also be a convenient templates for starting a new project.
 
@@ -103,7 +103,7 @@ Firstly; if you have a [Winit](https://crates.io/crates/winit) based application
 
 Winit-based applications can follow the [Android README](https://github.com/rust-windowing/winit#android) guidance for advice on how to switch over. Most Winit-based applications should aim to remove any explicit dependency on a specific glue crate (so not depend directly on `ndk-glue` or `android-activity` and instead rely on Winit to pull in the right glue crate). The main practical change will then be to add a `#[no_mangle]fn android_main(app: AndroidApp)` entry point.
 
-See the [Android README](https://github.com/rust-windowing/winit#android) for more details and also see the [Winit-based examples here](https://github.com/rib/android-activity/tree/main/examples).
+See the [Android README](https://github.com/rust-windowing/winit#android) for more details and also see the [Winit-based examples here](https://github.com/rust-mobile/rust-android-examples).
 
 ## Middleware crates (i.e. not applications)
 
@@ -129,7 +129,7 @@ fn android_main(app: AndroidApp) {
 }
 ```
 
-See this minimal [NativeActivity Mainloop](https://github.com/rib/android-activity/tree/main/examples/na-mainloop) for more details about how to poll for events.
+See this minimal [NativeActivity Mainloop](https://github.com/rust-mobile/android-activity/tree/main/examples/na-mainloop) for more details about how to poll for events.
 
 There is is no `#[ndk_glue::main]` replacement considering that `android_main()` entry point needs to be passed an `AndroidApp` argument which isn't compatible with a traditional `main()` function. Having an Android specific entry point also gives a place to initialize Android logging and handle other Android specific details (such as building an event loop based on the `app` argument)
 
