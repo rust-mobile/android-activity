@@ -62,6 +62,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
+use libc::c_void;
 use ndk::asset::AssetManager;
 use ndk::native_window::NativeWindow;
 
@@ -470,6 +471,49 @@ impl AndroidApp {
     /// events.
     pub fn native_window(&self) -> Option<NativeWindow> {
         self.inner.read().unwrap().native_window()
+    }
+
+    /// Returns a pointer to the Java Virtual Machine, for making JNI calls
+    ///
+    /// This returns a pointer to the Java Virtual Machine which can be used
+    /// with the [`jni`] crate (or similar crates) to make JNI calls that bridge
+    /// between native Rust code and Java/Kotlin code running within the JVM.
+    ///
+    /// If you use the [`jni`] crate you can wrap this as a [`JavaVM`] via:
+    /// ```ignore
+    /// # use jni::JavaVM;
+    /// # let app: AndroidApp = todo!();
+    /// let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr()) };
+    /// ```
+    ///
+    /// [`jni`]: https://crates.io/crates/jni
+    /// [`JavaVM`]: https://docs.rs/jni/latest/jni/struct.JavaVM.html
+    pub fn vm_as_ptr(&self) -> *mut c_void {
+        self.inner.read().unwrap().vm_as_ptr()
+    }
+
+    /// Returns a JNI object reference for this application's JVM `Activity` as a pointer
+    ///
+    /// If you use the [`jni`] crate you can wrap this as an object reference via:
+    /// ```ignore
+    /// # use jni::objects::JObject;
+    /// # let app: AndroidApp = todo!();
+    /// let activity = unsafe { JObject::from_raw(app.activity_as_ptr()) };
+    /// ```
+    ///
+    /// # JNI Safety
+    ///
+    /// Note that the object reference will be a JNI global reference, not a
+    /// local reference and it should not be deleted. Don't wrap the reference
+    /// in an [`AutoLocal`] which would try to explicitly delete the reference
+    /// when dropped. Similarly, don't wrap the reference as a [`GlobalRef`]
+    /// which would also try to explicitly delete the reference when dropped.
+    ///
+    /// [`jni`]: https://crates.io/crates/jni
+    /// [`AutoLocal`]: https://docs.rs/jni/latest/jni/objects/struct.AutoLocal.html
+    /// [`GlobalRef`]: https://docs.rs/jni/latest/jni/objects/struct.GlobalRef.html
+    pub fn activity_as_ptr(&self) -> *mut c_void {
+        self.inner.read().unwrap().activity_as_ptr()
     }
 
     /// Polls for any events associated with this [AndroidApp] and processes those events
