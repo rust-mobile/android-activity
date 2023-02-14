@@ -111,6 +111,8 @@ pub mod input;
 mod config;
 pub use config::ConfigurationRef;
 
+pub mod intent;
+
 mod util;
 
 /// A rectangle with integer edge coordinates. Used to represent window insets, for example.
