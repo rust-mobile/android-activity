@@ -5,6 +5,7 @@ use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
+use libc::c_void;
 use log::{error, trace};
 
 use ndk_sys::ALooper_wake;
@@ -130,6 +131,15 @@ pub(crate) struct AndroidAppInner {
 }
 
 impl AndroidAppInner {
+    pub(crate) fn vm_as_ptr(&self) -> *mut c_void {
+        unsafe { (*self.native_activity.activity).vm as _ }
+    }
+
+    pub(crate) fn activity_as_ptr(&self) -> *mut c_void {
+        // "clazz" is a completely bogus name; this is the _instance_ not class pointer
+        unsafe { (*self.native_activity.activity).clazz as _ }
+    }
+
     pub(crate) fn native_activity(&self) -> *const ndk_sys::ANativeActivity {
         self.native_activity.activity
     }
