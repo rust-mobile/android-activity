@@ -126,6 +126,7 @@ impl NativeActivityGlue {
             (*(*activity).callbacks).onLowMemory = Some(on_low_memory);
             (*(*activity).callbacks).onWindowFocusChanged = Some(on_window_focus_changed);
             (*(*activity).callbacks).onNativeWindowCreated = Some(on_native_window_created);
+            (*(*activity).callbacks).onNativeWindowResized = Some(on_native_window_resized);
             (*(*activity).callbacks).onNativeWindowDestroyed = Some(on_native_window_destroyed);
             (*(*activity).callbacks).onInputQueueCreated = Some(on_input_queue_created);
             (*(*activity).callbacks).onInputQueueDestroyed = Some(on_input_queue_destroyed);
@@ -394,6 +395,16 @@ impl WaitableNativeActivityState {
         } else {
             AppCmd::LostFocus
         });
+    }
+
+    pub fn notify_window_resized(&self, native_window: *mut ndk_sys::ANativeWindow) {
+        let mut guard = self.mutex.lock().unwrap();
+        // set_window always syncs .pending_window back to .window before returning. This callback
+        // from Android can never arrive at an interim state, and validates that Android:
+        // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
+        // 2. Doesn't call it on a bogus window pointer that we don't know about.
+        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        guard.write_cmd(AppCmd::WindowResized);
     }
 
     unsafe fn set_input(&self, input_queue: *mut ndk_sys::AInputQueue) {
@@ -694,10 +705,20 @@ unsafe extern "C" fn on_native_window_created(
 ) {
     log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
     try_with_waitable_activity_ref(activity, |waitable_activity| {
-        // It's important that we use ::clone_from_ptr() here because NativeWindow
-        // has a Drop implementation that will unconditionally _release() the native window
+        // Use clone_from_ptr to acquire additional ownership on the NativeWindow,
+        // which will unconditionally be _release()'d on Drop.
         let window = NativeWindow::clone_from_ptr(NonNull::new_unchecked(window));
         waitable_activity.set_window(Some(window));
+    });
+}
+
+unsafe extern "C" fn on_native_window_resized(
+    activity: *mut ndk_sys::ANativeActivity,
+    window: *mut ndk_sys::ANativeWindow,
+) {
+    log::debug!("NativeWindowResized: {:p} -- {:p}\n", activity, window);
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
+        waitable_activity.notify_window_resized(window);
     });
 }
 
