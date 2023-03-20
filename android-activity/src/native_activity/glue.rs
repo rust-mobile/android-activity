@@ -15,8 +15,7 @@ use std::{
 use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
-use crate::util::android_log;
-use crate::ConfigurationRef;
+use crate::{util::abort_on_panic, util::android_log, ConfigurationRef};
 
 use super::{AndroidApp, Rect};
 
@@ -628,92 +627,112 @@ unsafe fn try_with_waitable_activity_ref(
 }
 
 unsafe extern "C" fn on_destroy(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Destroy: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.notify_destroyed()
-    });
+    abort_on_panic(|| {
+        log::debug!("Destroy: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.notify_destroyed()
+        });
+    })
 }
 
 unsafe extern "C" fn on_start(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Start: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_activity_state(State::Start);
-    });
+    abort_on_panic(|| {
+        log::debug!("Start: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_activity_state(State::Start);
+        });
+    })
 }
 
 unsafe extern "C" fn on_resume(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Resume: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_activity_state(State::Resume);
-    });
+    abort_on_panic(|| {
+        log::debug!("Resume: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_activity_state(State::Resume);
+        });
+    })
 }
 
 unsafe extern "C" fn on_save_instance_state(
     activity: *mut ndk_sys::ANativeActivity,
     out_len: *mut ndk_sys::size_t,
 ) -> *mut libc::c_void {
-    log::debug!("SaveInstanceState: {:p}\n", activity);
-    *out_len = 0;
-    let mut ret = ptr::null_mut();
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        let (state, len) = waitable_activity.request_save_state();
-        *out_len = len as ndk_sys::size_t;
-        ret = state
-    });
+    abort_on_panic(|| {
+        log::debug!("SaveInstanceState: {:p}\n", activity);
+        *out_len = 0;
+        let mut ret = ptr::null_mut();
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            let (state, len) = waitable_activity.request_save_state();
+            *out_len = len as ndk_sys::size_t;
+            ret = state
+        });
 
-    log::debug!("Saved state = {:p}, len = {}", ret, *out_len);
-    ret
+        log::debug!("Saved state = {:p}, len = {}", ret, *out_len);
+        ret
+    })
 }
 
 unsafe extern "C" fn on_pause(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Pause: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_activity_state(State::Pause);
-    });
+    abort_on_panic(|| {
+        log::debug!("Pause: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_activity_state(State::Pause);
+        });
+    })
 }
 
 unsafe extern "C" fn on_stop(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Stop: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_activity_state(State::Stop);
-    });
+    abort_on_panic(|| {
+        log::debug!("Stop: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_activity_state(State::Stop);
+        });
+    })
 }
 
 unsafe extern "C" fn on_configuration_changed(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("ConfigurationChanged: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.notify_config_changed();
-    });
+    abort_on_panic(|| {
+        log::debug!("ConfigurationChanged: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.notify_config_changed();
+        });
+    })
 }
 
 unsafe extern "C" fn on_low_memory(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("LowMemory: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.notify_low_memory();
-    });
+    abort_on_panic(|| {
+        log::debug!("LowMemory: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.notify_low_memory();
+        });
+    })
 }
 
 unsafe extern "C" fn on_window_focus_changed(
     activity: *mut ndk_sys::ANativeActivity,
     focused: libc::c_int,
 ) {
-    log::debug!("WindowFocusChanged: {:p} -- {}\n", activity, focused);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.notify_focus_changed(focused != 0);
-    });
+    abort_on_panic(|| {
+        log::debug!("WindowFocusChanged: {:p} -- {}\n", activity, focused);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.notify_focus_changed(focused != 0);
+        });
+    })
 }
 
 unsafe extern "C" fn on_native_window_created(
     activity: *mut ndk_sys::ANativeActivity,
     window: *mut ndk_sys::ANativeWindow,
 ) {
-    log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        // Use clone_from_ptr to acquire additional ownership on the NativeWindow,
-        // which will unconditionally be _release()'d on Drop.
-        let window = NativeWindow::clone_from_ptr(NonNull::new_unchecked(window));
-        waitable_activity.set_window(Some(window));
-    });
+    abort_on_panic(|| {
+        log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            // Use clone_from_ptr to acquire additional ownership on the NativeWindow,
+            // which will unconditionally be _release()'d on Drop.
+            let window = NativeWindow::clone_from_ptr(NonNull::new_unchecked(window));
+            waitable_activity.set_window(Some(window));
+        });
+    })
 }
 
 unsafe extern "C" fn on_native_window_resized(
@@ -740,30 +759,36 @@ unsafe extern "C" fn on_native_window_destroyed(
     activity: *mut ndk_sys::ANativeActivity,
     window: *mut ndk_sys::ANativeWindow,
 ) {
-    log::debug!("NativeWindowDestroyed: {:p} -- {:p}\n", activity, window);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_window(None);
-    });
+    abort_on_panic(|| {
+        log::debug!("NativeWindowDestroyed: {:p} -- {:p}\n", activity, window);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_window(None);
+        });
+    })
 }
 
 unsafe extern "C" fn on_input_queue_created(
     activity: *mut ndk_sys::ANativeActivity,
     queue: *mut ndk_sys::AInputQueue,
 ) {
-    log::debug!("InputQueueCreated: {:p} -- {:p}\n", activity, queue);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_input(queue);
-    });
+    abort_on_panic(|| {
+        log::debug!("InputQueueCreated: {:p} -- {:p}\n", activity, queue);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_input(queue);
+        });
+    })
 }
 
 unsafe extern "C" fn on_input_queue_destroyed(
     activity: *mut ndk_sys::ANativeActivity,
     queue: *mut ndk_sys::AInputQueue,
 ) {
-    log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_input(ptr::null_mut());
-    });
+    abort_on_panic(|| {
+        log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_input(ptr::null_mut());
+        });
+    })
 }
 
 unsafe extern "C" fn on_content_rect_changed(
@@ -783,92 +808,94 @@ extern "C" fn ANativeActivity_onCreate(
     saved_state: *const libc::c_void,
     saved_state_size: libc::size_t,
 ) {
-    // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
-    unsafe {
-        let mut logpipe: [RawFd; 2] = Default::default();
-        libc::pipe(logpipe.as_mut_ptr());
-        libc::dup2(logpipe[1], libc::STDOUT_FILENO);
-        libc::dup2(logpipe[1], libc::STDERR_FILENO);
-        std::thread::spawn(move || {
-            let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-            let file = File::from_raw_fd(logpipe[0]);
-            let mut reader = BufReader::new(file);
-            let mut buffer = String::new();
-            loop {
-                buffer.clear();
-                if let Ok(len) = reader.read_line(&mut buffer) {
-                    if len == 0 {
-                        break;
-                    } else if let Ok(msg) = CString::new(buffer.clone()) {
-                        android_log(Level::Info, tag, &msg);
+    abort_on_panic(|| {
+        // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
+        unsafe {
+            let mut logpipe: [RawFd; 2] = Default::default();
+            libc::pipe(logpipe.as_mut_ptr());
+            libc::dup2(logpipe[1], libc::STDOUT_FILENO);
+            libc::dup2(logpipe[1], libc::STDERR_FILENO);
+            std::thread::spawn(move || {
+                let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
+                let file = File::from_raw_fd(logpipe[0]);
+                let mut reader = BufReader::new(file);
+                let mut buffer = String::new();
+                loop {
+                    buffer.clear();
+                    if let Ok(len) = reader.read_line(&mut buffer) {
+                        if len == 0 {
+                            break;
+                        } else if let Ok(msg) = CString::new(buffer.clone()) {
+                            android_log(Level::Info, tag, &msg);
+                        }
                     }
                 }
+            });
+        }
+
+        log::trace!(
+            "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
+            activity,
+            saved_state,
+            saved_state_size
+        );
+
+        // Conceptually we associate a glue reference with the JVM main thread, and another
+        // reference with the Rust main thread
+        let jvm_glue = NativeActivityGlue::new(activity, saved_state, saved_state_size);
+
+        let rust_glue = jvm_glue.clone();
+        // Let us Send the NativeActivity pointer to the Rust main() thread without a wrapper type
+        let activity_ptr: libc::intptr_t = activity as _;
+
+        // Note: we drop the thread handle which will detach the thread
+        std::thread::spawn(move || {
+            let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
+
+            let jvm = unsafe {
+                let na = activity;
+                let jvm = (*na).vm;
+                let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
+                ndk_context::initialize_android_context(jvm.cast(), activity.cast());
+
+                // Since this is a newly spawned thread then the JVM hasn't been attached
+                // to the thread yet. Attach before calling the applications main function
+                // so they can safely make JNI calls
+                let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
+                if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
+                    attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
+                }
+
+                jvm
+            };
+
+            let app = AndroidApp::new(rust_glue.clone());
+
+            rust_glue.notify_main_thread_running();
+
+            unsafe {
+                // XXX: If we were in control of the Java Activity subclass then
+                // we could potentially run the android_main function via a Java native method
+                // springboard (e.g. call an Activity subclass method that calls a jni native
+                // method that then just calls android_main()) that would make sure there was
+                // a Java frame at the base of our call stack which would then be recognised
+                // when calling FindClass to lookup a suitable classLoader, instead of
+                // defaulting to the system loader. Without this then it's difficult for native
+                // code to look up non-standard Java classes.
+                android_main(app);
+
+                if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
+                    detach_current_thread(jvm);
+                }
+
+                ndk_context::release_android_context();
             }
         });
-    }
 
-    log::trace!(
-        "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
-        activity,
-        saved_state,
-        saved_state_size
-    );
-
-    // Conceptually we associate a glue reference with the JVM main thread, and another
-    // reference with the Rust main thread
-    let jvm_glue = NativeActivityGlue::new(activity, saved_state, saved_state_size);
-
-    let rust_glue = jvm_glue.clone();
-    // Let us Send the NativeActivity pointer to the Rust main() thread without a wrapper type
-    let activity_ptr: libc::intptr_t = activity as _;
-
-    // Note: we drop the thread handle which will detach the thread
-    std::thread::spawn(move || {
-        let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
-
-        let jvm = unsafe {
-            let na = activity;
-            let jvm = (*na).vm;
-            let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
-            ndk_context::initialize_android_context(jvm.cast(), activity.cast());
-
-            // Since this is a newly spawned thread then the JVM hasn't been attached
-            // to the thread yet. Attach before calling the applications main function
-            // so they can safely make JNI calls
-            let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
-            if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
-                attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
-            }
-
-            jvm
-        };
-
-        let app = AndroidApp::new(rust_glue.clone());
-
-        rust_glue.notify_main_thread_running();
-
-        unsafe {
-            // XXX: If we were in control of the Java Activity subclass then
-            // we could potentially run the android_main function via a Java native method
-            // springboard (e.g. call an Activity subclass method that calls a jni native
-            // method that then just calls android_main()) that would make sure there was
-            // a Java frame at the base of our call stack which would then be recognised
-            // when calling FindClass to lookup a suitable classLoader, instead of
-            // defaulting to the system loader. Without this then it's difficult for native
-            // code to look up non-standard Java classes.
-            android_main(app);
-
-            if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
-                detach_current_thread(jvm);
-            }
-
-            ndk_context::release_android_context();
+        // Wait for thread to start.
+        let mut guard = jvm_glue.mutex.lock().unwrap();
+        while !guard.running {
+            guard = jvm_glue.cond.wait(guard).unwrap();
         }
-    });
-
-    // Wait for thread to start.
-    let mut guard = jvm_glue.mutex.lock().unwrap();
-    while !guard.running {
-        guard = jvm_glue.cond.wait(guard).unwrap();
-    }
+    })
 }
