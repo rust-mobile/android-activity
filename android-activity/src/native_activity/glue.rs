@@ -15,6 +15,7 @@ use std::{
 use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
+use crate::util::android_log;
 use crate::ConfigurationRef;
 
 use super::{AndroidApp, Rect};
@@ -609,19 +610,6 @@ impl WaitableNativeActivityState {
 
 extern "Rust" {
     pub fn android_main(app: AndroidApp);
-}
-
-fn android_log(level: Level, tag: &CStr, msg: &CStr) {
-    let prio = match level {
-        Level::Error => ndk_sys::android_LogPriority::ANDROID_LOG_ERROR,
-        Level::Warn => ndk_sys::android_LogPriority::ANDROID_LOG_WARN,
-        Level::Info => ndk_sys::android_LogPriority::ANDROID_LOG_INFO,
-        Level::Debug => ndk_sys::android_LogPriority::ANDROID_LOG_DEBUG,
-        Level::Trace => ndk_sys::android_LogPriority::ANDROID_LOG_VERBOSE,
-    };
-    unsafe {
-        ndk_sys::__android_log_write(prio.0 as libc::c_int, tag.as_ptr(), msg.as_ptr());
-    }
 }
 
 unsafe fn try_with_waitable_activity_ref(

@@ -5,7 +5,6 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::os::raw;
 use std::os::unix::prelude::*;
 use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
@@ -24,6 +23,7 @@ use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
+use crate::util::android_log;
 use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
@@ -593,19 +593,6 @@ pub unsafe extern "C" fn GameActivity_onCreate(
     saved_state_size: libc::size_t,
 ) {
     GameActivity_onCreate_C(activity, saved_state, saved_state_size);
-}
-
-fn android_log(level: Level, tag: &CStr, msg: &CStr) {
-    let prio = match level {
-        Level::Error => ndk_sys::android_LogPriority::ANDROID_LOG_ERROR,
-        Level::Warn => ndk_sys::android_LogPriority::ANDROID_LOG_WARN,
-        Level::Info => ndk_sys::android_LogPriority::ANDROID_LOG_INFO,
-        Level::Debug => ndk_sys::android_LogPriority::ANDROID_LOG_DEBUG,
-        Level::Trace => ndk_sys::android_LogPriority::ANDROID_LOG_VERBOSE,
-    };
-    unsafe {
-        ndk_sys::__android_log_write(prio.0 as raw::c_int, tag.as_ptr(), msg.as_ptr());
-    }
 }
 
 extern "Rust" {
