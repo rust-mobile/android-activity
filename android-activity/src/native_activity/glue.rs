@@ -127,6 +127,8 @@ impl NativeActivityGlue {
             (*(*activity).callbacks).onWindowFocusChanged = Some(on_window_focus_changed);
             (*(*activity).callbacks).onNativeWindowCreated = Some(on_native_window_created);
             (*(*activity).callbacks).onNativeWindowResized = Some(on_native_window_resized);
+            (*(*activity).callbacks).onNativeWindowRedrawNeeded =
+                Some(on_native_window_redraw_needed);
             (*(*activity).callbacks).onNativeWindowDestroyed = Some(on_native_window_destroyed);
             (*(*activity).callbacks).onInputQueueCreated = Some(on_input_queue_created);
             (*(*activity).callbacks).onInputQueueDestroyed = Some(on_input_queue_destroyed);
@@ -405,6 +407,16 @@ impl WaitableNativeActivityState {
         // 2. Doesn't call it on a bogus window pointer that we don't know about.
         debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
         guard.write_cmd(AppCmd::WindowResized);
+    }
+
+    pub fn notify_window_redraw_needed(&self, native_window: *mut ndk_sys::ANativeWindow) {
+        let mut guard = self.mutex.lock().unwrap();
+        // set_window always syncs .pending_window back to .window before returning. This callback
+        // from Android can never arrive at an interim state, and validates that Android:
+        // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
+        // 2. Doesn't call it on a bogus window pointer that we don't know about.
+        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        guard.write_cmd(AppCmd::WindowRedrawNeeded);
     }
 
     unsafe fn set_input(&self, input_queue: *mut ndk_sys::AInputQueue) {
@@ -719,6 +731,16 @@ unsafe extern "C" fn on_native_window_resized(
     log::debug!("NativeWindowResized: {:p} -- {:p}\n", activity, window);
     try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.notify_window_resized(window);
+    });
+}
+
+unsafe extern "C" fn on_native_window_redraw_needed(
+    activity: *mut ndk_sys::ANativeActivity,
+    window: *mut ndk_sys::ANativeWindow,
+) {
+    log::debug!("NativeWindowRedrawNeeded: {:p} -- {:p}\n", activity, window);
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
+        waitable_activity.notify_window_redraw_needed(window)
     });
 }
 
