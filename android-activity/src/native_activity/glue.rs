@@ -132,6 +132,7 @@ impl NativeActivityGlue {
             (*(*activity).callbacks).onNativeWindowDestroyed = Some(on_native_window_destroyed);
             (*(*activity).callbacks).onInputQueueCreated = Some(on_input_queue_created);
             (*(*activity).callbacks).onInputQueueDestroyed = Some(on_input_queue_destroyed);
+            (*(*activity).callbacks).onContentRectChanged = Some(on_content_rect_changed);
         }
 
         glue
@@ -211,7 +212,6 @@ pub struct NativeActivityState {
     pub redraw_needed: bool,
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
     pub pending_window: Option<NativeWindow>,
-    pub pending_content_rect: ndk_sys::ARect,
 }
 
 impl NativeActivityState {
@@ -358,7 +358,6 @@ impl WaitableNativeActivityState {
                 redraw_needed: false,
                 pending_input_queue: ptr::null_mut(),
                 pending_window: None,
-                pending_content_rect: Rect::empty().into(),
             }),
             cond: Condvar::new(),
         }
@@ -457,6 +456,12 @@ impl WaitableNativeActivityState {
             guard = self.cond.wait(guard).unwrap();
         }
         guard.pending_window = None;
+    }
+
+    unsafe fn set_content_rect(&self, rect: *const ndk_sys::ARect) {
+        let mut guard = self.mutex.lock().unwrap();
+        guard.content_rect = *rect;
+        guard.write_cmd(AppCmd::ContentRectChanged);
     }
 
     unsafe fn set_activity_state(&self, state: State) {
@@ -771,6 +776,16 @@ unsafe extern "C" fn on_input_queue_destroyed(
     log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
     try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_input(ptr::null_mut());
+    });
+}
+
+unsafe extern "C" fn on_content_rect_changed(
+    activity: *mut ndk_sys::ANativeActivity,
+    rect: *const ndk_sys::ARect,
+) {
+    log::debug!("ContentRectChanged: {:p} -- {:p}\n", activity, rect);
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
+        waitable_activity.set_content_rect(rect)
     });
 }
 
