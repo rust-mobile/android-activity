@@ -14,7 +14,6 @@ use std::{
 
 use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
-use ndk_sys::ANativeActivity;
 
 use crate::ConfigurationRef;
 
@@ -99,7 +98,7 @@ impl Deref for NativeActivityGlue {
 
 impl NativeActivityGlue {
     pub fn new(
-        activity: *mut ANativeActivity,
+        activity: *mut ndk_sys::ANativeActivity,
         saved_state: *const libc::c_void,
         saved_state_size: libc::size_t,
     ) -> Self {
@@ -149,7 +148,7 @@ impl NativeActivityGlue {
         self.inner.mutex.lock().unwrap().read_cmd()
     }
 
-    /// For the Rust main thread to get an ndk::InputQueue that wraps the AInputQueue pointer
+    /// For the Rust main thread to get an [`InputQueue`] that wraps the AInputQueue pointer
     /// we have and at the same time ensure that the input queue is attached to the given looper.
     ///
     /// NB: it's expected that the input queue is detached as soon as we know there is new
@@ -837,7 +836,7 @@ extern "C" fn ANativeActivity_onCreate(
 
     // Note: we drop the thread handle which will detach the thread
     std::thread::spawn(move || {
-        let activity: *mut ANativeActivity = activity_ptr as *mut _;
+        let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
 
         let jvm = unsafe {
             let na = activity;

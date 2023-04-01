@@ -7,12 +7,7 @@ use std::time::Duration;
 
 use libc::c_void;
 use log::{error, trace};
-
-use ndk_sys::ALooper_wake;
-use ndk_sys::{ALooper, ALooper_pollAll};
-
-use ndk::asset::AssetManager;
-use ndk::native_window::NativeWindow;
+use ndk::{asset::AssetManager, native_window::NativeWindow};
 
 use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
@@ -63,7 +58,7 @@ pub struct AndroidAppWaker {
     // The looper pointer is owned by the android_app and effectively
     // has a 'static lifetime, and the ALooper_wake C API is thread
     // safe, so this can be cloned safely and is send + sync safe
-    looper: NonNull<ALooper>,
+    looper: NonNull<ndk_sys::ALooper>,
 }
 unsafe impl Send for AndroidAppWaker {}
 unsafe impl Sync for AndroidAppWaker {}
@@ -77,7 +72,7 @@ impl AndroidAppWaker {
     /// [wake_event]: crate::PollEvent::Wake
     pub fn wake(&self) {
         unsafe {
-            ALooper_wake(self.looper.as_ptr());
+            ndk_sys::ALooper_wake(self.looper.as_ptr());
         }
     }
 }
@@ -119,7 +114,7 @@ impl AndroidApp {
 
 #[derive(Debug)]
 struct Looper {
-    pub ptr: *mut ALooper,
+    pub ptr: *mut ndk_sys::ALooper,
 }
 unsafe impl Send for Looper {}
 unsafe impl Sync for Looper {}
@@ -174,7 +169,7 @@ impl AndroidAppInner {
                 !ndk_sys::ALooper_forThread().is_null(),
                 "Application tried to poll events from non-main thread"
             );
-            let id = ALooper_pollAll(
+            let id = ndk_sys::ALooper_pollAll(
                 timeout_milliseconds,
                 &mut fd,
                 &mut events,
