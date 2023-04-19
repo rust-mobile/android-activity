@@ -14,7 +14,6 @@ use std::{
 
 use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
-use ndk_sys::ANativeActivity;
 
 use crate::ConfigurationRef;
 
@@ -99,7 +98,7 @@ impl Deref for NativeActivityGlue {
 
 impl NativeActivityGlue {
     pub fn new(
-        activity: *mut ANativeActivity,
+        activity: *mut ndk_sys::ANativeActivity,
         saved_state: *const libc::c_void,
         saved_state_size: libc::size_t,
     ) -> Self {
@@ -126,9 +125,13 @@ impl NativeActivityGlue {
             (*(*activity).callbacks).onLowMemory = Some(on_low_memory);
             (*(*activity).callbacks).onWindowFocusChanged = Some(on_window_focus_changed);
             (*(*activity).callbacks).onNativeWindowCreated = Some(on_native_window_created);
+            (*(*activity).callbacks).onNativeWindowResized = Some(on_native_window_resized);
+            (*(*activity).callbacks).onNativeWindowRedrawNeeded =
+                Some(on_native_window_redraw_needed);
             (*(*activity).callbacks).onNativeWindowDestroyed = Some(on_native_window_destroyed);
             (*(*activity).callbacks).onInputQueueCreated = Some(on_input_queue_created);
             (*(*activity).callbacks).onInputQueueDestroyed = Some(on_input_queue_destroyed);
+            (*(*activity).callbacks).onContentRectChanged = Some(on_content_rect_changed);
         }
 
         glue
@@ -145,7 +148,7 @@ impl NativeActivityGlue {
         self.inner.mutex.lock().unwrap().read_cmd()
     }
 
-    /// For the Rust main thread to get an ndk::InputQueue that wraps the AInputQueue pointer
+    /// For the Rust main thread to get an [`InputQueue`] that wraps the AInputQueue pointer
     /// we have and at the same time ensure that the input queue is attached to the given looper.
     ///
     /// NB: it's expected that the input queue is detached as soon as we know there is new
@@ -208,7 +211,6 @@ pub struct NativeActivityState {
     pub redraw_needed: bool,
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
     pub pending_window: Option<NativeWindow>,
-    pub pending_content_rect: ndk_sys::ARect,
 }
 
 impl NativeActivityState {
@@ -355,7 +357,6 @@ impl WaitableNativeActivityState {
                 redraw_needed: false,
                 pending_input_queue: ptr::null_mut(),
                 pending_window: None,
-                pending_content_rect: Rect::empty().into(),
             }),
             cond: Condvar::new(),
         }
@@ -396,6 +397,26 @@ impl WaitableNativeActivityState {
         });
     }
 
+    pub fn notify_window_resized(&self, native_window: *mut ndk_sys::ANativeWindow) {
+        let mut guard = self.mutex.lock().unwrap();
+        // set_window always syncs .pending_window back to .window before returning. This callback
+        // from Android can never arrive at an interim state, and validates that Android:
+        // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
+        // 2. Doesn't call it on a bogus window pointer that we don't know about.
+        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        guard.write_cmd(AppCmd::WindowResized);
+    }
+
+    pub fn notify_window_redraw_needed(&self, native_window: *mut ndk_sys::ANativeWindow) {
+        let mut guard = self.mutex.lock().unwrap();
+        // set_window always syncs .pending_window back to .window before returning. This callback
+        // from Android can never arrive at an interim state, and validates that Android:
+        // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
+        // 2. Doesn't call it on a bogus window pointer that we don't know about.
+        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        guard.write_cmd(AppCmd::WindowRedrawNeeded);
+    }
+
     unsafe fn set_input(&self, input_queue: *mut ndk_sys::AInputQueue) {
         let mut guard = self.mutex.lock().unwrap();
 
@@ -434,6 +455,12 @@ impl WaitableNativeActivityState {
             guard = self.cond.wait(guard).unwrap();
         }
         guard.pending_window = None;
+    }
+
+    unsafe fn set_content_rect(&self, rect: *const ndk_sys::ARect) {
+        let mut guard = self.mutex.lock().unwrap();
+        guard.content_rect = *rect;
+        guard.write_cmd(AppCmd::ContentRectChanged);
     }
 
     unsafe fn set_activity_state(&self, state: State) {
@@ -694,10 +721,30 @@ unsafe extern "C" fn on_native_window_created(
 ) {
     log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
     try_with_waitable_activity_ref(activity, |waitable_activity| {
-        // It's important that we use ::clone_from_ptr() here because NativeWindow
-        // has a Drop implementation that will unconditionally _release() the native window
+        // Use clone_from_ptr to acquire additional ownership on the NativeWindow,
+        // which will unconditionally be _release()'d on Drop.
         let window = NativeWindow::clone_from_ptr(NonNull::new_unchecked(window));
         waitable_activity.set_window(Some(window));
+    });
+}
+
+unsafe extern "C" fn on_native_window_resized(
+    activity: *mut ndk_sys::ANativeActivity,
+    window: *mut ndk_sys::ANativeWindow,
+) {
+    log::debug!("NativeWindowResized: {:p} -- {:p}\n", activity, window);
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
+        waitable_activity.notify_window_resized(window);
+    });
+}
+
+unsafe extern "C" fn on_native_window_redraw_needed(
+    activity: *mut ndk_sys::ANativeActivity,
+    window: *mut ndk_sys::ANativeWindow,
+) {
+    log::debug!("NativeWindowRedrawNeeded: {:p} -- {:p}\n", activity, window);
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
+        waitable_activity.notify_window_redraw_needed(window)
     });
 }
 
@@ -728,6 +775,16 @@ unsafe extern "C" fn on_input_queue_destroyed(
     log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
     try_with_waitable_activity_ref(activity, |waitable_activity| {
         waitable_activity.set_input(ptr::null_mut());
+    });
+}
+
+unsafe extern "C" fn on_content_rect_changed(
+    activity: *mut ndk_sys::ANativeActivity,
+    rect: *const ndk_sys::ARect,
+) {
+    log::debug!("ContentRectChanged: {:p} -- {:p}\n", activity, rect);
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
+        waitable_activity.set_content_rect(rect)
     });
 }
 
@@ -779,7 +836,7 @@ extern "C" fn ANativeActivity_onCreate(
 
     // Note: we drop the thread handle which will detach the thread
     std::thread::spawn(move || {
-        let activity: *mut ANativeActivity = activity_ptr as *mut _;
+        let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
 
         let jvm = unsafe {
             let na = activity;

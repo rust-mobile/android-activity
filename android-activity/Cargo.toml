@@ -17,7 +17,7 @@ license = "MIT OR Apache-2.0"
 #
 # In general it's only the final application crate that needs
 # to decide on a backend.
-default=[]
+default = []
 game-activity = []
 native-activity = []
 
@@ -43,4 +43,4 @@ targets = [
     "x86_64-linux-android",
 ]
 
-rustdoc-args = ["--cfg", "docsrs" ]
+rustdoc-args = ["--cfg", "docsrs"]
