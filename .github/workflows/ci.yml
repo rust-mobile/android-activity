@@ -36,7 +36,9 @@ jobs:
           i686-linux-android
 
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+        # We're currently sticking with cargo-ndk 2, until we bump our
+        # MSRV to 1.68+
+        run: cargo install cargo-ndk --version "^2"
 
       - name: Setup Java
         uses: actions/setup-java@v3
