@@ -147,3 +147,11 @@ Prior to working on android-activity, the existing glue crates available for bui
 [`AppCompatActivity`]: https://developer.android.com/reference/androidx/appcompat/app/AppCompatActivity
 
 
+# MSRV
+
+We aim to (at least) support stable releases of Rust from the last three months. Rust has a 6 week release cycle which means we will support the last three stable releases.
+For example, when Rust 1.69 is released we would limit our `rust_version` to 1.67.
+
+We will only bump the `rust_version` at the point where we either depend on a new features or a dependency has increased its MSRV, and we won't be greedy. In other words we will only set the MSRV to the lowest version that's _needed_.
+
+MSRV updates are not considered to be inherently semver breaking (unless a new feature is exposed in the public API) and so a `rust_version` change may happen in patch releases.
