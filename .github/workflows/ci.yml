@@ -16,9 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # We need to support the same MSRV as Winit which we are currently
-        # assuming will be bumped to 1.60.0 soon:
-        # https://github.com/rust-windowing/winit/pull/2453
+        # See top README for MSRV policy
         rust_version: [1.64.0, stable]
     steps:
       - uses: actions/checkout@v3
