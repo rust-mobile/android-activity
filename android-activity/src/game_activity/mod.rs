@@ -5,7 +5,6 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::os::raw;
 use std::os::unix::prelude::*;
 use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
@@ -24,6 +23,7 @@ use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
+use crate::util::{abort_on_panic, android_log};
 use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
@@ -595,19 +595,6 @@ pub unsafe extern "C" fn GameActivity_onCreate(
     GameActivity_onCreate_C(activity, saved_state, saved_state_size);
 }
 
-fn android_log(level: Level, tag: &CStr, msg: &CStr) {
-    let prio = match level {
-        Level::Error => ndk_sys::android_LogPriority::ANDROID_LOG_ERROR,
-        Level::Warn => ndk_sys::android_LogPriority::ANDROID_LOG_WARN,
-        Level::Info => ndk_sys::android_LogPriority::ANDROID_LOG_INFO,
-        Level::Debug => ndk_sys::android_LogPriority::ANDROID_LOG_DEBUG,
-        Level::Trace => ndk_sys::android_LogPriority::ANDROID_LOG_VERBOSE,
-    };
-    unsafe {
-        ndk_sys::__android_log_write(prio.0 as raw::c_int, tag.as_ptr(), msg.as_ptr());
-    }
-}
-
 extern "Rust" {
     pub fn android_main(app: AndroidApp);
 }
@@ -617,55 +604,57 @@ extern "Rust" {
 // by android_native_app_glue.
 #[no_mangle]
 pub unsafe extern "C" fn _rust_glue_entry(app: *mut ffi::android_app) {
-    // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
-    let mut logpipe: [RawFd; 2] = Default::default();
-    libc::pipe(logpipe.as_mut_ptr());
-    libc::dup2(logpipe[1], libc::STDOUT_FILENO);
-    libc::dup2(logpipe[1], libc::STDERR_FILENO);
-    thread::spawn(move || {
-        let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-        let file = File::from_raw_fd(logpipe[0]);
-        let mut reader = BufReader::new(file);
-        let mut buffer = String::new();
-        loop {
-            buffer.clear();
-            if let Ok(len) = reader.read_line(&mut buffer) {
-                if len == 0 {
-                    break;
-                } else if let Ok(msg) = CString::new(buffer.clone()) {
-                    android_log(Level::Info, tag, &msg);
+    abort_on_panic(|| {
+        // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
+        let mut logpipe: [RawFd; 2] = Default::default();
+        libc::pipe(logpipe.as_mut_ptr());
+        libc::dup2(logpipe[1], libc::STDOUT_FILENO);
+        libc::dup2(logpipe[1], libc::STDERR_FILENO);
+        thread::spawn(move || {
+            let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
+            let file = File::from_raw_fd(logpipe[0]);
+            let mut reader = BufReader::new(file);
+            let mut buffer = String::new();
+            loop {
+                buffer.clear();
+                if let Ok(len) = reader.read_line(&mut buffer) {
+                    if len == 0 {
+                        break;
+                    } else if let Ok(msg) = CString::new(buffer.clone()) {
+                        android_log(Level::Info, tag, &msg);
+                    }
                 }
             }
+        });
+
+        let jvm: *mut JavaVM = (*(*app).activity).vm;
+        let activity: jobject = (*(*app).activity).javaGameActivity;
+        ndk_context::initialize_android_context(jvm.cast(), activity.cast());
+
+        let app = AndroidApp::from_ptr(NonNull::new(app).unwrap());
+
+        // Since this is a newly spawned thread then the JVM hasn't been attached
+        // to the thread yet. Attach before calling the applications main function
+        // so they can safely make JNI calls
+        let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
+        if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
+            attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
         }
-    });
 
-    let jvm: *mut JavaVM = (*(*app).activity).vm;
-    let activity: jobject = (*(*app).activity).javaGameActivity;
-    ndk_context::initialize_android_context(jvm.cast(), activity.cast());
+        // XXX: If we were in control of the Java Activity subclass then
+        // we could potentially run the android_main function via a Java native method
+        // springboard (e.g. call an Activity subclass method that calls a jni native
+        // method that then just calls android_main()) that would make sure there was
+        // a Java frame at the base of our call stack which would then be recognised
+        // when calling FindClass to lookup a suitable classLoader, instead of
+        // defaulting to the system loader. Without this then it's difficult for native
+        // code to look up non-standard Java classes.
+        android_main(app);
 
-    let app = AndroidApp::from_ptr(NonNull::new(app).unwrap());
+        if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
+            detach_current_thread(jvm);
+        }
 
-    // Since this is a newly spawned thread then the JVM hasn't been attached
-    // to the thread yet. Attach before calling the applications main function
-    // so they can safely make JNI calls
-    let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
-    if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
-        attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
-    }
-
-    // XXX: If we were in control of the Java Activity subclass then
-    // we could potentially run the android_main function via a Java native method
-    // springboard (e.g. call an Activity subclass method that calls a jni native
-    // method that then just calls android_main()) that would make sure there was
-    // a Java frame at the base of our call stack which would then be recognised
-    // when calling FindClass to lookup a suitable classLoader, instead of
-    // defaulting to the system loader. Without this then it's difficult for native
-    // code to look up non-standard Java classes.
-    android_main(app);
-
-    if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
-        detach_current_thread(jvm);
-    }
-
-    ndk_context::release_android_context();
+        ndk_context::release_android_context();
+    })
 }
