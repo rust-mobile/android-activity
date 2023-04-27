@@ -8,6 +8,7 @@ use std::{
     io::{BufRead, BufReader},
     ops::Deref,
     os::unix::prelude::{FromRawFd, RawFd},
+    panic::catch_unwind,
     ptr::{self, NonNull},
     sync::{Arc, Condvar, Mutex, Weak},
 };
@@ -15,7 +16,11 @@ use std::{
 use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
-use crate::{util::abort_on_panic, util::android_log, ConfigurationRef};
+use crate::{
+    util::android_log,
+    util::{abort_on_panic, log_panic},
+    ConfigurationRef,
+};
 
 use super::{AndroidApp, Rect};
 
@@ -803,6 +808,7 @@ unsafe extern "C" fn on_content_rect_changed(
 
 /// This is the native entrypoint for our cdylib library that `ANativeActivity` will look for via `dlsym`
 #[no_mangle]
+#[allow(unused_unsafe)] // Otherwise rust 1.64 moans about using unsafe{} in unsafe functions
 extern "C" fn ANativeActivity_onCreate(
     activity: *mut ndk_sys::ANativeActivity,
     saved_state: *const libc::c_void,
@@ -874,15 +880,26 @@ extern "C" fn ANativeActivity_onCreate(
             rust_glue.notify_main_thread_running();
 
             unsafe {
-                // XXX: If we were in control of the Java Activity subclass then
-                // we could potentially run the android_main function via a Java native method
-                // springboard (e.g. call an Activity subclass method that calls a jni native
-                // method that then just calls android_main()) that would make sure there was
-                // a Java frame at the base of our call stack which would then be recognised
-                // when calling FindClass to lookup a suitable classLoader, instead of
-                // defaulting to the system loader. Without this then it's difficult for native
-                // code to look up non-standard Java classes.
-                android_main(app);
+                // We want to specifically catch any panic from the application's android_main
+                // so we can finish + destroy the Activity gracefully via the JVM
+                catch_unwind(|| {
+                    // XXX: If we were in control of the Java Activity subclass then
+                    // we could potentially run the android_main function via a Java native method
+                    // springboard (e.g. call an Activity subclass method that calls a jni native
+                    // method that then just calls android_main()) that would make sure there was
+                    // a Java frame at the base of our call stack which would then be recognised
+                    // when calling FindClass to lookup a suitable classLoader, instead of
+                    // defaulting to the system loader. Without this then it's difficult for native
+                    // code to look up non-standard Java classes.
+                    android_main(app);
+                })
+                .unwrap_or_else(|panic| log_panic(panic));
+
+                // Let JVM know that our Activity can be destroyed before detaching from the JVM
+                //
+                // "Note that this method can be called from any thread; it will send a message
+                //  to the main thread of the process where the Java finish call will take place"
+                ndk_sys::ANativeActivity_finish(activity);
 
                 if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
                     detach_current_thread(jvm);
