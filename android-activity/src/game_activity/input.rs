@@ -332,7 +332,7 @@ impl<'a> MotionEvent<'a> {
     /// or [`PointerDown`](MotionAction::PointerDown).
     #[inline]
     pub fn pointer_index(&self) -> usize {
-        let action = self.action as u32 & ndk_sys::AMOTION_EVENT_ACTION_MASK;
+        let action = self.action as u32;
         let index = (action & ndk_sys::AMOTION_EVENT_ACTION_POINTER_INDEX_MASK)
             >> ndk_sys::AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
         index as usize
