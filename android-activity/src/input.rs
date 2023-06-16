@@ -63,7 +63,7 @@ pub enum Class {
 
 impl From<u32> for Class {
     fn from(source: u32) -> Self {
-        let class = SourceFlags::from_bits_truncate(source as u32);
+        let class = SourceFlags::from_bits_truncate(source);
         match class {
             SourceFlags::BUTTON => Class::Button,
             SourceFlags::POINTER => Class::Pointer,
