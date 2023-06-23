@@ -216,7 +216,7 @@ pub enum NativeThreadState {
 pub struct NativeActivityState {
     pub msg_read: libc::c_int,
     pub msg_write: libc::c_int,
-    pub config: super::ConfigurationRef,
+    pub config: ConfigurationRef,
     pub saved_state: Vec<u8>,
     pub input_queue: *mut ndk_sys::AInputQueue,
     pub window: Option<NativeWindow>,
@@ -343,9 +343,8 @@ impl WaitableNativeActivityState {
             }
         }
 
-        let saved_state = unsafe {
-            std::slice::from_raw_parts(saved_state_in as *const u8, saved_state_size as _)
-        };
+        let saved_state =
+            unsafe { std::slice::from_raw_parts(saved_state_in as *const u8, saved_state_size) };
 
         let config = unsafe {
             let config = ndk_sys::AConfiguration_new();
@@ -517,7 +516,7 @@ impl WaitableNativeActivityState {
         // given via a `malloc()` allocated pointer since it will automatically
         // `free()` the state after it has been converted to a buffer for the JVM.
         if !guard.saved_state.is_empty() {
-            let saved_state_size = guard.saved_state.len() as _;
+            let saved_state_size = guard.saved_state.len();
             let saved_state_src_ptr = guard.saved_state.as_ptr();
             unsafe {
                 let saved_state = libc::malloc(saved_state_size);
@@ -681,7 +680,7 @@ unsafe extern "C" fn on_resume(activity: *mut ndk_sys::ANativeActivity) {
 
 unsafe extern "C" fn on_save_instance_state(
     activity: *mut ndk_sys::ANativeActivity,
-    out_len: *mut ndk_sys::size_t,
+    out_len: *mut usize,
 ) -> *mut libc::c_void {
     abort_on_panic(|| {
         log::debug!("SaveInstanceState: {:p}\n", activity);
@@ -689,7 +688,7 @@ unsafe extern "C" fn on_save_instance_state(
         let mut ret = ptr::null_mut();
         try_with_waitable_activity_ref(activity, |waitable_activity| {
             let (state, len) = waitable_activity.request_save_state();
-            *out_len = len as ndk_sys::size_t;
+            *out_len = len;
             ret = state
         });
 

@@ -537,14 +537,14 @@ impl AndroidApp {
     /// [`ALooper_pollAll`]: ndk::looper::ThreadLooper::poll_all
     pub fn poll_events<F>(&self, timeout: Option<Duration>, callback: F)
     where
-        F: FnMut(PollEvent),
+        F: FnMut(PollEvent<'_>),
     {
         self.inner.read().unwrap().poll_events(timeout, callback);
     }
 
     /// Creates a means to wake up the main loop while it is blocked waiting for
     /// events within [`AndroidApp::poll_events()`].
-    pub fn create_waker(&self) -> activity_impl::AndroidAppWaker {
+    pub fn create_waker(&self) -> AndroidAppWaker {
         self.inner.read().unwrap().create_waker()
     }
 
