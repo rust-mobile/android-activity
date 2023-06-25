@@ -1,12 +1,108 @@
-<!-- markdownlint-disable MD022 MD024 MD032  -->
+<!-- markdownlint-disable MD022 MD024 MD032 MD033  -->
 
 # Changelog
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+- Added `KeyEvent::meta_state()` for being able to query the state of meta keys, needed for character mapping ([#102](https://github.com/rust-mobile/android-activity/pull/102))
+- Added `KeyCharacterMap` JNI bindings to the corresponding Android SDK API ([#102](https://github.com/rust-mobile/android-activity/pull/102))
+- Added `AndroidApp::device_key_character_map()` for being able to get a `KeyCharacterMap` for a given `device_id` for unicode character mapping ([#102](https://github.com/rust-mobile/android-activity/pull/102))
+
+    <details>
+    <summary>Click here for an example of how to handle unicode character mapping:</summary>
+
+    ```rust
+    let mut combining_accent = None;
+    // Snip
+
+
+    let combined_key_char = if let Ok(map) = app.device_key_character_map(device_id) {
+        match map.get(key_event.key_code(), key_event.meta_state()) {
+            Ok(KeyMapChar::Unicode(unicode)) => {
+                let combined_unicode = if let Some(accent) = combining_accent {
+                    match map.get_dead_char(accent, unicode) {
+                        Ok(Some(key)) => {
+                            info!("KeyEvent: Combined '{unicode}' with accent '{accent}' to give '{key}'");
+                            Some(key)
+                        }
+                        Ok(None) => None,
+                        Err(err) => {
+                            log::error!("KeyEvent: Failed to combine 'dead key' accent '{accent}' with '{unicode}': {err:?}");
+                            None
+                        }
+                    }
+                } else {
+                    info!("KeyEvent: Pressed '{unicode}'");
+                    Some(unicode)
+                };
+                combining_accent = None;
+                combined_unicode.map(|unicode| KeyMapChar::Unicode(unicode))
+            }
+            Ok(KeyMapChar::CombiningAccent(accent)) => {
+                info!("KeyEvent: Pressed 'dead key' combining accent '{accent}'");
+                combining_accent = Some(accent);
+                Some(KeyMapChar::CombiningAccent(accent))
+            }
+            Ok(KeyMapChar::None) => {
+                info!("KeyEvent: Pressed non-unicode key");
+                combining_accent = None;
+                None
+            }
+            Err(err) => {
+                log::error!("KeyEvent: Failed to get key map character: {err:?}");
+                combining_accent = None;
+                None
+            }
+        }
+    } else {
+        None
+    };
+    ```
+
+    </details>
+
 ### Changed
 - GameActivity updated to 2.0.2 (requires the corresponding 2.0.2 `.aar` release from Google) ([#88](https://github.com/rust-mobile/android-activity/pull/88))
+- `AndroidApp::input_events()` is replaced by `AndroidApp::input_events_iter()` ([#102](https://github.com/rust-mobile/android-activity/pull/102))
+
+    <details>
+    <summary>Click here for an example of how to use `input_events_iter()`:</summary>
+
+    ```rust
+    match app.input_events_iter() {
+        Ok(mut iter) => {
+            loop {
+                let read_input = iter.next(|event| {
+                    let handled = match event {
+                        InputEvent::KeyEvent(key_event) => {
+                            // Snip
+                        }
+                        InputEvent::MotionEvent(motion_event) => {
+                            // Snip
+                        }
+                        event => {
+                            // Snip
+                        }
+                    };
+
+                    handled
+                });
+
+                if !read_input {
+                    break;
+                }
+            }
+        }
+        Err(err) => {
+            log::error!("Failed to get input events iterator: {err:?}");
+        }
+    }
+    ```
+
+    </details>
 
 ## [0.4.3] - 2022-07-30
 ### Fixed

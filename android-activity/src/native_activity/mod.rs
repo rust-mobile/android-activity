@@ -1,15 +1,22 @@
 #![cfg(any(feature = "native-activity", doc))]
 
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use std::panic::AssertUnwindSafe;
 use std::ptr;
 use std::ptr::NonNull;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::time::Duration;
 
 use libc::c_void;
 use log::{error, trace};
+use ndk::input_queue::InputQueue;
 use ndk::{asset::AssetManager, native_window::NativeWindow};
 
+use crate::error::{InternalAppError, InternalResult};
+use crate::input::{KeyCharacterMap, KeyCharacterMapBinding};
 use crate::input::{TextInputState, TextSpan};
+use crate::jni_utils::{self, CloneJavaVM};
 use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
@@ -79,13 +86,26 @@ impl AndroidAppWaker {
 }
 
 impl AndroidApp {
-    pub(crate) fn new(native_activity: NativeActivityGlue) -> Self {
+    pub(crate) fn new(native_activity: NativeActivityGlue, jvm: CloneJavaVM) -> Self {
+        let mut env = jvm.get_env().unwrap(); // We attach to the thread before creating the AndroidApp
+
+        let key_map_binding = match KeyCharacterMapBinding::new(&mut env) {
+            Ok(b) => b,
+            Err(err) => {
+                panic!("Failed to create KeyCharacterMap JNI bindings: {err:?}");
+            }
+        };
+
         let app = Self {
             inner: Arc::new(RwLock::new(AndroidAppInner {
+                jvm,
                 native_activity,
                 looper: Looper {
                     ptr: ptr::null_mut(),
                 },
+                key_map_binding: Arc::new(key_map_binding),
+                key_maps: Mutex::new(HashMap::new()),
+                input_receiver: Mutex::new(None),
             })),
         };
 
@@ -122,8 +142,23 @@ unsafe impl Sync for Looper {}
 
 #[derive(Debug)]
 pub(crate) struct AndroidAppInner {
+    pub(crate) jvm: CloneJavaVM,
+
     pub(crate) native_activity: NativeActivityGlue,
     looper: Looper,
+
+    /// Shared JNI bindings for the `KeyCharacterMap` class
+    key_map_binding: Arc<KeyCharacterMapBinding>,
+
+    /// A table of `KeyCharacterMap`s per `InputDevice` ID
+    /// these are used to be able to map key presses to unicode
+    /// characters
+    key_maps: Mutex<HashMap<i32, KeyCharacterMap>>,
+
+    /// While an app is reading input events it holds an
+    /// InputReceiver reference which we track to ensure
+    /// we don't hand out more than one receiver at a time
+    input_receiver: Mutex<Option<Weak<InputReceiver>>>,
 }
 
 impl AndroidAppInner {
@@ -356,6 +391,25 @@ impl AndroidAppInner {
         // NOP: Unsupported
     }
 
+    pub fn device_key_character_map(&self, device_id: i32) -> InternalResult<KeyCharacterMap> {
+        let mut guard = self.key_maps.lock().unwrap();
+
+        let key_map = match guard.entry(device_id) {
+            std::collections::hash_map::Entry::Occupied(occupied) => occupied.get().clone(),
+            std::collections::hash_map::Entry::Vacant(vacant) => {
+                let character_map = jni_utils::device_key_character_map(
+                    self.jvm.clone(),
+                    self.key_map_binding.clone(),
+                    device_id,
+                )?;
+                vacant.insert(character_map.clone());
+                character_map
+            }
+        };
+
+        Ok(key_map)
+    }
+
     pub fn enable_motion_axis(&self, _axis: input::Axis) {
         // NOP - The InputQueue API doesn't let us optimize which axis values are read
     }
@@ -364,10 +418,16 @@ impl AndroidAppInner {
         // NOP - The InputQueue API doesn't let us optimize which axis values are read
     }
 
-    pub fn input_events<F>(&self, mut callback: F)
-    where
-        F: FnMut(&input::InputEvent) -> InputStatus,
-    {
+    pub fn input_events_receiver(&self) -> InternalResult<Arc<InputReceiver>> {
+        let mut guard = self.input_receiver.lock().unwrap();
+
+        if let Some(receiver) = &*guard {
+            if receiver.strong_count() > 0 {
+                return Err(crate::error::InternalAppError::InputUnavailable);
+            }
+        }
+        *guard = None;
+
         // Get the InputQueue for the NativeActivity (if there is one) and also ensure
         // the queue is re-attached to our event Looper (so new input events will again
         // trigger a wake up)
@@ -376,40 +436,13 @@ impl AndroidAppInner {
             .looper_attached_input_queue(self.looper(), LOOPER_ID_INPUT);
         let queue = match queue {
             Some(queue) => queue,
-            None => return,
+            None => return Err(InternalAppError::InputUnavailable),
         };
 
-        // Note: we basically ignore errors from get_event() currently. Looking
-        // at the source code for Android's InputQueue, the only error that
-        // can be returned here is 'WOULD_BLOCK', which we want to just treat as
-        // meaning the queue is empty.
-        //
-        // ref: https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/jni/android_view_InputQueue.cpp
-        //
-        while let Ok(Some(event)) = queue.get_event() {
-            if let Some(ndk_event) = queue.pre_dispatch(event) {
-                let event = match ndk_event {
-                    ndk::event::InputEvent::MotionEvent(e) => {
-                        input::InputEvent::MotionEvent(input::MotionEvent::new(e))
-                    }
-                    ndk::event::InputEvent::KeyEvent(e) => {
-                        input::InputEvent::KeyEvent(input::KeyEvent::new(e))
-                    }
-                };
-                let handled = callback(&event);
+        let receiver = Arc::new(InputReceiver { queue });
 
-                let ndk_event = match event {
-                    input::InputEvent::MotionEvent(e) => {
-                        ndk::event::InputEvent::MotionEvent(e.into_ndk_event())
-                    }
-                    input::InputEvent::KeyEvent(e) => {
-                        ndk::event::InputEvent::KeyEvent(e.into_ndk_event())
-                    }
-                    _ => unreachable!(),
-                };
-                queue.finish_event(ndk_event, matches!(handled, InputStatus::Handled));
-            }
-        }
+        *guard = Some(Arc::downgrade(&receiver));
+        Ok(receiver)
     }
 
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
@@ -425,5 +458,87 @@ impl AndroidAppInner {
     pub fn obb_path(&self) -> Option<std::path::PathBuf> {
         let na = self.native_activity();
         unsafe { util::try_get_path_from_ptr((*na).obbPath) }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct InputReceiver {
+    queue: InputQueue,
+}
+
+impl<'a> From<Arc<InputReceiver>> for InputIteratorInner<'a> {
+    fn from(receiver: Arc<InputReceiver>) -> Self {
+        Self {
+            receiver,
+            _lifetime: PhantomData,
+        }
+    }
+}
+
+pub(crate) struct InputIteratorInner<'a> {
+    // Held to maintain exclusive access to buffered input events
+    receiver: Arc<InputReceiver>,
+    _lifetime: PhantomData<&'a ()>,
+}
+
+impl<'a> InputIteratorInner<'a> {
+    pub(crate) fn next<F>(&self, callback: F) -> bool
+    where
+        F: FnOnce(&input::InputEvent) -> InputStatus,
+    {
+        // Note: we basically ignore errors from get_event() currently. Looking
+        // at the source code for Android's InputQueue, the only error that
+        // can be returned here is 'WOULD_BLOCK', which we want to just treat as
+        // meaning the queue is empty.
+        //
+        // ref: https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/jni/android_view_InputQueue.cpp
+        //
+        if let Ok(Some(ndk_event)) = self.receiver.queue.get_event() {
+            log::info!("queue: got event: {ndk_event:?}");
+
+            if let Some(ndk_event) = self.receiver.queue.pre_dispatch(ndk_event) {
+                let event = match ndk_event {
+                    ndk::event::InputEvent::MotionEvent(e) => {
+                        input::InputEvent::MotionEvent(input::MotionEvent::new(e))
+                    }
+                    ndk::event::InputEvent::KeyEvent(e) => {
+                        input::InputEvent::KeyEvent(input::KeyEvent::new(e))
+                    }
+                };
+
+                // `finish_event` needs to be called for each event otherwise
+                // the app would likely get an ANR
+                let result = std::panic::catch_unwind(AssertUnwindSafe(|| callback(&event)));
+
+                let ndk_event = match event {
+                    input::InputEvent::MotionEvent(e) => {
+                        ndk::event::InputEvent::MotionEvent(e.into_ndk_event())
+                    }
+                    input::InputEvent::KeyEvent(e) => {
+                        ndk::event::InputEvent::KeyEvent(e.into_ndk_event())
+                    }
+                    _ => unreachable!(),
+                };
+
+                let handled = match result {
+                    Ok(handled) => handled,
+                    Err(payload) => {
+                        log::error!("Calling `finish_event` after panic in input event handler, to try and avoid being killed via an ANR");
+                        self.receiver.queue.finish_event(ndk_event, false);
+                        std::panic::resume_unwind(payload);
+                    }
+                };
+
+                log::info!("queue: finishing event");
+                self.receiver
+                    .queue
+                    .finish_event(ndk_event, handled == InputStatus::Handled);
+            }
+
+            true
+        } else {
+            log::info!("queue: no more events");
+            false
+        }
     }
 }

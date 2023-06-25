@@ -326,6 +326,15 @@ impl<'a> KeyEvent<'a> {
     pub fn scan_code(&self) -> i32 {
         self.ndk_event.scan_code()
     }
+
+    /// Returns the state of the modifiers during this key event, represented by a bitmask.
+    ///
+    /// See [the NDK
+    /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getmetastate)
+    #[inline]
+    pub fn meta_state(&self) -> MetaState {
+        self.ndk_event.meta_state()
+    }
 }
 
 // We use our own wrapper type for input events to have better consistency

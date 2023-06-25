@@ -38,6 +38,7 @@ native-activity = []
 log = "0.4"
 jni-sys = "0.3"
 cesu8 = "1"
+jni = "0.21"
 ndk = "0.7"
 ndk-sys = "0.4"
 ndk-context = "0.1"
@@ -45,6 +46,7 @@ android-properties = "0.2"
 num_enum = "0.6"
 bitflags = "2.0"
 libc = "0.2"
+thiserror = "1"
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
