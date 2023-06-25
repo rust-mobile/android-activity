@@ -1,0 +1,342 @@
+From c36efc7f6bd4a6202b8ba249b83c3251f501bcb6 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@sixbynine.org>
+Date: Thu, 12 May 2022 02:27:01 +0100
+Subject: [PATCH] GameActivity PATCH: support capturing historic pointer
+ samples
+
+---
+ .../csrc/game-activity/GameActivity.cpp       | 88 ++++++++++++++++++-
+ .../csrc/game-activity/GameActivity.h         | 57 +++++++++++-
+ .../native_app_glue/android_native_app_glue.c | 18 +++-
+ .../native_app_glue/android_native_app_glue.h | 28 ++++++
+ 4 files changed, 182 insertions(+), 9 deletions(-)
+
+diff --git a/game-activity/csrc/game-activity/GameActivity.cpp b/game-activity/csrc/game-activity/GameActivity.cpp
+index d240f18..c9081d2 100644
+--- a/game-activity/csrc/game-activity/GameActivity.cpp
++++ b/game-activity/csrc/game-activity/GameActivity.cpp
+@@ -840,6 +840,27 @@ extern "C" void GameActivityPointerAxes_disableAxis(int32_t axis) {
+     enabledAxes[axis] = false;
+ }
+ 
++static bool enabledHistoricalAxes[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT] = {
++    // Disable all axes by default (they can be enabled using
++    // `GameActivityPointerAxes_enableHistoricalAxis`).
++    false};
++
++extern "C" void GameActivityHistoricalPointerAxes_enableAxis(int32_t axis) {
++    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
++        return;
++    }
++
++    enabledHistoricalAxes[axis] = true;
++}
++
++extern "C" void GameActivityHistoricalPointerAxes_disableAxis(int32_t axis) {
++    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
++        return;
++    }
++
++    enabledHistoricalAxes[axis] = false;
++}
++
+ extern "C" void GameActivity_setImeEditorInfo(GameActivity *activity,
+                                               int inputType, int actionId,
+                                               int imeOptions) {
+@@ -874,10 +895,15 @@ static struct {
+     jmethodID getXPrecision;
+     jmethodID getYPrecision;
+     jmethodID getAxisValue;
++
++    jmethodID getHistorySize;
++    jmethodID getHistoricalEventTime;
++    jmethodID getHistoricalAxisValue;
+ } gMotionEventClassInfo;
+ 
+-extern "C" void GameActivityMotionEvent_fromJava(
+-    JNIEnv *env, jobject motionEvent, GameActivityMotionEvent *out_event) {
++extern "C" int GameActivityMotionEvent_fromJava(
++    JNIEnv *env, jobject motionEvent, GameActivityMotionEvent *out_event,
++    GameActivityHistoricalPointerAxes *out_historical) {
+     static bool gMotionEventClassInfoInitialized = false;
+     if (!gMotionEventClassInfoInitialized) {
+         int sdkVersion = GetSystemPropAsInt("ro.build.version.sdk");
+@@ -928,9 +954,44 @@ extern "C" void GameActivityMotionEvent_fromJava(
+         gMotionEventClassInfo.getAxisValue =
+             env->GetMethodID(motionEventClass, "getAxisValue", "(II)F");
+ 
++        gMotionEventClassInfo.getHistorySize =
++            env->GetMethodID(motionEventClass, "getHistorySize", "()I");
++        gMotionEventClassInfo.getHistoricalEventTime =
++            env->GetMethodID(motionEventClass, "getHistoricalEventTime", "(I)J");
++        gMotionEventClassInfo.getHistoricalAxisValue =
++            env->GetMethodID(motionEventClass, "getHistoricalAxisValue", "(III)F");
++
+         gMotionEventClassInfoInitialized = true;
+     }
+ 
++    int historySize =
++        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getHistorySize);
++    historySize =
++        std::min(historySize, GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT);
++
++    int localEnabledHistoricalAxis[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT];
++    int enabledHistoricalAxisCount = 0;
++
++    for (int axisIndex = 0;
++         axisIndex < GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT;
++         ++axisIndex) {
++        if (enabledHistoricalAxes[axisIndex]) {
++            localEnabledHistoricalAxis[enabledHistoricalAxisCount++] = axisIndex;
++        }
++    }
++    out_event->historicalCount = enabledHistoricalAxisCount == 0 ? 0 : historySize;
++    out_event->historicalStart = 0; // Free for caller to use
++
++    // The historical event times aren't unique per-pointer but for simplicity
++    // we output a per-pointer event time, copied from here...
++    int64_t historicalEventTimes[GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT];
++    for (int histIndex = 0; histIndex < historySize; ++histIndex) {
++        historicalEventTimes[histIndex] =
++            env->CallLongMethod(motionEvent,
++                gMotionEventClassInfo.getHistoricalEventTime) *
++                1000000;
++    }
++
+     int pointerCount =
+         env->CallIntMethod(motionEvent, gMotionEventClassInfo.getPointerCount);
+     pointerCount =
+@@ -960,6 +1021,20 @@ extern "C" void GameActivityMotionEvent_fromJava(
+                                          axisIndex, i);
+             }
+         }
++
++        if (enabledHistoricalAxisCount > 0) {
++            for (int histIndex = 0; histIndex < historySize; ++histIndex) {
++                int pointerHistIndex = historySize * i;
++                out_historical[pointerHistIndex].eventTime = historicalEventTimes[histIndex];
++                for (int c = 0; c < enabledHistoricalAxisCount; ++c) {
++                    int axisIndex = localEnabledHistoricalAxis[c];
++                    out_historical[pointerHistIndex].axisValues[axisIndex] =
++                        env->CallFloatMethod(motionEvent,
++                                             gMotionEventClassInfo.getHistoricalAxisValue,
++                                             axisIndex, i, histIndex);
++                }
++            }
++        }
+     }
+ 
+     out_event->deviceId =
+@@ -999,6 +1074,8 @@ extern "C" void GameActivityMotionEvent_fromJava(
+         env->CallFloatMethod(motionEvent, gMotionEventClassInfo.getXPrecision);
+     out_event->precisionY =
+         env->CallFloatMethod(motionEvent, gMotionEventClassInfo.getYPrecision);
++
++    return out_event->pointerCount * out_event->historicalCount;
+ }
+ 
+ static struct {
+@@ -1085,8 +1162,11 @@ static bool onTouchEvent_native(JNIEnv *env, jobject javaGameActivity,
+     if (code->callbacks.onTouchEvent == nullptr) return false;
+ 
+     static GameActivityMotionEvent c_event;
+-    GameActivityMotionEvent_fromJava(env, motionEvent, &c_event);
+-    return code->callbacks.onTouchEvent(code, &c_event);
++    // Note the actual data is written contiguously as numPointers x historySize
++    // entries.
++    static GameActivityHistoricalPointerAxes historical[GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT * GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT];
++    int historicalLen = GameActivityMotionEvent_fromJava(env, motionEvent, &c_event, historical);
++    return code->callbacks.onTouchEvent(code, &c_event, historical, historicalLen);
+ }
+ 
+ static bool onKeyUp_native(JNIEnv *env, jobject javaGameActivity, jlong handle,
+diff --git a/game-activity/csrc/game-activity/GameActivity.h b/game-activity/csrc/game-activity/GameActivity.h
+index 7a5645c..e0c48e1 100644
+--- a/game-activity/csrc/game-activity/GameActivity.h
++++ b/game-activity/csrc/game-activity/GameActivity.h
+@@ -142,6 +142,11 @@ typedef struct GameActivityPointerAxes {
+     float rawY;
+ } GameActivityPointerAxes;
+ 
++typedef struct GameActivityHistoricalPointerAxes {
++    int64_t eventTime;
++    float axisValues[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT];
++} GameActivityHistoricalPointerAxes;
++
+ /** \brief Get the current X coordinate of the pointer. */
+ inline float GameActivityPointerAxes_getX(
+     const GameActivityPointerAxes* pointerInfo) {
+@@ -177,6 +182,26 @@ void GameActivityPointerAxes_enableAxis(int32_t axis);
+  */
+ void GameActivityPointerAxes_disableAxis(int32_t axis);
+ 
++/**
++ * \brief Enable the specified axis, so that its value is reported in the
++ * GameActivityHistoricalPointerAxes structures associated with a motion event.
++ *
++ * You must enable any axis that you want to read (no axes are enabled by
++ * default).
++ *
++ * If the axis index is out of range, nothing is done.
++ */
++void GameActivityHistoricalPointerAxes_enableAxis(int32_t axis);
++
++/**
++ * \brief Disable the specified axis. Its value won't be reported in the
++ * GameActivityHistoricalPointerAxes structures associated with motion events
++ * anymore.
++ *
++ * If the axis index is out of range, nothing is done.
++ */
++void GameActivityHistoricalPointerAxes_disableAxis(int32_t axis);
++
+ /**
+  * \brief Get the value of the requested axis.
+  *
+@@ -212,6 +237,16 @@ inline float GameActivityPointerAxes_getAxisValue(
+ #define GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT 8
+ #endif
+ 
++/**
++ * The maximum number of historic samples associated with a single motion event.
++ */
++#if (defined GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT_OVERRIDE)
++#define GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT \
++    GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT_OVERRIDE
++#else
++#define GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT 8
++#endif
++
+ /**
+  * \brief Describe a motion event that happened on the GameActivity SurfaceView.
+  *
+@@ -240,6 +275,13 @@ typedef struct GameActivityMotionEvent {
+ 
+     float precisionX;
+     float precisionY;
++
++    int16_t historicalStart;
++
++    // Note the actual buffer of historical data has a length of
++    // pointerCount * historicalCount, since the historical axis
++    // data is per-pointer.
++    int16_t historicalCount;
+ } GameActivityMotionEvent;
+ 
+ /**
+@@ -381,7 +423,9 @@ typedef struct GameActivityCallbacks {
+      * only valid during the callback.
+      */
+     bool (*onTouchEvent)(GameActivity* activity,
+-                         const GameActivityMotionEvent* event);
++                         const GameActivityMotionEvent* event,
++                         const GameActivityHistoricalPointerAxes* historical,
++                         int historicalLen);
+ 
+     /**
+      * Callback called for every key down event on the GameActivity SurfaceView.
+@@ -419,11 +463,16 @@ typedef struct GameActivityCallbacks {
+  * This is done automatically by the GameActivity: see `onTouchEvent` to set
+  * a callback to consume the received events.
+  * This function can be used if you re-implement events handling in your own
+- * activity.
++ * activity. On return, the out_event->historicalStart will be zero, and should
++ * be updated to index into whatever buffer out_historical is copied.
++ * On return the length of out_historical is
++ * (out_event->pointerCount x out_event->historicalCount) and is in a
++ * pointer-major order (i.e. all axis for a pointer are contiguous)
+  * Ownership of out_event is maintained by the caller.
+  */
+-void GameActivityMotionEvent_fromJava(JNIEnv* env, jobject motionEvent,
+-                                      GameActivityMotionEvent* out_event);
++int GameActivityMotionEvent_fromJava(JNIEnv* env, jobject motionEvent,
++                                     GameActivityMotionEvent* out_event,
++                                     GameActivityHistoricalPointerAxes *out_historical);
+ 
+ /**
+  * \brief Convert a Java `KeyEvent` to a `GameActivityKeyEvent`.
+diff --git a/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.c b/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.c
+index 7ae073d..ea4de04 100644
+--- a/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.c
++++ b/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.c
+@@ -441,7 +441,9 @@ void android_app_set_motion_event_filter(struct android_app* app,
+ }
+ 
+ static bool onTouchEvent(GameActivity* activity,
+-                         const GameActivityMotionEvent* event) {
++                         const GameActivityMotionEvent* event,
++                         const GameActivityHistoricalPointerAxes* historical,
++                         int historicalLen) {
+     struct android_app* android_app = ToApp(activity);
+     pthread_mutex_lock(&android_app->mutex);
+ 
+@@ -461,6 +463,20 @@ static bool onTouchEvent(GameActivity* activity,
+         memcpy(&inputBuffer->motionEvents[new_ix], event,
+                sizeof(GameActivityMotionEvent));
+         ++inputBuffer->motionEventsCount;
++
++        if (inputBuffer->historicalSamplesCount + historicalLen <=
++            NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES) {
++
++            int start_ix = inputBuffer->historicalSamplesCount;
++            memcpy(&inputBuffer->historicalAxisSamples[start_ix], historical,
++                    sizeof(historical[0]) * historicalLen);
++            inputBuffer->historicalSamplesCount += event->historicalCount;
++
++            inputBuffer->motionEvents[new_ix].historicalStart = start_ix;
++            inputBuffer->motionEvents[new_ix].historicalCount = historicalLen;
++        } else {
++            inputBuffer->motionEvents[new_ix].historicalCount = 0;
++        }
+     }
+     pthread_mutex_unlock(&android_app->mutex);
+     return true;
+diff --git a/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.h b/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.h
+index 4f19c8d..1e678b5 100644
+--- a/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.h
++++ b/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.h
+@@ -37,6 +37,13 @@
+ #define NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS 16
+ #endif
+ 
++#if (defined NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES_OVERRIDE)
++#define NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES \
++    NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES_OVERRIDE
++#else
++#define NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES 64
++#endif
++
+ #if (defined NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE)
+ #define NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS \
+     NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE
+@@ -129,6 +136,27 @@ struct android_input_buffer {
+      */
+     uint64_t motionEventsCount;
+ 
++    /**
++     * Pointer to a read-only array of pointers to GameActivityHistoricalPointerAxes.
++     *
++     * Only the first historicalSamplesCount samples are valid.
++     * Refer to event->historicalStart, event->pointerCount and event->historicalCount
++     * to access the specific samples that relate to an event.
++     *
++     * Each slice of samples for one event has a length of
++     * (event->pointerCount and event->historicalCount) and is in pointer-major
++     * order so the historic samples for each pointer are contiguous.
++     * E.g. you would access historic sample index 3 for pointer 2 of an event with:
++     *
++     *   historicalAxisSamples[event->historicalStart + (event->historicalCount * 2) + 3];
++     */
++    GameActivityHistoricalPointerAxes historicalAxisSamples[NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES];
++
++    /**
++     * The number of valid historical samples in `historicalAxisSamples`.
++     */
++    uint64_t historicalSamplesCount;
++
+     /**
+      * Pointer to a read-only array of pointers to GameActivityKeyEvent.
+      * Only the first keyEventsCount events are valid.
+-- 
+2.41.0.windows.1
+

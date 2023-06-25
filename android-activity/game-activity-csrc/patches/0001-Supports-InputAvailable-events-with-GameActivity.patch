@@ -1,0 +1,424 @@
+From 3d1b1c5cb9ccfb47d8a067b78bea45c4b72e2033 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@sixbynine.org>
+Date: Sat, 13 Aug 2022 05:42:37 +0100
+Subject: [PATCH] Supports InputAvailable events with GameActivity
+
+This makes a small change to the C glue code for GameActivity to send
+looper wake ups when new input is received (only sending a single wake
+up, until the application next handles input).
+
+When a wake up is received and we recognise that new input is available
+then an `InputAvailable` event is sent to the application - consistent
+with how NativeActivity can deliver `InputAvailable` events.
+
+This addresses a significant feature disparity between GameActivity and
+NativeActivity that meant GameActivity was not practically usable for
+GUI applications that wouldn't want to render continuously like a game.
+
+Addresses #4
+---
+ .../native_app_glue/android_native_app_glue.c | 33 +++++++++++++++++++
+ .../native_app_glue/android_native_app_glue.h | 24 ++++++++++++++
+ .../src/game_activity/ffi_aarch64.rs          | 30 ++++++++++++++++-
+ android-activity/src/game_activity/ffi_arm.rs | 28 ++++++++++++++++
+ .../src/game_activity/ffi_i686.rs             | 30 ++++++++++++++++-
+ .../src/game_activity/ffi_x86_64.rs           | 30 ++++++++++++++++-
+ android-activity/src/game_activity/mod.rs     |  6 ++++
+ examples/agdk-mainloop/.idea/gradle.xml       |  1 -
+ examples/agdk-mainloop/src/lib.rs             |  5 ++-
+ 9 files changed, 182 insertions(+), 5 deletions(-)
+
+diff --git a/android-activity/game-activity-csrc/game-activity/native_app_glue/android_native_app_glue.c b/android-activity/game-activity-csrc/game-activity/native_app_glue/android_native_app_glue.c
+index c0d6380..5fd3eb8 100644
+--- a/android-activity/game-activity-csrc/game-activity/native_app_glue/android_native_app_glue.c
++++ b/android-activity/game-activity-csrc/game-activity/native_app_glue/android_native_app_glue.c
+@@ -449,6 +449,31 @@ void android_app_set_motion_event_filter(struct android_app* app,
+     pthread_mutex_unlock(&app->mutex);
+ }
+ 
++bool android_app_input_available_wake_up(struct android_app* app) {
++    pthread_mutex_lock(&app->mutex);
++    // TODO: use atomic ops for this
++    bool available = app->inputAvailableWakeUp;
++    app->inputAvailableWakeUp = false;
++    pthread_mutex_unlock(&app->mutex);
++    return available;
++}
++
++// NB: should be called with the android_app->mutex held already
++static void notifyInput(struct android_app* android_app) {
++    // Don't spam the mainloop with wake ups if we've already sent one
++    if (android_app->inputSwapPending) {
++        return;
++    }
++
++    if (android_app->looper != NULL) {
++        LOGV("Input Notify: %p", android_app);
++        // for the app thread to know why it received the wake() up
++        android_app->inputAvailableWakeUp = true;
++        android_app->inputSwapPending = true;
++        ALooper_wake(android_app->looper);
++    }
++}
++
+ static bool onTouchEvent(GameActivity* activity,
+                          const GameActivityMotionEvent* event,
+                          const GameActivityHistoricalPointerAxes* historical,
+@@ -486,12 +511,15 @@ static bool onTouchEvent(GameActivity* activity,
+         } else {
+             inputBuffer->motionEvents[new_ix].historicalCount = 0;
+         }
++
++        notifyInput(android_app);
+     } else {
+         LOGW_ONCE("Motion event will be dropped because the number of unconsumed motion"
+              " events exceeded NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS (%d). Consider setting"
+              " NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS_OVERRIDE to a larger value",
+              NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS);
+     }
++
+     pthread_mutex_unlock(&android_app->mutex);
+     return true;
+ }
+@@ -512,6 +540,9 @@ struct android_input_buffer* android_app_swap_input_buffers(
+             NATIVE_APP_GLUE_MAX_INPUT_BUFFERS;
+     }
+ 
++    android_app->inputSwapPending = false;
++    android_app->inputAvailableWakeUp = false;
++
+     pthread_mutex_unlock(&android_app->mutex);
+ 
+     return inputBuffer;
+@@ -547,6 +578,8 @@ static bool onKey(GameActivity* activity, const GameActivityKeyEvent* event) {
+         memcpy(&inputBuffer->keyEvents[new_ix], event,
+                sizeof(GameActivityKeyEvent));
+         ++inputBuffer->keyEventsCount;
++
++        notifyInput(android_app);
+     } else {
+         LOGW_ONCE("Key event will be dropped because the number of unconsumed key events exceeded"
+              " NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS (%d). Consider setting"
+diff --git a/android-activity/game-activity-csrc/game-activity/native_app_glue/android_native_app_glue.h b/android-activity/game-activity-csrc/game-activity/native_app_glue/android_native_app_glue.h
+index 1e678b5..96968e3 100644
+--- a/android-activity/game-activity-csrc/game-activity/native_app_glue/android_native_app_glue.h
++++ b/android-activity/game-activity-csrc/game-activity/native_app_glue/android_native_app_glue.h
+@@ -295,6 +295,26 @@ struct android_app {
+     android_key_event_filter keyEventFilter;
+     android_motion_event_filter motionEventFilter;
+ 
++    // When new input is received we set both of these flags and use the looper to
++    // wake up the application mainloop.
++    //
++    // To avoid spamming the mainloop with wake ups from lots of input though we
++    // don't sent a wake up if the inputSwapPending flag is already set. (i.e.
++    // we already expect input to be processed in a finite amount of time due to
++    // our previous wake up)
++    //
++    // When a wake up is received then we will check this flag (clearing it
++    // at the same time). If it was set then an InputAvailable event is sent to
++    // the application - which should lead to all input being processed within
++    // a finite amount of time.
++    //
++    // The next time android_app_swap_input_buffers is called, both flags will be
++    // cleared.
++    //
++    // NB: both of these should only be read with the app mutex held
++    bool inputAvailableWakeUp;
++    bool inputSwapPending;
++
+     /** @endcond */
+ };
+ 
+@@ -507,6 +527,10 @@ void android_app_set_key_event_filter(struct android_app* app,
+ void android_app_set_motion_event_filter(struct android_app* app,
+                                          android_motion_event_filter filter);
+ 
++/**
++ * Determines if a looper wake up was due to new input becoming available
++ */
++bool android_app_input_available_wake_up(struct android_app* app);
+ 
+ void GameActivity_onCreate_C(GameActivity* activity, void* savedState,
+                             size_t savedStateSize);
+diff --git a/android-activity/src/game_activity/ffi_aarch64.rs b/android-activity/src/game_activity/ffi_aarch64.rs
+index 6873c58..d9ebe3d 100644
+--- a/android-activity/src/game_activity/ffi_aarch64.rs
++++ b/android-activity/src/game_activity/ffi_aarch64.rs
+@@ -8437,12 +8437,14 @@ pub struct android_app {
+     pub pendingContentRect: ARect,
+     pub keyEventFilter: android_key_event_filter,
+     pub motionEventFilter: android_motion_event_filter,
++    pub inputAvailableWakeUp: bool,
++    pub inputSwapPending: bool,
+ }
+ #[test]
+ fn bindgen_test_layout_android_app() {
+     assert_eq!(
+         ::std::mem::size_of::<android_app>(),
+-        80904usize,
++        80912usize,
+         concat!("Size of: ", stringify!(android_app))
+     );
+     assert_eq!(
+@@ -8730,6 +8732,28 @@ fn bindgen_test_layout_android_app() {
+             stringify!(motionEventFilter)
+         )
+     );
++    assert_eq!(
++        unsafe {
++            &(*(::std::ptr::null::<android_app>())).inputAvailableWakeUp as *const _ as usize
++        },
++        80904usize,
++        concat!(
++            "Offset of field: ",
++            stringify!(android_app),
++            "::",
++            stringify!(inputAvailableWakeUp)
++        )
++    );
++    assert_eq!(
++        unsafe { &(*(::std::ptr::null::<android_app>())).inputSwapPending as *const _ as usize },
++        80905usize,
++        concat!(
++            "Offset of field: ",
++            stringify!(android_app),
++            "::",
++            stringify!(inputSwapPending)
++        )
++    );
+ }
+ #[doc = " Looper data ID of commands coming from the app's main thread, which"]
+ #[doc = " is returned as an identifier from ALooper_pollOnce().  The data for this"]
+@@ -8869,4 +8893,8 @@ extern "C" {
+         filter: android_motion_event_filter,
+     );
+ }
++extern "C" {
++    #[doc = " Determines if a looper wake up was due to new input becoming available"]
++    pub fn android_app_input_available_wake_up(app: *mut android_app) -> bool;
++}
+ pub type __uint128_t = u128;
+diff --git a/android-activity/src/game_activity/ffi_arm.rs b/android-activity/src/game_activity/ffi_arm.rs
+index c519f13..73b02a4 100644
+--- a/android-activity/src/game_activity/ffi_arm.rs
++++ b/android-activity/src/game_activity/ffi_arm.rs
+@@ -8906,6 +8906,8 @@ pub struct android_app {
+     pub pendingContentRect: ARect,
+     pub keyEventFilter: android_key_event_filter,
+     pub motionEventFilter: android_motion_event_filter,
++    pub inputAvailableWakeUp: bool,
++    pub inputSwapPending: bool,
+ }
+ #[test]
+ fn bindgen_test_layout_android_app() {
+@@ -9199,6 +9201,28 @@ fn bindgen_test_layout_android_app() {
+             stringify!(motionEventFilter)
+         )
+     );
++    assert_eq!(
++        unsafe {
++            &(*(::std::ptr::null::<android_app>())).inputAvailableWakeUp as *const _ as usize
++        },
++        80764usize,
++        concat!(
++            "Offset of field: ",
++            stringify!(android_app),
++            "::",
++            stringify!(inputAvailableWakeUp)
++        )
++    );
++    assert_eq!(
++        unsafe { &(*(::std::ptr::null::<android_app>())).inputSwapPending as *const _ as usize },
++        80765usize,
++        concat!(
++            "Offset of field: ",
++            stringify!(android_app),
++            "::",
++            stringify!(inputSwapPending)
++        )
++    );
+ }
+ #[doc = " Looper data ID of commands coming from the app's main thread, which"]
+ #[doc = " is returned as an identifier from ALooper_pollOnce().  The data for this"]
+@@ -9338,3 +9362,7 @@ extern "C" {
+         filter: android_motion_event_filter,
+     );
+ }
++extern "C" {
++    #[doc = " Determines if a looper wake up was due to new input becoming available"]
++    pub fn android_app_input_available_wake_up(app: *mut android_app) -> bool;
++}
+diff --git a/android-activity/src/game_activity/ffi_i686.rs b/android-activity/src/game_activity/ffi_i686.rs
+index 52b8174..4fc5a56 100644
+--- a/android-activity/src/game_activity/ffi_i686.rs
++++ b/android-activity/src/game_activity/ffi_i686.rs
+@@ -10651,12 +10651,14 @@ pub struct android_app {
+     pub pendingContentRect: ARect,
+     pub keyEventFilter: android_key_event_filter,
+     pub motionEventFilter: android_motion_event_filter,
++    pub inputAvailableWakeUp: bool,
++    pub inputSwapPending: bool,
+ }
+ #[test]
+ fn bindgen_test_layout_android_app() {
+     assert_eq!(
+         ::std::mem::size_of::<android_app>(),
+-        80604usize,
++        80608usize,
+         concat!("Size of: ", stringify!(android_app))
+     );
+     assert_eq!(
+@@ -10944,6 +10946,28 @@ fn bindgen_test_layout_android_app() {
+             stringify!(motionEventFilter)
+         )
+     );
++    assert_eq!(
++        unsafe {
++            &(*(::std::ptr::null::<android_app>())).inputAvailableWakeUp as *const _ as usize
++        },
++        80604usize,
++        concat!(
++            "Offset of field: ",
++            stringify!(android_app),
++            "::",
++            stringify!(inputAvailableWakeUp)
++        )
++    );
++    assert_eq!(
++        unsafe { &(*(::std::ptr::null::<android_app>())).inputSwapPending as *const _ as usize },
++        80605usize,
++        concat!(
++            "Offset of field: ",
++            stringify!(android_app),
++            "::",
++            stringify!(inputSwapPending)
++        )
++    );
+ }
+ #[doc = " Looper data ID of commands coming from the app's main thread, which"]
+ #[doc = " is returned as an identifier from ALooper_pollOnce().  The data for this"]
+@@ -11083,4 +11107,8 @@ extern "C" {
+         filter: android_motion_event_filter,
+     );
+ }
++extern "C" {
++    #[doc = " Determines if a looper wake up was due to new input becoming available"]
++    pub fn android_app_input_available_wake_up(app: *mut android_app) -> bool;
++}
+ pub type __builtin_va_list = *mut ::std::os::raw::c_char;
+diff --git a/android-activity/src/game_activity/ffi_x86_64.rs b/android-activity/src/game_activity/ffi_x86_64.rs
+index 03485a7..e5a2b88 100644
+--- a/android-activity/src/game_activity/ffi_x86_64.rs
++++ b/android-activity/src/game_activity/ffi_x86_64.rs
+@@ -10680,12 +10680,14 @@ pub struct android_app {
+     pub pendingContentRect: ARect,
+     pub keyEventFilter: android_key_event_filter,
+     pub motionEventFilter: android_motion_event_filter,
++    pub inputAvailableWakeUp: bool,
++    pub inputSwapPending: bool,
+ }
+ #[test]
+ fn bindgen_test_layout_android_app() {
+     assert_eq!(
+         ::std::mem::size_of::<android_app>(),
+-        80904usize,
++        80912usize,
+         concat!("Size of: ", stringify!(android_app))
+     );
+     assert_eq!(
+@@ -10973,6 +10975,28 @@ fn bindgen_test_layout_android_app() {
+             stringify!(motionEventFilter)
+         )
+     );
++    assert_eq!(
++        unsafe {
++            &(*(::std::ptr::null::<android_app>())).inputAvailableWakeUp as *const _ as usize
++        },
++        80904usize,
++        concat!(
++            "Offset of field: ",
++            stringify!(android_app),
++            "::",
++            stringify!(inputAvailableWakeUp)
++        )
++    );
++    assert_eq!(
++        unsafe { &(*(::std::ptr::null::<android_app>())).inputSwapPending as *const _ as usize },
++        80905usize,
++        concat!(
++            "Offset of field: ",
++            stringify!(android_app),
++            "::",
++            stringify!(inputSwapPending)
++        )
++    );
+ }
+ #[doc = " Looper data ID of commands coming from the app's main thread, which"]
+ #[doc = " is returned as an identifier from ALooper_pollOnce().  The data for this"]
+@@ -11112,6 +11136,10 @@ extern "C" {
+         filter: android_motion_event_filter,
+     );
+ }
++extern "C" {
++    #[doc = " Determines if a looper wake up was due to new input becoming available"]
++    pub fn android_app_input_available_wake_up(app: *mut android_app) -> bool;
++}
+ pub type __builtin_va_list = [__va_list_tag; 1usize];
+ #[repr(C)]
+ #[derive(Debug, Copy, Clone)]
+diff --git a/android-activity/src/game_activity/mod.rs b/android-activity/src/game_activity/mod.rs
+index c395d61..2b66977 100644
+--- a/android-activity/src/game_activity/mod.rs
++++ b/android-activity/src/game_activity/mod.rs
+@@ -180,6 +180,12 @@ impl AndroidAppInner {
+             match id {
+                 ffi::ALOOPER_POLL_WAKE => {
+                     trace!("ALooper_pollAll returned POLL_WAKE");
++
++                    if ffi::android_app_input_available_wake_up(app_ptr.as_ptr()) {
++                        log::debug!("Notifying Input Available");
++                        callback(PollEvent::Main(MainEvent::InputAvailable));
++                    }
++
+                     callback(PollEvent::Wake);
+                 }
+                 ffi::ALOOPER_POLL_CALLBACK => {
+diff --git a/examples/agdk-mainloop/.idea/gradle.xml b/examples/agdk-mainloop/.idea/gradle.xml
+index 526b4c2..a2d7c21 100644
+--- a/examples/agdk-mainloop/.idea/gradle.xml
++++ b/examples/agdk-mainloop/.idea/gradle.xml
+@@ -13,7 +13,6 @@
+             <option value="$PROJECT_DIR$/app" />
+           </set>
+         </option>
+-        <option name="resolveModulePerSourceSet" value="false" />
+       </GradleProjectSettings>
+     </option>
+   </component>
+diff --git a/examples/agdk-mainloop/src/lib.rs b/examples/agdk-mainloop/src/lib.rs
+index cb98354..6462b86 100644
+--- a/examples/agdk-mainloop/src/lib.rs
++++ b/examples/agdk-mainloop/src/lib.rs
+@@ -11,7 +11,7 @@ fn android_main(app: AndroidApp) {
+ 
+     while !quit {
+         app.poll_events(
+-            Some(std::time::Duration::from_millis(500)), /* timeout */
++            Some(std::time::Duration::from_secs(1)), /* timeout */
+             |event| {
+                 match event {
+                     PollEvent::Wake => {
+@@ -49,6 +49,9 @@ fn android_main(app: AndroidApp) {
+                             MainEvent::RedrawNeeded { .. } => {
+                                 redraw_pending = true;
+                             }
++                            MainEvent::InputAvailable { .. } => {
++                                redraw_pending = true;
++                            }
+                             MainEvent::LowMemory => {}
+ 
+                             MainEvent::Destroy => quit = true,
+-- 
+2.41.0.windows.1
+

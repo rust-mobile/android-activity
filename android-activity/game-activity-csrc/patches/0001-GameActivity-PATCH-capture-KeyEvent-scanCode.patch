@@ -1,0 +1,57 @@
+From e27b6b5a44f531c0425deb0237826358be0613a3 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@sixbynine.org>
+Date: Sun, 8 May 2022 02:41:48 +0100
+Subject: [PATCH] GameActivity PATCH: capture KeyEvent scanCode
+
+---
+ game-activity/csrc/game-activity/GameActivity.cpp | 7 ++++++-
+ game-activity/csrc/game-activity/GameActivity.h   | 1 +
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/game-activity/csrc/game-activity/GameActivity.cpp b/game-activity/csrc/game-activity/GameActivity.cpp
+index 2b37365..57bc4e1 100644
+--- a/game-activity/csrc/game-activity/GameActivity.cpp
++++ b/game-activity/csrc/game-activity/GameActivity.cpp
+@@ -1015,6 +1015,7 @@ static struct {
+     jmethodID getModifiers;
+     jmethodID getRepeatCount;
+     jmethodID getKeyCode;
++    jmethodID getScanCode;
+ } gKeyEventClassInfo;
+ 
+ extern "C" void GameActivityKeyEvent_fromJava(JNIEnv *env, jobject keyEvent,
+@@ -1046,6 +1047,8 @@ extern "C" void GameActivityKeyEvent_fromJava(JNIEnv *env, jobject keyEvent,
+             env->GetMethodID(keyEventClass, "getRepeatCount", "()I");
+         gKeyEventClassInfo.getKeyCode =
+             env->GetMethodID(keyEventClass, "getKeyCode", "()I");
++        gKeyEventClassInfo.getScanCode =
++            env->GetMethodID(keyEventClass, "getScanCode", "()I");
+ 
+         gKeyEventClassInfoInitialized = true;
+     }
+@@ -1070,7 +1073,9 @@ extern "C" void GameActivityKeyEvent_fromJava(JNIEnv *env, jobject keyEvent,
+         /*repeatCount=*/
+         env->CallIntMethod(keyEvent, gKeyEventClassInfo.getRepeatCount),
+         /*keyCode=*/
+-        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getKeyCode)};
++        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getKeyCode),
++        /*scanCode=*/
++        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getScanCode)};
+ }
+ 
+ static bool onTouchEvent_native(JNIEnv *env, jobject javaGameActivity,
+diff --git a/game-activity/csrc/game-activity/GameActivity.h b/game-activity/csrc/game-activity/GameActivity.h
+index da102bc..7a5645c 100644
+--- a/game-activity/csrc/game-activity/GameActivity.h
++++ b/game-activity/csrc/game-activity/GameActivity.h
+@@ -262,6 +262,7 @@ typedef struct GameActivityKeyEvent {
+     int32_t modifiers;
+     int32_t repeatCount;
+     int32_t keyCode;
++    int32_t scanCode;
+ } GameActivityKeyEvent;
+ 
+ /**
+-- 
+2.41.0.windows.1
+

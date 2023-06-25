@@ -1,0 +1,24 @@
+From 73d56ede5f0e795583100d307fd64c2681538b8c Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@sixbynine.org>
+Date: Wed, 25 May 2022 23:57:45 +0100
+Subject: [PATCH] GameActivity PATCH: remove unused variable
+
+---
+ .../csrc/game-activity/native_app_glue/android_native_app_glue.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.c b/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.c
+index 70d52c9..c0d6380 100644
+--- a/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.c
++++ b/game-activity/csrc/game-activity/native_app_glue/android_native_app_glue.c
+@@ -371,7 +371,6 @@ static void onSaveInstanceState(GameActivity* activity,
+     LOGV("SaveInstanceState: %p", activity);
+ 
+     struct android_app* android_app = ToApp(activity);
+-    void* savedState = NULL;
+     pthread_mutex_lock(&android_app->mutex);
+     android_app->stateSaved = 0;
+     android_app_write_cmd(android_app, APP_CMD_SAVE_STATE);
+-- 
+2.41.0.windows.1
+

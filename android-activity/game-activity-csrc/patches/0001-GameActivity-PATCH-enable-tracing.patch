@@ -1,0 +1,25 @@
+From b97adb91f9407f4f6998654b5b7dc14c334640d1 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@sixbynine.org>
+Date: Sun, 8 May 2022 02:40:39 +0100
+Subject: [PATCH] GameActivity PATCH: enable tracing
+
+---
+ game-activity/csrc/game-activity/GameActivity.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/game-activity/csrc/game-activity/GameActivity.cpp b/game-activity/csrc/game-activity/GameActivity.cpp
+index ca63915..2b37365 100644
+--- a/game-activity/csrc/game-activity/GameActivity.cpp
++++ b/game-activity/csrc/game-activity/GameActivity.cpp
+@@ -185,7 +185,7 @@ struct OwnedGameTextInputState {
+ #define ALOG_ASSERT(cond, ...) LOG_FATAL_IF(!(cond), ##__VA_ARGS__)
+ #endif
+ 
+-#define LOG_TRACE(...)
++#define LOG_TRACE(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
+ 
+ #ifndef NELEM
+ #define NELEM(x) ((int)(sizeof(x) / sizeof((x)[0])))
+-- 
+2.41.0.windows.1
+

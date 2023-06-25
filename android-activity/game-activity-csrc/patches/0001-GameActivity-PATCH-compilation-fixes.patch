@@ -1,0 +1,71 @@
+From 9267b60938219ec8db799d7f92555e13548055be Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@sixbynine.org>
+Date: Sun, 8 May 2022 22:25:03 +0100
+Subject: [PATCH] GameActivity PATCH: compilation fixes
+
+Fixes some compilation bugs in the upstream AGDK glue code:
+https://issuetracker.google.com/issues/229997306
+---
+ game-activity/csrc/game-activity/GameActivity.cpp    | 10 +++++-----
+ game-activity/csrc/game-text-input/gametextinput.cpp |  2 --
+ 2 files changed, 5 insertions(+), 7 deletions(-)
+
+diff --git a/game-activity/csrc/game-activity/GameActivity.cpp b/game-activity/csrc/game-activity/GameActivity.cpp
+index 57bc4e1..a872422 100644
+--- a/game-activity/csrc/game-activity/GameActivity.cpp
++++ b/game-activity/csrc/game-activity/GameActivity.cpp
+@@ -1080,7 +1080,7 @@ extern "C" void GameActivityKeyEvent_fromJava(JNIEnv *env, jobject keyEvent,
+ 
+ static bool onTouchEvent_native(JNIEnv *env, jobject javaGameActivity,
+                                 jlong handle, jobject motionEvent) {
+-    if (handle == 0) return;
++    if (handle == 0) return false;
+     NativeCode *code = (NativeCode *)handle;
+     if (code->callbacks.onTouchEvent == nullptr) return false;
+ 
+@@ -1091,7 +1091,7 @@ static bool onTouchEvent_native(JNIEnv *env, jobject javaGameActivity,
+ 
+ static bool onKeyUp_native(JNIEnv *env, jobject javaGameActivity, jlong handle,
+                            jobject keyEvent) {
+-    if (handle == 0) return;
++    if (handle == 0) return false;
+     NativeCode *code = (NativeCode *)handle;
+     if (code->callbacks.onKeyUp == nullptr) return false;
+ 
+@@ -1102,9 +1102,9 @@ static bool onKeyUp_native(JNIEnv *env, jobject javaGameActivity, jlong handle,
+ 
+ static bool onKeyDown_native(JNIEnv *env, jobject javaGameActivity,
+                              jlong handle, jobject keyEvent) {
+-    if (handle == 0) return;
++    if (handle == 0) return false;
+     NativeCode *code = (NativeCode *)handle;
+-    if (code->callbacks.onKeyDown == nullptr) return;
++    if (code->callbacks.onKeyDown == nullptr) return false;
+ 
+     static GameActivityKeyEvent c_event;
+     GameActivityKeyEvent_fromJava(env, keyEvent, &c_event);
+@@ -1223,7 +1223,7 @@ static const char *const kWindowInsetsCompatTypePathName =
+ 
+ #define GET_FIELD_ID(var, clazz, fieldName, fieldDescriptor)  \
+     var = env->GetFieldID(clazz, fieldName, fieldDescriptor); \
+-    LOG_FATAL_IF(!var, "Unable to find field %s" fieldName);
++    LOG_FATAL_IF(!var, "Unable to find field %s", fieldName);
+ 
+ static int jniRegisterNativeMethods(JNIEnv *env, const char *className,
+                                     const JNINativeMethod *methods,
+diff --git a/game-activity/csrc/game-text-input/gametextinput.cpp b/game-activity/csrc/game-text-input/gametextinput.cpp
+index f25437a..6a39943 100755
+--- a/game-activity/csrc/game-text-input/gametextinput.cpp
++++ b/game-activity/csrc/game-text-input/gametextinput.cpp
+@@ -210,8 +210,6 @@ GameTextInput::GameTextInput(JNIEnv *env, uint32_t max_string_size)
+         env_->GetFieldID(stateJavaClass_, "composingRegionStart", "I");
+     stateClassInfo_.composingRegionEnd =
+         env_->GetFieldID(stateJavaClass_, "composingRegionEnd", "I");
+-
+-    return s_gameTextInput.get();
+ }
+ 
+ GameTextInput::~GameTextInput() {
+-- 
+2.41.0.windows.1
+
