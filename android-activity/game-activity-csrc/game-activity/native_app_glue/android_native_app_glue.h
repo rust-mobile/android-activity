@@ -30,27 +30,6 @@
 
 #include "game-activity/GameActivity.h"
 
-#if (defined NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS_OVERRIDE)
-#define NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS \
-    NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS_OVERRIDE
-#else
-#define NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS 16
-#endif
-
-#if (defined NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES_OVERRIDE)
-#define NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES \
-    NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES_OVERRIDE
-#else
-#define NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES 64
-#endif
-
-#if (defined NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE)
-#define NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS \
-    NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE
-#else
-#define NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS 4
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -126,10 +105,10 @@ struct android_poll_source {
 
 struct android_input_buffer {
     /**
-     * Pointer to a read-only array of pointers to GameActivityMotionEvent.
+     * Pointer to a read-only array of GameActivityMotionEvent.
      * Only the first motionEventsCount events are valid.
      */
-    GameActivityMotionEvent motionEvents[NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS];
+    GameActivityMotionEvent *motionEvents;
 
     /**
      * The number of valid motion events in `motionEvents`.
@@ -137,36 +116,25 @@ struct android_input_buffer {
     uint64_t motionEventsCount;
 
     /**
-     * Pointer to a read-only array of pointers to GameActivityHistoricalPointerAxes.
-     *
-     * Only the first historicalSamplesCount samples are valid.
-     * Refer to event->historicalStart, event->pointerCount and event->historicalCount
-     * to access the specific samples that relate to an event.
-     *
-     * Each slice of samples for one event has a length of
-     * (event->pointerCount and event->historicalCount) and is in pointer-major
-     * order so the historic samples for each pointer are contiguous.
-     * E.g. you would access historic sample index 3 for pointer 2 of an event with:
-     *
-     *   historicalAxisSamples[event->historicalStart + (event->historicalCount * 2) + 3];
+     * The size of the `motionEvents` buffer.
      */
-    GameActivityHistoricalPointerAxes historicalAxisSamples[NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES];
+    uint64_t motionEventsBufferSize;
 
     /**
-     * The number of valid historical samples in `historicalAxisSamples`.
-     */
-    uint64_t historicalSamplesCount;
-
-    /**
-     * Pointer to a read-only array of pointers to GameActivityKeyEvent.
+     * Pointer to a read-only array of GameActivityKeyEvent.
      * Only the first keyEventsCount events are valid.
      */
-    GameActivityKeyEvent keyEvents[NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS];
+    GameActivityKeyEvent *keyEvents;
 
     /**
      * The number of valid "Key" events in `keyEvents`.
      */
     uint64_t keyEventsCount;
+
+    /**
+     * The size of the `keyEvents` buffer.
+     */
+    uint64_t keyEventsBufferSize;
 };
 
 /**
@@ -294,26 +262,6 @@ struct android_app {
 
     android_key_event_filter keyEventFilter;
     android_motion_event_filter motionEventFilter;
-
-    // When new input is received we set both of these flags and use the looper to
-    // wake up the application mainloop.
-    //
-    // To avoid spamming the mainloop with wake ups from lots of input though we
-    // don't sent a wake up if the inputSwapPending flag is already set. (i.e.
-    // we already expect input to be processed in a finite amount of time due to
-    // our previous wake up)
-    //
-    // When a wake up is received then we will check this flag (clearing it
-    // at the same time). If it was set then an InputAvailable event is sent to
-    // the application - which should lead to all input being processed within
-    // a finite amount of time.
-    //
-    // The next time android_app_swap_input_buffers is called, both flags will be
-    // cleared.
-    //
-    // NB: both of these should only be read with the app mutex held
-    bool inputAvailableWakeUp;
-    bool inputSwapPending;
 
     /** @endcond */
 };
@@ -500,10 +448,10 @@ void android_app_clear_motion_events(struct android_input_buffer* inputBuffer);
 void android_app_clear_key_events(struct android_input_buffer* inputBuffer);
 
 /**
- * This is a springboard into the Rust glue layer that wraps calling the
- * main entry for the app itself.
+ * This is the function that application code must implement, representing
+ * the main entry to the app.
  */
-extern void _rust_glue_entry(struct android_app* app);
+extern void android_main(struct android_app* app);
 
 /**
  * Set the filter to use when processing key events.
@@ -527,13 +475,6 @@ void android_app_set_key_event_filter(struct android_app* app,
 void android_app_set_motion_event_filter(struct android_app* app,
                                          android_motion_event_filter filter);
 
-/**
- * Determines if a looper wake up was due to new input becoming available
- */
-bool android_app_input_available_wake_up(struct android_app* app);
-
-void GameActivity_onCreate_C(GameActivity* activity, void* savedState,
-                            size_t savedStateSize);
 #ifdef __cplusplus
 }
 #endif
