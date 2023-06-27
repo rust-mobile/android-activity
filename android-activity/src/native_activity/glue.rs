@@ -8,15 +8,19 @@ use std::{
     io::{BufRead, BufReader},
     ops::Deref,
     os::unix::prelude::{FromRawFd, RawFd},
+    panic::catch_unwind,
     ptr::{self, NonNull},
     sync::{Arc, Condvar, Mutex, Weak},
 };
 
 use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
-use ndk_sys::ANativeActivity;
 
-use crate::ConfigurationRef;
+use crate::{
+    util::android_log,
+    util::{abort_on_panic, log_panic},
+    ConfigurationRef,
+};
 
 use super::{AndroidApp, Rect};
 
@@ -99,7 +103,7 @@ impl Deref for NativeActivityGlue {
 
 impl NativeActivityGlue {
     pub fn new(
-        activity: *mut ANativeActivity,
+        activity: *mut ndk_sys::ANativeActivity,
         saved_state: *const libc::c_void,
         saved_state_size: libc::size_t,
     ) -> Self {
@@ -126,9 +130,13 @@ impl NativeActivityGlue {
             (*(*activity).callbacks).onLowMemory = Some(on_low_memory);
             (*(*activity).callbacks).onWindowFocusChanged = Some(on_window_focus_changed);
             (*(*activity).callbacks).onNativeWindowCreated = Some(on_native_window_created);
+            (*(*activity).callbacks).onNativeWindowResized = Some(on_native_window_resized);
+            (*(*activity).callbacks).onNativeWindowRedrawNeeded =
+                Some(on_native_window_redraw_needed);
             (*(*activity).callbacks).onNativeWindowDestroyed = Some(on_native_window_destroyed);
             (*(*activity).callbacks).onInputQueueCreated = Some(on_input_queue_created);
             (*(*activity).callbacks).onInputQueueDestroyed = Some(on_input_queue_destroyed);
+            (*(*activity).callbacks).onContentRectChanged = Some(on_content_rect_changed);
         }
 
         glue
@@ -145,7 +153,7 @@ impl NativeActivityGlue {
         self.inner.mutex.lock().unwrap().read_cmd()
     }
 
-    /// For the Rust main thread to get an ndk::InputQueue that wraps the AInputQueue pointer
+    /// For the Rust main thread to get an [`InputQueue`] that wraps the AInputQueue pointer
     /// we have and at the same time ensure that the input queue is attached to the given looper.
     ///
     /// NB: it's expected that the input queue is detached as soon as we know there is new
@@ -208,7 +216,6 @@ pub struct NativeActivityState {
     pub redraw_needed: bool,
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
     pub pending_window: Option<NativeWindow>,
-    pub pending_content_rect: ndk_sys::ARect,
 }
 
 impl NativeActivityState {
@@ -355,7 +362,6 @@ impl WaitableNativeActivityState {
                 redraw_needed: false,
                 pending_input_queue: ptr::null_mut(),
                 pending_window: None,
-                pending_content_rect: Rect::empty().into(),
             }),
             cond: Condvar::new(),
         }
@@ -396,6 +402,26 @@ impl WaitableNativeActivityState {
         });
     }
 
+    pub fn notify_window_resized(&self, native_window: *mut ndk_sys::ANativeWindow) {
+        let mut guard = self.mutex.lock().unwrap();
+        // set_window always syncs .pending_window back to .window before returning. This callback
+        // from Android can never arrive at an interim state, and validates that Android:
+        // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
+        // 2. Doesn't call it on a bogus window pointer that we don't know about.
+        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        guard.write_cmd(AppCmd::WindowResized);
+    }
+
+    pub fn notify_window_redraw_needed(&self, native_window: *mut ndk_sys::ANativeWindow) {
+        let mut guard = self.mutex.lock().unwrap();
+        // set_window always syncs .pending_window back to .window before returning. This callback
+        // from Android can never arrive at an interim state, and validates that Android:
+        // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
+        // 2. Doesn't call it on a bogus window pointer that we don't know about.
+        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        guard.write_cmd(AppCmd::WindowRedrawNeeded);
+    }
+
     unsafe fn set_input(&self, input_queue: *mut ndk_sys::AInputQueue) {
         let mut guard = self.mutex.lock().unwrap();
 
@@ -434,6 +460,12 @@ impl WaitableNativeActivityState {
             guard = self.cond.wait(guard).unwrap();
         }
         guard.pending_window = None;
+    }
+
+    unsafe fn set_content_rect(&self, rect: *const ndk_sys::ARect) {
+        let mut guard = self.mutex.lock().unwrap();
+        guard.content_rect = *rect;
+        guard.write_cmd(AppCmd::ContentRectChanged);
     }
 
     unsafe fn set_activity_state(&self, state: State) {
@@ -584,19 +616,6 @@ extern "Rust" {
     pub fn android_main(app: AndroidApp);
 }
 
-fn android_log(level: Level, tag: &CStr, msg: &CStr) {
-    let prio = match level {
-        Level::Error => ndk_sys::android_LogPriority::ANDROID_LOG_ERROR,
-        Level::Warn => ndk_sys::android_LogPriority::ANDROID_LOG_WARN,
-        Level::Info => ndk_sys::android_LogPriority::ANDROID_LOG_INFO,
-        Level::Debug => ndk_sys::android_LogPriority::ANDROID_LOG_DEBUG,
-        Level::Trace => ndk_sys::android_LogPriority::ANDROID_LOG_VERBOSE,
-    };
-    unsafe {
-        ndk_sys::__android_log_write(prio.0 as libc::c_int, tag.as_ptr(), msg.as_ptr());
-    }
-}
-
 unsafe fn try_with_waitable_activity_ref(
     activity: *mut ndk_sys::ANativeActivity,
     closure: impl FnOnce(Arc<WaitableNativeActivityState>),
@@ -613,91 +632,131 @@ unsafe fn try_with_waitable_activity_ref(
 }
 
 unsafe extern "C" fn on_destroy(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Destroy: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.notify_destroyed()
-    });
+    abort_on_panic(|| {
+        log::debug!("Destroy: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.notify_destroyed()
+        });
+    })
 }
 
 unsafe extern "C" fn on_start(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Start: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_activity_state(State::Start);
-    });
+    abort_on_panic(|| {
+        log::debug!("Start: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_activity_state(State::Start);
+        });
+    })
 }
 
 unsafe extern "C" fn on_resume(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Resume: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_activity_state(State::Resume);
-    });
+    abort_on_panic(|| {
+        log::debug!("Resume: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_activity_state(State::Resume);
+        });
+    })
 }
 
 unsafe extern "C" fn on_save_instance_state(
     activity: *mut ndk_sys::ANativeActivity,
     out_len: *mut ndk_sys::size_t,
 ) -> *mut libc::c_void {
-    log::debug!("SaveInstanceState: {:p}\n", activity);
-    *out_len = 0;
-    let mut ret = ptr::null_mut();
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        let (state, len) = waitable_activity.request_save_state();
-        *out_len = len as ndk_sys::size_t;
-        ret = state
-    });
+    abort_on_panic(|| {
+        log::debug!("SaveInstanceState: {:p}\n", activity);
+        *out_len = 0;
+        let mut ret = ptr::null_mut();
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            let (state, len) = waitable_activity.request_save_state();
+            *out_len = len as ndk_sys::size_t;
+            ret = state
+        });
 
-    log::debug!("Saved state = {:p}, len = {}", ret, *out_len);
-    ret
+        log::debug!("Saved state = {:p}, len = {}", ret, *out_len);
+        ret
+    })
 }
 
 unsafe extern "C" fn on_pause(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Pause: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_activity_state(State::Pause);
-    });
+    abort_on_panic(|| {
+        log::debug!("Pause: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_activity_state(State::Pause);
+        });
+    })
 }
 
 unsafe extern "C" fn on_stop(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("Stop: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_activity_state(State::Stop);
-    });
+    abort_on_panic(|| {
+        log::debug!("Stop: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_activity_state(State::Stop);
+        });
+    })
 }
 
 unsafe extern "C" fn on_configuration_changed(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("ConfigurationChanged: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.notify_config_changed();
-    });
+    abort_on_panic(|| {
+        log::debug!("ConfigurationChanged: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.notify_config_changed();
+        });
+    })
 }
 
 unsafe extern "C" fn on_low_memory(activity: *mut ndk_sys::ANativeActivity) {
-    log::debug!("LowMemory: {:p}\n", activity);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.notify_low_memory();
-    });
+    abort_on_panic(|| {
+        log::debug!("LowMemory: {:p}\n", activity);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.notify_low_memory();
+        });
+    })
 }
 
 unsafe extern "C" fn on_window_focus_changed(
     activity: *mut ndk_sys::ANativeActivity,
     focused: libc::c_int,
 ) {
-    log::debug!("WindowFocusChanged: {:p} -- {}\n", activity, focused);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.notify_focus_changed(focused != 0);
-    });
+    abort_on_panic(|| {
+        log::debug!("WindowFocusChanged: {:p} -- {}\n", activity, focused);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.notify_focus_changed(focused != 0);
+        });
+    })
 }
 
 unsafe extern "C" fn on_native_window_created(
     activity: *mut ndk_sys::ANativeActivity,
     window: *mut ndk_sys::ANativeWindow,
 ) {
-    log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
+    abort_on_panic(|| {
+        log::debug!("NativeWindowCreated: {:p} -- {:p}\n", activity, window);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            // Use clone_from_ptr to acquire additional ownership on the NativeWindow,
+            // which will unconditionally be _release()'d on Drop.
+            let window = NativeWindow::clone_from_ptr(NonNull::new_unchecked(window));
+            waitable_activity.set_window(Some(window));
+        });
+    })
+}
+
+unsafe extern "C" fn on_native_window_resized(
+    activity: *mut ndk_sys::ANativeActivity,
+    window: *mut ndk_sys::ANativeWindow,
+) {
+    log::debug!("NativeWindowResized: {:p} -- {:p}\n", activity, window);
     try_with_waitable_activity_ref(activity, |waitable_activity| {
-        // It's important that we use ::clone_from_ptr() here because NativeWindow
-        // has a Drop implementation that will unconditionally _release() the native window
-        let window = NativeWindow::clone_from_ptr(NonNull::new_unchecked(window));
-        waitable_activity.set_window(Some(window));
+        waitable_activity.notify_window_resized(window);
+    });
+}
+
+unsafe extern "C" fn on_native_window_redraw_needed(
+    activity: *mut ndk_sys::ANativeActivity,
+    window: *mut ndk_sys::ANativeWindow,
+) {
+    log::debug!("NativeWindowRedrawNeeded: {:p} -- {:p}\n", activity, window);
+    try_with_waitable_activity_ref(activity, |waitable_activity| {
+        waitable_activity.notify_window_redraw_needed(window)
     });
 }
 
@@ -705,125 +764,155 @@ unsafe extern "C" fn on_native_window_destroyed(
     activity: *mut ndk_sys::ANativeActivity,
     window: *mut ndk_sys::ANativeWindow,
 ) {
-    log::debug!("NativeWindowDestroyed: {:p} -- {:p}\n", activity, window);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_window(None);
-    });
+    abort_on_panic(|| {
+        log::debug!("NativeWindowDestroyed: {:p} -- {:p}\n", activity, window);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_window(None);
+        });
+    })
 }
 
 unsafe extern "C" fn on_input_queue_created(
     activity: *mut ndk_sys::ANativeActivity,
     queue: *mut ndk_sys::AInputQueue,
 ) {
-    log::debug!("InputQueueCreated: {:p} -- {:p}\n", activity, queue);
-    try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_input(queue);
-    });
+    abort_on_panic(|| {
+        log::debug!("InputQueueCreated: {:p} -- {:p}\n", activity, queue);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_input(queue);
+        });
+    })
 }
 
 unsafe extern "C" fn on_input_queue_destroyed(
     activity: *mut ndk_sys::ANativeActivity,
     queue: *mut ndk_sys::AInputQueue,
 ) {
-    log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
+    abort_on_panic(|| {
+        log::debug!("InputQueueDestroyed: {:p} -- {:p}\n", activity, queue);
+        try_with_waitable_activity_ref(activity, |waitable_activity| {
+            waitable_activity.set_input(ptr::null_mut());
+        });
+    })
+}
+
+unsafe extern "C" fn on_content_rect_changed(
+    activity: *mut ndk_sys::ANativeActivity,
+    rect: *const ndk_sys::ARect,
+) {
+    log::debug!("ContentRectChanged: {:p} -- {:p}\n", activity, rect);
     try_with_waitable_activity_ref(activity, |waitable_activity| {
-        waitable_activity.set_input(ptr::null_mut());
+        waitable_activity.set_content_rect(rect)
     });
 }
 
 /// This is the native entrypoint for our cdylib library that `ANativeActivity` will look for via `dlsym`
 #[no_mangle]
+#[allow(unused_unsafe)] // Otherwise rust 1.64 moans about using unsafe{} in unsafe functions
 extern "C" fn ANativeActivity_onCreate(
     activity: *mut ndk_sys::ANativeActivity,
     saved_state: *const libc::c_void,
     saved_state_size: libc::size_t,
 ) {
-    // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
-    unsafe {
-        let mut logpipe: [RawFd; 2] = Default::default();
-        libc::pipe(logpipe.as_mut_ptr());
-        libc::dup2(logpipe[1], libc::STDOUT_FILENO);
-        libc::dup2(logpipe[1], libc::STDERR_FILENO);
-        std::thread::spawn(move || {
-            let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-            let file = File::from_raw_fd(logpipe[0]);
-            let mut reader = BufReader::new(file);
-            let mut buffer = String::new();
-            loop {
-                buffer.clear();
-                if let Ok(len) = reader.read_line(&mut buffer) {
-                    if len == 0 {
-                        break;
-                    } else if let Ok(msg) = CString::new(buffer.clone()) {
-                        android_log(Level::Info, tag, &msg);
+    abort_on_panic(|| {
+        // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
+        unsafe {
+            let mut logpipe: [RawFd; 2] = Default::default();
+            libc::pipe(logpipe.as_mut_ptr());
+            libc::dup2(logpipe[1], libc::STDOUT_FILENO);
+            libc::dup2(logpipe[1], libc::STDERR_FILENO);
+            std::thread::spawn(move || {
+                let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
+                let file = File::from_raw_fd(logpipe[0]);
+                let mut reader = BufReader::new(file);
+                let mut buffer = String::new();
+                loop {
+                    buffer.clear();
+                    if let Ok(len) = reader.read_line(&mut buffer) {
+                        if len == 0 {
+                            break;
+                        } else if let Ok(msg) = CString::new(buffer.clone()) {
+                            android_log(Level::Info, tag, &msg);
+                        }
                     }
                 }
+            });
+        }
+
+        log::trace!(
+            "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
+            activity,
+            saved_state,
+            saved_state_size
+        );
+
+        // Conceptually we associate a glue reference with the JVM main thread, and another
+        // reference with the Rust main thread
+        let jvm_glue = NativeActivityGlue::new(activity, saved_state, saved_state_size);
+
+        let rust_glue = jvm_glue.clone();
+        // Let us Send the NativeActivity pointer to the Rust main() thread without a wrapper type
+        let activity_ptr: libc::intptr_t = activity as _;
+
+        // Note: we drop the thread handle which will detach the thread
+        std::thread::spawn(move || {
+            let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
+
+            let jvm = unsafe {
+                let na = activity;
+                let jvm = (*na).vm;
+                let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
+                ndk_context::initialize_android_context(jvm.cast(), activity.cast());
+
+                // Since this is a newly spawned thread then the JVM hasn't been attached
+                // to the thread yet. Attach before calling the applications main function
+                // so they can safely make JNI calls
+                let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
+                if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
+                    attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
+                }
+
+                jvm
+            };
+
+            let app = AndroidApp::new(rust_glue.clone());
+
+            rust_glue.notify_main_thread_running();
+
+            unsafe {
+                // We want to specifically catch any panic from the application's android_main
+                // so we can finish + destroy the Activity gracefully via the JVM
+                catch_unwind(|| {
+                    // XXX: If we were in control of the Java Activity subclass then
+                    // we could potentially run the android_main function via a Java native method
+                    // springboard (e.g. call an Activity subclass method that calls a jni native
+                    // method that then just calls android_main()) that would make sure there was
+                    // a Java frame at the base of our call stack which would then be recognised
+                    // when calling FindClass to lookup a suitable classLoader, instead of
+                    // defaulting to the system loader. Without this then it's difficult for native
+                    // code to look up non-standard Java classes.
+                    android_main(app);
+                })
+                .unwrap_or_else(|panic| log_panic(panic));
+
+                // Let JVM know that our Activity can be destroyed before detaching from the JVM
+                //
+                // "Note that this method can be called from any thread; it will send a message
+                //  to the main thread of the process where the Java finish call will take place"
+                ndk_sys::ANativeActivity_finish(activity);
+
+                if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
+                    detach_current_thread(jvm);
+                }
+
+                ndk_context::release_android_context();
             }
         });
-    }
 
-    log::trace!(
-        "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
-        activity,
-        saved_state,
-        saved_state_size
-    );
-
-    // Conceptually we associate a glue reference with the JVM main thread, and another
-    // reference with the Rust main thread
-    let jvm_glue = NativeActivityGlue::new(activity, saved_state, saved_state_size);
-
-    let rust_glue = jvm_glue.clone();
-    // Let us Send the NativeActivity pointer to the Rust main() thread without a wrapper type
-    let activity_ptr: libc::intptr_t = activity as _;
-
-    // Note: we drop the thread handle which will detach the thread
-    std::thread::spawn(move || {
-        let activity: *mut ANativeActivity = activity_ptr as *mut _;
-
-        let jvm = unsafe {
-            let na = activity;
-            let jvm = (*na).vm;
-            let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
-            ndk_context::initialize_android_context(jvm.cast(), activity.cast());
-
-            // Since this is a newly spawned thread then the JVM hasn't been attached
-            // to the thread yet. Attach before calling the applications main function
-            // so they can safely make JNI calls
-            let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
-            if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
-                attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
-            }
-
-            jvm
-        };
-
-        let app = AndroidApp::new(rust_glue.clone());
-
-        rust_glue.notify_main_thread_running();
-
-        unsafe {
-            // XXX: If we were in control of the Java Activity subclass then
-            // we could potentially run the android_main function via a Java native method
-            // springboard (e.g. call an Activity subclass method that calls a jni native
-            // method that then just calls android_main()) that would make sure there was
-            // a Java frame at the base of our call stack which would then be recognised
-            // when calling FindClass to lookup a suitable classLoader, instead of
-            // defaulting to the system loader. Without this then it's difficult for native
-            // code to look up non-standard Java classes.
-            android_main(app);
-
-            if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
-                detach_current_thread(jvm);
-            }
-
-            ndk_context::release_android_context();
+        // Wait for thread to start.
+        let mut guard = jvm_glue.mutex.lock().unwrap();
+        while !guard.running {
+            guard = jvm_glue.cond.wait(guard).unwrap();
         }
-    });
-
-    // Wait for thread to start.
-    let mut guard = jvm_glue.mutex.lock().unwrap();
-    while !guard.running {
-        guard = jvm_glue.cond.wait(guard).unwrap();
-    }
+    })
 }

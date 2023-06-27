@@ -16,12 +16,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # We need to support the same MSRV as Winit which we are currently
-        # assuming will be bumped to 1.60.0 soon:
-        # https://github.com/rust-windowing/winit/pull/2453
-        rust_version: [1.60.0, stable]
+        # See top README for MSRV policy
+        rust_version: [1.64.0, stable]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: hecrj/setup-rust-action@v1
         with:
@@ -36,7 +34,9 @@ jobs:
           i686-linux-android
 
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+        # We're currently sticking with cargo-ndk 2, until we bump our
+        # MSRV to 1.68+
+        run: cargo install cargo-ndk --version "^2"
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -96,7 +96,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: actions-rs/toolchain@v1
         with:

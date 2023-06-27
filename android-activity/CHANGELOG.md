@@ -4,6 +4,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.4.2] - 2022-02-16
+### Changed
+- The `Activity.finish()` method is now called when `android_main` returns so the `Activity` will be destroyed ([#67](https://github.com/rust-mobile/android-activity/issues/67))
+- The `native-activity` backend now propagates `NativeWindow` redraw/resize and `ContentRectChanged` callbacks to main loop ([#70](https://github.com/rust-mobile/android-activity/pull/70))
+- The `game-activity` implementation of `pointer_index()` was fixed to not always return `0` ([#80](https://github.com/rust-mobile/android-activity/pull/84))
+- Added `panic` guards around application's `android_main()` and native code that could potentially unwind across a Java FFI boundary ([#68](https://github.com/rust-mobile/android-activity/pull/68))
+
 ## [0.4.1] - 2022-02-16
 ### Added
 - Added `AndroidApp::vm_as_ptr()` to expose JNI `JavaVM` pointer ([#60](https://github.com/rust-mobile/android-activity/issues/60))
