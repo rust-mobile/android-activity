@@ -1,11 +1,11 @@
 [package]
 name = "android-activity"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 keywords = ["android", "ndk"]
 readme = "../README.md"
-homepage = "https://github.com/rib/android-activity"
-repository = "https://github.com/rib/android-activity"
+homepage = "https://github.com/rust-mobile/android-activity"
+repository = "https://github.com/rust-mobile/android-activity"
 documentation = "https://docs.rs/android-activity"
 description = "Glue for building Rust applications on Android with NativeActivity or GameActivity"
 license = "MIT OR Apache-2.0"

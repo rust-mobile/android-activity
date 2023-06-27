@@ -5,7 +5,8 @@ use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use log::{error, info, trace};
+use libc::c_void;
+use log::{error, trace};
 
 use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
@@ -130,6 +131,15 @@ pub(crate) struct AndroidAppInner {
 }
 
 impl AndroidAppInner {
+    pub(crate) fn vm_as_ptr(&self) -> *mut c_void {
+        unsafe { (*self.native_activity.activity).vm as _ }
+    }
+
+    pub(crate) fn activity_as_ptr(&self) -> *mut c_void {
+        // "clazz" is a completely bogus name; this is the _instance_ not class pointer
+        unsafe { (*self.native_activity.activity).clazz as _ }
+    }
+
     pub(crate) fn native_activity(&self) -> *const ndk_sys::ANativeActivity {
         self.native_activity.activity
     }
@@ -159,7 +169,7 @@ impl AndroidAppInner {
                 -1
             };
 
-            info!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
+            trace!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
             assert!(
                 !ndk_sys::ALooper_forThread().is_null(),
                 "Application tried to poll events from non-main thread"
@@ -170,7 +180,7 @@ impl AndroidAppInner {
                 &mut events,
                 &mut source as *mut *mut core::ffi::c_void,
             );
-            info!("pollAll id = {id}");
+            trace!("pollAll id = {id}");
             match id {
                 ndk_sys::ALOOPER_POLL_WAKE => {
                     trace!("ALooper_pollAll returned POLL_WAKE");

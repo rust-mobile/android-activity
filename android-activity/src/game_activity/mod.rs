@@ -12,6 +12,7 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::{ptr, thread};
 
+use libc::c_void;
 use log::{error, trace, Level};
 
 use jni_sys::*;
@@ -155,6 +156,16 @@ pub struct AndroidAppInner {
 }
 
 impl AndroidAppInner {
+    pub fn vm_as_ptr(&self) -> *mut c_void {
+        let app_ptr = self.native_app.as_ptr();
+        unsafe { (*(*app_ptr).activity).vm as _ }
+    }
+
+    pub fn activity_as_ptr(&self) -> *mut c_void {
+        let app_ptr = self.native_app.as_ptr();
+        unsafe { (*(*app_ptr).activity).javaGameActivity as _ }
+    }
+
     pub fn native_window(&self) -> Option<NativeWindow> {
         self.native_window.read().unwrap().clone()
     }

@@ -62,6 +62,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
+use libc::c_void;
 use ndk::asset::AssetManager;
 use ndk::native_window::NativeWindow;
 
@@ -72,14 +73,14 @@ compile_error!("android-activity only supports compiling for Android");
 
 #[cfg(all(feature = "game-activity", feature = "native-activity"))]
 compile_error!(
-    "The \"game-activity\" and \"native-activity\" features cannot be enabled at the same time"
+    r#"The "game-activity" and "native-activity" features cannot be enabled at the same time"#
 );
 #[cfg(all(
     not(any(feature = "game-activity", feature = "native-activity")),
     not(doc)
 ))]
 compile_error!(
-    r#"Either \"game-activity\" or \"native-activity\" must be enabled as features
+    r#"Either "game-activity" or "native-activity" must be enabled as features
 
 If you have set one of these features then this error indicates that Cargo is trying to
 link together multiple implementations of android-activity (with incompatible versions)
@@ -92,8 +93,7 @@ You can use `cargo tree` (e.g. via `cargo ndk -t arm64-v8a tree`) to identify wh
 versions have been resolved.
 
 You may need to add a `[patch]` into your Cargo.toml to ensure a specific version of
-android-activity is used across all of your application's crates.
-"#
+android-activity is used across all of your application's crates."#
 );
 
 #[cfg(any(feature = "native-activity", doc))]
@@ -471,6 +471,49 @@ impl AndroidApp {
     /// events.
     pub fn native_window(&self) -> Option<NativeWindow> {
         self.inner.read().unwrap().native_window()
+    }
+
+    /// Returns a pointer to the Java Virtual Machine, for making JNI calls
+    ///
+    /// This returns a pointer to the Java Virtual Machine which can be used
+    /// with the [`jni`] crate (or similar crates) to make JNI calls that bridge
+    /// between native Rust code and Java/Kotlin code running within the JVM.
+    ///
+    /// If you use the [`jni`] crate you can wrap this as a [`JavaVM`] via:
+    /// ```ignore
+    /// # use jni::JavaVM;
+    /// # let app: AndroidApp = todo!();
+    /// let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr()) };
+    /// ```
+    ///
+    /// [`jni`]: https://crates.io/crates/jni
+    /// [`JavaVM`]: https://docs.rs/jni/latest/jni/struct.JavaVM.html
+    pub fn vm_as_ptr(&self) -> *mut c_void {
+        self.inner.read().unwrap().vm_as_ptr()
+    }
+
+    /// Returns a JNI object reference for this application's JVM `Activity` as a pointer
+    ///
+    /// If you use the [`jni`] crate you can wrap this as an object reference via:
+    /// ```ignore
+    /// # use jni::objects::JObject;
+    /// # let app: AndroidApp = todo!();
+    /// let activity = unsafe { JObject::from_raw(app.activity_as_ptr()) };
+    /// ```
+    ///
+    /// # JNI Safety
+    ///
+    /// Note that the object reference will be a JNI global reference, not a
+    /// local reference and it should not be deleted. Don't wrap the reference
+    /// in an [`AutoLocal`] which would try to explicitly delete the reference
+    /// when dropped. Similarly, don't wrap the reference as a [`GlobalRef`]
+    /// which would also try to explicitly delete the reference when dropped.
+    ///
+    /// [`jni`]: https://crates.io/crates/jni
+    /// [`AutoLocal`]: https://docs.rs/jni/latest/jni/objects/struct.AutoLocal.html
+    /// [`GlobalRef`]: https://docs.rs/jni/latest/jni/objects/struct.GlobalRef.html
+    pub fn activity_as_ptr(&self) -> *mut c_void {
+        self.inner.read().unwrap().activity_as_ptr()
     }
 
     /// Polls for any events associated with this [AndroidApp] and processes those events
