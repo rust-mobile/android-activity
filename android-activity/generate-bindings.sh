@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# First install bindgen-cli via `cargo install bindgen-cli`
+
 if test -z "${ANDROID_NDK_ROOT}"; then
     export ANDROID_NDK_ROOT=${ANDROID_NDK_HOME}
 fi
