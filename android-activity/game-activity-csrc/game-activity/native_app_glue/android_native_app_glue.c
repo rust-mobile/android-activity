@@ -616,9 +616,12 @@ static void onContentRectChanged(GameActivity* activity, const ARect *rect) {
     pthread_mutex_unlock(&android_app->mutex);
 }
 
-
+// XXX: This symbol is renamed with a _C suffix and then re-exported from
+// Rust because Rust/Cargo don't give us a way to directly export symbols
+// from C/C++ code: https://github.com/rust-lang/rfcs/issues/2771
+//
 JNIEXPORT
-void GameActivity_onCreate(GameActivity* activity, void* savedState,
+void GameActivity_onCreate_C(GameActivity* activity, void* savedState,
                            size_t savedStateSize) {
     LOGV("Creating: %p", activity);
     activity->callbacks->onDestroy = onDestroy;

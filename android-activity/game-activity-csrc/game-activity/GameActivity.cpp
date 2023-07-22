@@ -485,7 +485,7 @@ static jlong initializeNativeCode_native(
 
     readConfigurationValues(code, javaConfig);
 
-    GameActivity_onCreate(code, rawSavedState, rawSavedSize);
+    GameActivity_onCreate_C(code, rawSavedState, rawSavedSize);
 
     code->gameTextInput = GameTextInput_init(env, 0);
     GameTextInput_setEventCallback(code->gameTextInput,
@@ -1130,8 +1130,12 @@ extern "C" int GameActivity_register(JNIEnv *env) {
                                     NELEM(g_methods));
 }
 
+// XXX: This symbol is renamed with a _C suffix and then re-exported from
+// Rust because Rust/Cargo don't give us a way to directly export symbols
+// from C/C++ code: https://github.com/rust-lang/rfcs/issues/2771
+//
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_androidgamesdk_GameActivity_initializeNativeCode(
+Java_com_google_androidgamesdk_GameActivity_initializeNativeCode_C(
     JNIEnv *env, jobject javaGameActivity, jstring internalDataDir,
     jstring obbDir, jstring externalDataDir, jobject jAssetMgr,
     jbyteArray savedState, jobject javaConfig) {
