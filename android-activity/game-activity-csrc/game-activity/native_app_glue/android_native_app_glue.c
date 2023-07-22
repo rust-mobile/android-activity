@@ -233,7 +233,7 @@ static void* android_app_entry(void* param) {
     pthread_cond_broadcast(&android_app->cond);
     pthread_mutex_unlock(&android_app->mutex);
 
-    android_main(android_app);
+    _rust_glue_entry(android_app);
 
     android_app_destroy(android_app);
     return NULL;
