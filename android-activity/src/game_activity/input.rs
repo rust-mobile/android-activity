@@ -14,7 +14,7 @@
 // by masking bits from the `Source`.
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::{convert::TryInto, ops::Deref};
+use std::convert::TryInto;
 
 use crate::game_activity::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
 use crate::input::{Class, Source};
@@ -112,14 +112,6 @@ impl MetaState {
 #[derive(Clone, Debug)]
 pub struct MotionEvent<'a> {
     ga_event: &'a GameActivityMotionEvent,
-}
-
-impl<'a> Deref for MotionEvent<'a> {
-    type Target = GameActivityMotionEvent;
-
-    fn deref(&self) -> &Self::Target {
-        self.ga_event
-    }
 }
 
 /// A motion action.
@@ -295,7 +287,7 @@ impl<'a> MotionEvent<'a> {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        let source = self.source as u32;
+        let source = self.ga_event.source as u32;
         source.try_into().unwrap_or(Source::Unknown)
     }
 
@@ -310,7 +302,7 @@ impl<'a> MotionEvent<'a> {
     ///
     #[inline]
     pub fn device_id(&self) -> i32 {
-        self.deviceId
+        self.ga_event.deviceId
     }
 
     /// Returns the motion action associated with the event.
@@ -318,7 +310,7 @@ impl<'a> MotionEvent<'a> {
     /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getActionMasked())
     #[inline]
     pub fn action(&self) -> MotionAction {
-        let action = self.action as u32 & ndk_sys::AMOTION_EVENT_ACTION_MASK;
+        let action = self.ga_event.action as u32 & ndk_sys::AMOTION_EVENT_ACTION_MASK;
         action.try_into().unwrap()
     }
 
@@ -327,12 +319,12 @@ impl<'a> MotionEvent<'a> {
     /// Pointer indices can change per motion event.  For an identifier that stays the same, see
     /// [`Pointer::pointer_id()`].
     ///
-    /// This only has a meaning when the [action](Self::action) is one of [`Up`](MotionAction::Up),
+    /// This only has a meaning when the [action](self::action) is one of [`Up`](MotionAction::Up),
     /// [`Down`](MotionAction::Down), [`PointerUp`](MotionAction::PointerUp),
     /// or [`PointerDown`](MotionAction::PointerDown).
     #[inline]
     pub fn pointer_index(&self) -> usize {
-        let action = self.action as u32;
+        let action = self.ga_event.action as u32;
         let index = (action & ndk_sys::AMOTION_EVENT_ACTION_POINTER_INDEX_MASK)
             >> ndk_sys::AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
         index as usize
@@ -345,8 +337,8 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getpointerid)
     // TODO: look at output with out-of-range pointer index
     // Probably -1 though
-    pub fn pointer_id_for(&self, pointer_index: usize) -> i32 {
-        unsafe { ndk_sys::AMotionEvent_getPointerId(self.ptr.as_ptr(), pointer_index) }
+    pub fn pointer_id_for(&self.ga_event, pointer_index: usize) -> i32 {
+        unsafe { ndk_sys::AMotionEvent_getPointerId(self.ga_event.ptr.as_ptr(), pointer_index) }
     }
     */
 
@@ -355,7 +347,7 @@ impl<'a> MotionEvent<'a> {
     /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getPointerCount())
     #[inline]
     pub fn pointer_count(&self) -> usize {
-        self.pointerCount as usize
+        self.ga_event.pointerCount as usize
     }
 
     /// An iterator over the pointers in this motion event
@@ -370,7 +362,7 @@ impl<'a> MotionEvent<'a> {
 
     /// The pointer at a given pointer index. Panics if the pointer index is out of bounds.
     ///
-    /// If you need to loop over all the pointers, prefer the [`pointers()`](Self::pointers) method.
+    /// If you need to loop over all the pointers, prefer the [`pointers()`](self::pointers) method.
     #[inline]
     pub fn pointer_at_index(&self, index: usize) -> Pointer<'_> {
         if index >= self.pointer_count() {
@@ -386,14 +378,14 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_gethistorysize)
     #[inline]
     pub fn history_size(&self) -> usize {
-        unsafe { ndk_sys::AMotionEvent_getHistorySize(self.ptr.as_ptr()) as usize }
+        unsafe { ndk_sys::AMotionEvent_getHistorySize(self.ga_event.ptr.as_ptr()) as usize }
     }
 
     /// An iterator over the historical events contained in this event.
     #[inline]
     pub fn history(&self) -> HistoricalMotionEventsIter<'_> {
         HistoricalMotionEventsIter {
-            event: self.ptr,
+            event: self.ga_event.ptr,
             next_history_index: 0,
             history_size: self.history_size(),
             _marker: std::marker::PhantomData,
@@ -407,7 +399,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getmetastate)
     #[inline]
     pub fn meta_state(&self) -> MetaState {
-        MetaState(self.metaState as u32)
+        MetaState(self.ga_event.metaState as u32)
     }
 
     /// Returns the button state during this event, as a bitfield.
@@ -416,7 +408,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getbuttonstate)
     #[inline]
     pub fn button_state(&self) -> ButtonState {
-        ButtonState(self.buttonState as u32)
+        ButtonState(self.ga_event.buttonState as u32)
     }
 
     /// Returns the time of the start of this gesture, in the `java.lang.System.nanoTime()` time
@@ -426,7 +418,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getdowntime)
     #[inline]
     pub fn down_time(&self) -> i64 {
-        self.downTime
+        self.ga_event.downTime
     }
 
     /// Returns a bitfield indicating which edges were touched by this event.
@@ -435,7 +427,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getedgeflags)
     #[inline]
     pub fn edge_flags(&self) -> EdgeFlags {
-        EdgeFlags(self.edgeFlags as u32)
+        EdgeFlags(self.ga_event.edgeFlags as u32)
     }
 
     /// Returns the time of this event, in the `java.lang.System.nanoTime()` time base
@@ -444,7 +436,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_geteventtime)
     #[inline]
     pub fn event_time(&self) -> i64 {
-        self.eventTime
+        self.ga_event.eventTime
     }
 
     /// The flags associated with a motion event.
@@ -453,7 +445,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getflags)
     #[inline]
     pub fn flags(&self) -> MotionEventFlags {
-        MotionEventFlags(self.flags as u32)
+        MotionEventFlags(self.ga_event.flags as u32)
     }
 
     /* Missing from GameActivity currently...
@@ -462,8 +454,8 @@ impl<'a> MotionEvent<'a> {
     /// See [the NDK
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getxoffset)
     #[inline]
-    pub fn x_offset(&self) -> f32 {
-        self.x_offset
+    pub fn x_offset(&self.ga_event) -> f32 {
+        self.ga_event.x_offset
     }
 
     /// Returns the offset in the y direction between the coordinates and the raw coordinates
@@ -471,8 +463,8 @@ impl<'a> MotionEvent<'a> {
     /// See [the NDK
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getyoffset)
     #[inline]
-    pub fn y_offset(&self) -> f32 {
-        self.y_offset
+    pub fn y_offset(&self.ga_event) -> f32 {
+        self.ga_event.y_offset
     }
     */
 
@@ -482,7 +474,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getxprecision)
     #[inline]
     pub fn x_precision(&self) -> f32 {
-        self.precisionX
+        self.ga_event.precisionX
     }
 
     /// Returns the precision of the y value of the coordinates
@@ -491,7 +483,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getyprecision)
     #[inline]
     pub fn y_precision(&self) -> f32 {
-        self.precisionY
+        self.ga_event.precisionY
     }
 }
 
@@ -510,13 +502,13 @@ impl<'a> Pointer<'a> {
 
     #[inline]
     pub fn pointer_id(&self) -> i32 {
-        let pointer = &self.event.pointers[self.index];
+        let pointer = &self.event.ga_event.pointers[self.index];
         pointer.id
     }
 
     #[inline]
     pub fn axis_value(&self, axis: Axis) -> f32 {
-        let pointer = &self.event.pointers[self.index];
+        let pointer = &self.event.ga_event.pointers[self.index];
         pointer.axisValues[axis as u32 as usize]
     }
 
@@ -532,13 +524,13 @@ impl<'a> Pointer<'a> {
 
     #[inline]
     pub fn raw_x(&self) -> f32 {
-        let pointer = &self.event.pointers[self.index];
+        let pointer = &self.event.ga_event.pointers[self.index];
         pointer.rawX
     }
 
     #[inline]
     pub fn raw_y(&self) -> f32 {
-        let pointer = &self.event.pointers[self.index];
+        let pointer = &self.event.ga_event.pointers[self.index];
         pointer.rawY
     }
 
@@ -579,7 +571,7 @@ impl<'a> Pointer<'a> {
 
     #[inline]
     pub fn tool_type(&self) -> ToolType {
-        let pointer = &self.event.pointers[self.index];
+        let pointer = &self.event.ga_event.pointers[self.index];
         let tool_type = pointer.toolType as u32;
         tool_type.try_into().unwrap()
     }
@@ -937,14 +929,6 @@ pub struct KeyEvent<'a> {
     ga_event: &'a GameActivityKeyEvent,
 }
 
-impl<'a> Deref for KeyEvent<'a> {
-    type Target = GameActivityKeyEvent;
-
-    fn deref(&self) -> &Self::Target {
-        self.ga_event
-    }
-}
-
 /// Key actions.
 ///
 /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-27)
@@ -1262,7 +1246,7 @@ impl<'a> KeyEvent<'a> {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        let source = self.source as u32;
+        let source = self.ga_event.source as u32;
         source.try_into().unwrap_or(Source::Unknown)
     }
 
@@ -1277,7 +1261,7 @@ impl<'a> KeyEvent<'a> {
     ///
     #[inline]
     pub fn device_id(&self) -> i32 {
-        self.deviceId
+        self.ga_event.deviceId
     }
 
     /// Returns the key action associated with the event.
@@ -1285,7 +1269,7 @@ impl<'a> KeyEvent<'a> {
     /// See [the KeyEvent docs](https://developer.android.com/reference/android/view/KeyEvent#getAction())
     #[inline]
     pub fn action(&self) -> KeyAction {
-        let action = self.action as u32;
+        let action = self.ga_event.action as u32;
         action.try_into().unwrap()
     }
 
@@ -1296,7 +1280,7 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getdowntime)
     #[inline]
     pub fn down_time(&self) -> i64 {
-        self.downTime
+        self.ga_event.downTime
     }
 
     /// Returns the time this event occured.  This is on the scale of
@@ -1306,7 +1290,7 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_geteventtime)
     #[inline]
     pub fn event_time(&self) -> i64 {
-        self.eventTime
+        self.ga_event.eventTime
     }
 
     /// Returns the keycode associated with this key event
@@ -1315,7 +1299,7 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getkeycode)
     #[inline]
     pub fn key_code(&self) -> Keycode {
-        let keycode = self.keyCode as u32;
+        let keycode = self.ga_event.keyCode as u32;
         keycode.try_into().unwrap_or(Keycode::Unknown)
     }
 
@@ -1325,7 +1309,7 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getrepeatcount)
     #[inline]
     pub fn repeat_count(&self) -> i32 {
-        self.repeatCount
+        self.ga_event.repeatCount
     }
 
     /// Returns the hardware keycode of a key.  This varies from device to device.
@@ -1334,7 +1318,7 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getscancode)
     #[inline]
     pub fn scan_code(&self) -> i32 {
-        self.scanCode
+        self.ga_event.scanCode
     }
 }
 
@@ -1397,7 +1381,7 @@ impl<'a> KeyEvent<'a> {
     /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getflags)
     #[inline]
     pub fn flags(&self) -> KeyEventFlags {
-        KeyEventFlags(self.flags as u32)
+        KeyEventFlags(self.ga_event.flags as u32)
     }
 
     /// Returns the state of the modifiers during this key event, represented by a bitmask.
@@ -1406,6 +1390,6 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getmetastate)
     #[inline]
     pub fn meta_state(&self) -> MetaState {
-        MetaState(self.metaState as u32)
+        MetaState(self.ga_event.metaState as u32)
     }
 }
