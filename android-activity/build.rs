@@ -1,10 +1,7 @@
 #![allow(dead_code)]
 
 fn build_glue_for_game_activity() {
-    for f in [
-        "GameActivity.h",
-        "GameActivity.cpp",
-    ] {
+    for f in ["GameActivity.h", "GameActivity.cpp"] {
         println!("cargo:rerun-if-changed=game-activity-csrc/game-activity/{f}");
     }
     cc::Build::new()
