@@ -326,6 +326,15 @@ static void android_app_set_window(struct android_app* android_app,
                                    ANativeWindow* window) {
     LOGV("android_app_set_window called");
     pthread_mutex_lock(&android_app->mutex);
+
+    // NB: we have to consider that the native thread could have already
+    // (gracefully) exit (setting android_app->destroyed) and so we need
+    // to be careful to avoid a deadlock waiting for a thread that's
+    // already exit.
+    if (android_app->destroyed) {
+        pthread_mutex_unlock(&android_app->mutex);
+        return;
+    }
     if (android_app->pendingWindow != NULL) {
         android_app_write_cmd(android_app, APP_CMD_TERM_WINDOW);
     }
@@ -342,9 +351,16 @@ static void android_app_set_window(struct android_app* android_app,
 static void android_app_set_activity_state(struct android_app* android_app,
                                            int8_t cmd) {
     pthread_mutex_lock(&android_app->mutex);
-    android_app_write_cmd(android_app, cmd);
-    while (android_app->activityState != cmd) {
-        pthread_cond_wait(&android_app->cond, &android_app->mutex);
+
+    // NB: we have to consider that the native thread could have already
+    // (gracefully) exit (setting android_app->destroyed) and so we need
+    // to be careful to avoid a deadlock waiting for a thread that's
+    // already exit.
+    if (!android_app->destroyed) {
+        android_app_write_cmd(android_app, cmd);
+        while (android_app->activityState != cmd) {
+            pthread_cond_wait(&android_app->cond, &android_app->mutex);
+        }
     }
     pthread_mutex_unlock(&android_app->mutex);
 }
@@ -353,6 +369,14 @@ static void android_app_free(struct android_app* android_app) {
     int input_buf_idx = 0;
 
     pthread_mutex_lock(&android_app->mutex);
+
+    // It's possible that onDestroy is called after we have already 'destroyed'
+    // the app (via `android_app_destroy` due to `android_main` returning.
+    //
+    // In this case `->destroyed` will already be set (so we won't deadlock in
+    // the loop below) but we still need to close the messaging fds and finish
+    // freeing the android_app
+
     android_app_write_cmd(android_app, APP_CMD_DESTROY);
     while (!android_app->destroyed) {
         pthread_cond_wait(&android_app->cond, &android_app->mutex);
@@ -400,6 +424,16 @@ static void onSaveInstanceState(GameActivity* activity,
 
     struct android_app* android_app = ToApp(activity);
     pthread_mutex_lock(&android_app->mutex);
+
+    // NB: we have to consider that the native thread could have already
+    // (gracefully) exit (setting android_app->destroyed) and so we need
+    // to be careful to avoid a deadlock waiting for a thread that's
+    // already exit.
+    if (android_app->destroyed) {
+        pthread_mutex_unlock(&android_app->mutex);
+        return;
+    }
+
     android_app->stateSaved = 0;
     android_app_write_cmd(android_app, APP_CMD_SAVE_STATE);
     while (!android_app->stateSaved) {
@@ -505,6 +539,15 @@ static bool onTouchEvent(GameActivity* activity,
     struct android_app* android_app = ToApp(activity);
     pthread_mutex_lock(&android_app->mutex);
 
+    // NB: we have to consider that the native thread could have already
+    // (gracefully) exit (setting android_app->destroyed) and so we need
+    // to be careful to avoid a deadlock waiting for a thread that's
+    // already exit.
+    if (android_app->destroyed) {
+        pthread_mutex_unlock(&android_app->mutex);
+        return false;
+    }
+
     if (android_app->motionEventFilter != NULL &&
         !android_app->motionEventFilter(event)) {
         pthread_mutex_unlock(&android_app->mutex);
@@ -582,6 +625,15 @@ static bool onKey(GameActivity* activity, const GameActivityKeyEvent* event) {
     struct android_app* android_app = ToApp(activity);
     pthread_mutex_lock(&android_app->mutex);
 
+    // NB: we have to consider that the native thread could have already
+    // (gracefully) exit (setting android_app->destroyed) and so we need
+    // to be careful to avoid a deadlock waiting for a thread that's
+    // already exit.
+    if (android_app->destroyed) {
+        pthread_mutex_unlock(&android_app->mutex);
+        return false;
+    }
+
     if (android_app->keyEventFilter != NULL &&
         !android_app->keyEventFilter(event)) {
         pthread_mutex_unlock(&android_app->mutex);
@@ -620,8 +672,9 @@ static void onTextInputEvent(GameActivity* activity,
                              const GameTextInputState* state) {
     struct android_app* android_app = ToApp(activity);
     pthread_mutex_lock(&android_app->mutex);
-
-    android_app->textInputState = 1;
+    if (!android_app->destroyed) {
+        android_app->textInputState = 1;
+    }
     pthread_mutex_unlock(&android_app->mutex);
 }
 
