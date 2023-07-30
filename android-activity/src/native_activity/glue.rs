@@ -199,6 +199,18 @@ impl NativeActivityGlue {
     }
 }
 
+/// The status of the native thread that's created to run
+/// `android_main`
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum NativeThreadState {
+    /// The `android_main` thread hasn't been created yet
+    Init,
+    /// The `android_main` thread has been spawned and started running
+    Running,
+    /// The `android_main` thread has finished
+    Stopped,
+}
+
 #[derive(Debug)]
 pub struct NativeActivityState {
     pub msg_read: libc::c_int,
@@ -210,8 +222,11 @@ pub struct NativeActivityState {
     pub content_rect: ndk_sys::ARect,
     pub activity_state: State,
     pub destroy_requested: bool,
-    pub running: bool,
+    pub thread_state: NativeThreadState,
     pub app_has_saved_state: bool,
+
+    /// Set as soon as the Java main thread notifies us of an
+    /// `onDestroyed` callback.
     pub destroyed: bool,
     pub redraw_needed: bool,
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
@@ -303,8 +318,6 @@ impl Drop for WaitableNativeActivityState {
         unsafe {
             let mut guard = self.mutex.lock().unwrap();
             guard.detach_input_queue_from_looper();
-            guard.destroyed = true;
-            self.cond.notify_one();
         }
     }
 }
@@ -356,7 +369,7 @@ impl WaitableNativeActivityState {
                 content_rect: Rect::empty().into(),
                 activity_state: State::Init,
                 destroy_requested: false,
-                running: false,
+                thread_state: NativeThreadState::Init,
                 app_has_saved_state: false,
                 destroyed: false,
                 redraw_needed: false,
@@ -369,10 +382,11 @@ impl WaitableNativeActivityState {
 
     pub fn notify_destroyed(&self) {
         let mut guard = self.mutex.lock().unwrap();
+        guard.destroyed = true;
 
         unsafe {
             guard.write_cmd(AppCmd::Destroy);
-            while !guard.destroyed {
+            while guard.thread_state != NativeThreadState::Stopped {
                 guard = self.cond.wait(guard).unwrap();
             }
 
@@ -541,7 +555,13 @@ impl WaitableNativeActivityState {
 
     pub fn notify_main_thread_running(&self) {
         let mut guard = self.mutex.lock().unwrap();
-        guard.running = true;
+        guard.thread_state = NativeThreadState::Running;
+        self.cond.notify_one();
+    }
+
+    pub fn notify_main_thread_stopped_running(&self) {
+        let mut guard = self.mutex.lock().unwrap();
+        guard.thread_state = NativeThreadState::Stopped;
         self.cond.notify_one();
     }
 
@@ -907,11 +927,16 @@ extern "C" fn ANativeActivity_onCreate(
 
                 ndk_context::release_android_context();
             }
+
+            rust_glue.notify_main_thread_stopped_running();
         });
 
         // Wait for thread to start.
         let mut guard = jvm_glue.mutex.lock().unwrap();
-        while !guard.running {
+
+        // Don't specifically wait for `Running` just in case `android_main` returns
+        // immediately and the state is set to `Stopped`
+        while guard.thread_state == NativeThreadState::Init {
             guard = jvm_glue.cond.wait(guard).unwrap();
         }
     })
