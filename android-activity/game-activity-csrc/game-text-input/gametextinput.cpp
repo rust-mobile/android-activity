@@ -48,6 +48,7 @@ struct GameTextInput {
     void processEvent(jobject textInputEvent);
     void showIme(uint32_t flags);
     void hideIme(uint32_t flags);
+    void restartInput();
     void setEventCallback(GameTextInputEventCallback callback, void *context);
     jobject stateToJava(const GameTextInputState &state) const;
     void stateFromJava(jobject textInputEvent,
@@ -73,6 +74,7 @@ struct GameTextInput {
     jobject inputConnection_ = nullptr;
     jmethodID inputConnectionSetStateMethod_;
     jmethodID setSoftKeyboardActiveMethod_;
+    jmethodID restartInputMethod_;
     void (*eventCallback_)(void *context,
                            const struct GameTextInputState *state) = nullptr;
     void *eventCallbackContext_ = nullptr;
@@ -164,6 +166,10 @@ void GameTextInput_hideIme(struct GameTextInput *input, uint32_t flags) {
     input->hideIme(flags);
 }
 
+void GameTextInput_restartInput(struct GameTextInput *input) {
+    input->restartInput();
+}
+
 void GameTextInput_setEventCallback(struct GameTextInput *input,
                                     GameTextInputEventCallback callback,
                                     void *context) {
@@ -199,6 +205,8 @@ GameTextInput::GameTextInput(JNIEnv *env, uint32_t max_string_size)
                           "(Lcom/google/androidgamesdk/gametextinput/State;)V");
     setSoftKeyboardActiveMethod_ = env_->GetMethodID(
         inputConnectionClass_, "setSoftKeyboardActive", "(ZI)V");
+    restartInputMethod_ =
+        env_->GetMethodID(inputConnectionClass_, "restartInput", "()V");
 
     stateClassInfo_.text =
         env_->GetFieldID(stateJavaClass_, "text", "Ljava/lang/String;");
@@ -305,6 +313,11 @@ void GameTextInput::hideIme(uint32_t flags) {
     if (inputConnection_ == nullptr) return;
     env_->CallVoidMethod(inputConnection_, setSoftKeyboardActiveMethod_, false,
                          flags);
+}
+
+void GameTextInput::restartInput() {
+    if (inputConnection_ == nullptr) return;
+    env_->CallVoidMethod(inputConnection_, restartInputMethod_, false);
 }
 
 jobject GameTextInput::stateToJava(const GameTextInputState &state) const {

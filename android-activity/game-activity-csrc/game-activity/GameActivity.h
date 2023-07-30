@@ -36,11 +36,21 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#include "common/gamesdk_common.h"
+#include "game-activity/GameActivityEvents.h"
 #include "game-text-input/gametextinput.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define GAMEACTIVITY_MAJOR_VERSION 2
+#define GAMEACTIVITY_MINOR_VERSION 0
+#define GAMEACTIVITY_BUGFIX_VERSION 2
+#define GAMEACTIVITY_PACKED_VERSION                            \
+    ANDROID_GAMESDK_PACKED_VERSION(GAMEACTIVITY_MAJOR_VERSION, \
+                                   GAMEACTIVITY_MINOR_VERSION, \
+                                   GAMEACTIVITY_BUGFIX_VERSION)
 
 /**
  * {@link GameActivityCallbacks}
@@ -114,199 +124,6 @@ typedef struct GameActivity {
      */
     const char* obbPath;
 } GameActivity;
-
-/**
- * The maximum number of axes supported in an Android MotionEvent.
- * See https://developer.android.com/ndk/reference/group/input.
- */
-#define GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT 48
-
-/**
- * \brief Describe information about a pointer, found in a
- * GameActivityMotionEvent.
- *
- * You can read values directly from this structure, or use helper functions
- * (`GameActivityPointerAxes_getX`, `GameActivityPointerAxes_getY` and
- * `GameActivityPointerAxes_getAxisValue`).
- *
- * The X axis and Y axis are enabled by default but any other axis that you want
- * to read **must** be enabled first, using
- * `GameActivityPointerAxes_enableAxis`.
- *
- * \see GameActivityMotionEvent
- */
-typedef struct GameActivityPointerAxes {
-    int32_t id;
-    int32_t toolType;
-    float axisValues[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT];
-    float rawX;
-    float rawY;
-} GameActivityPointerAxes;
-
-typedef struct GameActivityHistoricalPointerAxes {
-    int64_t eventTime;
-    float axisValues[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT];
-} GameActivityHistoricalPointerAxes;
-
-/** \brief Get the current X coordinate of the pointer. */
-inline float GameActivityPointerAxes_getX(
-    const GameActivityPointerAxes* pointerInfo) {
-    return pointerInfo->axisValues[AMOTION_EVENT_AXIS_X];
-}
-
-/** \brief Get the current Y coordinate of the pointer. */
-inline float GameActivityPointerAxes_getY(
-    const GameActivityPointerAxes* pointerInfo) {
-    return pointerInfo->axisValues[AMOTION_EVENT_AXIS_Y];
-}
-
-/**
- * \brief Enable the specified axis, so that its value is reported in the
- * GameActivityPointerAxes structures stored in a motion event.
- *
- * You must enable any axis that you want to read, apart from
- * `AMOTION_EVENT_AXIS_X` and `AMOTION_EVENT_AXIS_Y` that are enabled by
- * default.
- *
- * If the axis index is out of range, nothing is done.
- */
-void GameActivityPointerAxes_enableAxis(int32_t axis);
-
-/**
- * \brief Disable the specified axis. Its value won't be reported in the
- * GameActivityPointerAxes structures stored in a motion event anymore.
- *
- * Apart from X and Y, any axis that you want to read **must** be enabled first,
- * using `GameActivityPointerAxes_enableAxis`.
- *
- * If the axis index is out of range, nothing is done.
- */
-void GameActivityPointerAxes_disableAxis(int32_t axis);
-
-/**
- * \brief Enable the specified axis, so that its value is reported in the
- * GameActivityHistoricalPointerAxes structures associated with a motion event.
- *
- * You must enable any axis that you want to read (no axes are enabled by
- * default).
- *
- * If the axis index is out of range, nothing is done.
- */
-void GameActivityHistoricalPointerAxes_enableAxis(int32_t axis);
-
-/**
- * \brief Disable the specified axis. Its value won't be reported in the
- * GameActivityHistoricalPointerAxes structures associated with motion events
- * anymore.
- *
- * If the axis index is out of range, nothing is done.
- */
-void GameActivityHistoricalPointerAxes_disableAxis(int32_t axis);
-
-/**
- * \brief Get the value of the requested axis.
- *
- * Apart from X and Y, any axis that you want to read **must** be enabled first,
- * using `GameActivityPointerAxes_enableAxis`.
- *
- * Find the valid enums for the axis (`AMOTION_EVENT_AXIS_X`,
- * `AMOTION_EVENT_AXIS_Y`, `AMOTION_EVENT_AXIS_PRESSURE`...)
- * in https://developer.android.com/ndk/reference/group/input.
- *
- * @param pointerInfo The structure containing information about the pointer,
- * obtained from GameActivityMotionEvent.
- * @param axis The axis to get the value from
- * @return The value of the axis, or 0 if the axis is invalid or was not
- * enabled.
- */
-inline float GameActivityPointerAxes_getAxisValue(
-    GameActivityPointerAxes* pointerInfo, int32_t axis) {
-    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
-        return 0;
-    }
-
-    return pointerInfo->axisValues[axis];
-}
-
-/**
- * The maximum number of pointers returned inside a motion event.
- */
-#if (defined GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT_OVERRIDE)
-#define GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT \
-    GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT_OVERRIDE
-#else
-#define GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT 8
-#endif
-
-/**
- * The maximum number of historic samples associated with a single motion event.
- */
-#if (defined GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT_OVERRIDE)
-#define GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT \
-    GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT_OVERRIDE
-#else
-#define GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT 8
-#endif
-
-/**
- * \brief Describe a motion event that happened on the GameActivity SurfaceView.
- *
- * This is 1:1 mapping to the information contained in a Java `MotionEvent`
- * (see https://developer.android.com/reference/android/view/MotionEvent).
- */
-typedef struct GameActivityMotionEvent {
-    int32_t deviceId;
-    int32_t source;
-    int32_t action;
-
-    int64_t eventTime;
-    int64_t downTime;
-
-    int32_t flags;
-    int32_t metaState;
-
-    int32_t actionButton;
-    int32_t buttonState;
-    int32_t classification;
-    int32_t edgeFlags;
-
-    uint32_t pointerCount;
-    GameActivityPointerAxes
-        pointers[GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT];
-
-    float precisionX;
-    float precisionY;
-
-    int16_t historicalStart;
-
-    // Note the actual buffer of historical data has a length of
-    // pointerCount * historicalCount, since the historical axis
-    // data is per-pointer.
-    int16_t historicalCount;
-} GameActivityMotionEvent;
-
-/**
- * \brief Describe a key event that happened on the GameActivity SurfaceView.
- *
- * This is 1:1 mapping to the information contained in a Java `KeyEvent`
- * (see https://developer.android.com/reference/android/view/KeyEvent).
- */
-typedef struct GameActivityKeyEvent {
-    int32_t deviceId;
-    int32_t source;
-    int32_t action;
-
-    int64_t eventTime;
-    int64_t downTime;
-
-    int32_t flags;
-    int32_t metaState;
-
-    int32_t modifiers;
-    int32_t repeatCount;
-    int32_t keyCode;
-    int32_t scanCode;
-} GameActivityKeyEvent;
 
 /**
  * A function the user should call from their callback with the data, its length
@@ -424,9 +241,7 @@ typedef struct GameActivityCallbacks {
      * only valid during the callback.
      */
     bool (*onTouchEvent)(GameActivity* activity,
-                         const GameActivityMotionEvent* event,
-                         const GameActivityHistoricalPointerAxes* historical,
-                         int historicalLen);
+                         const GameActivityMotionEvent* event);
 
     /**
      * Callback called for every key down event on the GameActivity SurfaceView.
@@ -456,36 +271,13 @@ typedef struct GameActivityCallbacks {
      * Call GameActivity_getWindowInsets to retrieve the insets themselves.
      */
     void (*onWindowInsetsChanged)(GameActivity* activity);
+
+    /**
+     * Callback called when the rectangle in the window where the content
+     * should be placed has changed.
+     */
+    void (*onContentRectChanged)(GameActivity *activity, const ARect *rect);
 } GameActivityCallbacks;
-
-/**
- * \brief Convert a Java `MotionEvent` to a `GameActivityMotionEvent`.
- *
- * This is done automatically by the GameActivity: see `onTouchEvent` to set
- * a callback to consume the received events.
- * This function can be used if you re-implement events handling in your own
- * activity. On return, the out_event->historicalStart will be zero, and should
- * be updated to index into whatever buffer out_historical is copied.
- * On return the length of out_historical is
- * (out_event->pointerCount x out_event->historicalCount) and is in a
- * pointer-major order (i.e. all axis for a pointer are contiguous)
- * Ownership of out_event is maintained by the caller.
- */
-int GameActivityMotionEvent_fromJava(JNIEnv* env, jobject motionEvent,
-                                     GameActivityMotionEvent* out_event,
-                                     GameActivityHistoricalPointerAxes *out_historical);
-
-/**
- * \brief Convert a Java `KeyEvent` to a `GameActivityKeyEvent`.
- *
- * This is done automatically by the GameActivity: see `onKeyUp` and `onKeyDown`
- * to set a callback to consume the received events.
- * This function can be used if you re-implement events handling in your own
- * activity.
- * Ownership of out_event is maintained by the caller.
- */
-void GameActivityKeyEvent_fromJava(JNIEnv* env, jobject motionEvent,
-                                   GameActivityKeyEvent* out_event);
 
 /**
  * This is the function that must be in the native code to instantiate the
@@ -504,7 +296,7 @@ typedef void GameActivity_createFunc(GameActivity* activity, void* savedState,
  * "android.app.func_name" string meta-data in your manifest to use a different
  * function.
  */
-extern GameActivity_createFunc GameActivity_onCreate;
+extern GameActivity_createFunc GameActivity_onCreate_C;
 
 /**
  * Finish the given activity.  Its finish() method will be called, causing it
@@ -810,6 +602,30 @@ void GameActivity_getWindowInsets(GameActivity* activity,
  */
 void GameActivity_setImeEditorInfo(GameActivity* activity, int inputType,
                                    int actionId, int imeOptions);
+
+/**
+ * These are getters for Configuration class members. They may be called from
+ * any thread.
+ */
+int GameActivity_getOrientation(GameActivity* activity);
+int GameActivity_getColorMode(GameActivity* activity);
+int GameActivity_getDensityDpi(GameActivity* activity);
+float GameActivity_getFontScale(GameActivity* activity);
+int GameActivity_getFontWeightAdjustment(GameActivity* activity);
+int GameActivity_getHardKeyboardHidden(GameActivity* activity);
+int GameActivity_getKeyboard(GameActivity* activity);
+int GameActivity_getKeyboardHidden(GameActivity* activity);
+int GameActivity_getMcc(GameActivity* activity);
+int GameActivity_getMnc(GameActivity* activity);
+int GameActivity_getNavigation(GameActivity* activity);
+int GameActivity_getNavigationHidden(GameActivity* activity);
+int GameActivity_getOrientation(GameActivity* activity);
+int GameActivity_getScreenHeightDp(GameActivity* activity);
+int GameActivity_getScreenLayout(GameActivity* activity);
+int GameActivity_getScreenWidthDp(GameActivity* activity);
+int GameActivity_getSmallestScreenWidthDp(GameActivity* activity);
+int GameActivity_getTouchscreen(GameActivity* activity);
+int GameActivity_getUIMode(GameActivity* activity);
 
 #ifdef __cplusplus
 }

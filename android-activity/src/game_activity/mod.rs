@@ -467,7 +467,17 @@ impl<'a> MotionEventsLendingIterator<'a> {
     }
     fn next(&mut self) -> Option<MotionEvent<'a>> {
         if self.pos < self.count {
-            let ga_event = unsafe { &(*self.buffer.ptr.as_ptr()).motionEvents[self.pos] };
+            // Safety:
+            // - This iterator currently has exclusive access to the front buffer of events
+            // - We know the buffer is non-null
+            // - `pos` is less than the number of events stored in the buffer
+            let ga_event = unsafe {
+                (*self.buffer.ptr.as_ptr())
+                    .motionEvents
+                    .offset(self.pos as isize)
+                    .as_ref()
+                    .unwrap()
+            };
             let event = MotionEvent::new(ga_event);
             self.pos += 1;
             Some(event)
@@ -496,7 +506,17 @@ impl<'a> KeyEventsLendingIterator<'a> {
     }
     fn next(&mut self) -> Option<KeyEvent<'a>> {
         if self.pos < self.count {
-            let ga_event = unsafe { &(*self.buffer.ptr.as_ptr()).keyEvents[self.pos] };
+            // Safety:
+            // - This iterator currently has exclusive access to the front buffer of events
+            // - We know the buffer is non-null
+            // - `pos` is less than the number of events stored in the buffer
+            let ga_event = unsafe {
+                (*self.buffer.ptr.as_ptr())
+                    .keyEvents
+                    .offset(self.pos as isize)
+                    .as_ref()
+                    .unwrap()
+            };
             let event = KeyEvent::new(ga_event);
             self.pos += 1;
             Some(event)
@@ -543,16 +563,15 @@ impl<'a> Drop for InputBuffer<'a> {
 //
 // https://github.com/rust-lang/rfcs/issues/2771
 extern "C" {
-    pub fn Java_com_google_androidgamesdk_GameActivity_loadNativeCode_C(
+    pub fn Java_com_google_androidgamesdk_GameActivity_initializeNativeCode_C(
         env: *mut JNIEnv,
         javaGameActivity: jobject,
-        path: jstring,
-        funcName: jstring,
         internalDataDir: jstring,
         obbDir: jstring,
         externalDataDir: jstring,
         jAssetMgr: jobject,
         savedState: jbyteArray,
+        javaConfig: jobject,
     ) -> jlong;
 
     pub fn GameActivity_onCreate_C(
@@ -563,27 +582,25 @@ extern "C" {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn Java_com_google_androidgamesdk_GameActivity_loadNativeCode(
+pub unsafe extern "C" fn Java_com_google_androidgamesdk_GameActivity_initializeNativeCode(
     env: *mut JNIEnv,
     java_game_activity: jobject,
-    path: jstring,
-    func_name: jstring,
     internal_data_dir: jstring,
     obb_dir: jstring,
     external_data_dir: jstring,
     jasset_mgr: jobject,
     saved_state: jbyteArray,
+    java_config: jobject,
 ) -> jni_sys::jlong {
-    Java_com_google_androidgamesdk_GameActivity_loadNativeCode_C(
+    Java_com_google_androidgamesdk_GameActivity_initializeNativeCode_C(
         env,
         java_game_activity,
-        path,
-        func_name,
         internal_data_dir,
         obb_dir,
         external_data_dir,
         jasset_mgr,
         saved_state,
+        java_config,
     )
 }
 

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#define LOG_TAG "GameActivity"
 
 #include "GameActivity.h"
 
@@ -39,53 +38,9 @@
 #include <mutex>
 #include <string>
 
-// TODO(b/187147166): these functions were extracted from the Game SDK
-// (gamesdk/src/common/system_utils.h). system_utils.h/cpp should be used
-// instead.
+#include "GameActivityLog.h"
+
 namespace {
-
-#if __ANDROID_API__ >= 26
-std::string getSystemPropViaCallback(const char *key,
-                                     const char *default_value = "") {
-    const prop_info *prop = __system_property_find(key);
-    if (prop == nullptr) {
-        return default_value;
-    }
-    std::string return_value;
-    auto thunk = [](void *cookie, const char * /*name*/, const char *value,
-                    uint32_t /*serial*/) {
-        if (value != nullptr) {
-            std::string *r = static_cast<std::string *>(cookie);
-            *r = value;
-        }
-    };
-    __system_property_read_callback(prop, thunk, &return_value);
-    return return_value;
-}
-#else
-std::string getSystemPropViaGet(const char *key,
-                                const char *default_value = "") {
-    char buffer[PROP_VALUE_MAX + 1] = "";  // +1 for terminator
-    int bufferLen = __system_property_get(key, buffer);
-    if (bufferLen > 0)
-        return buffer;
-    else
-        return "";
-}
-#endif
-
-std::string GetSystemProp(const char *key, const char *default_value = "") {
-#if __ANDROID_API__ >= 26
-    return getSystemPropViaCallback(key, default_value);
-#else
-    return getSystemPropViaGet(key, default_value);
-#endif
-}
-
-int GetSystemPropAsInt(const char *key, int default_value = 0) {
-    std::string prop = GetSystemProp(key);
-    return prop == "" ? default_value : strtoll(prop.c_str(), nullptr, 10);
-}
 
 struct OwnedGameTextInputState {
     OwnedGameTextInputState &operator=(const GameTextInputState &rhs) {
@@ -99,93 +54,6 @@ struct OwnedGameTextInputState {
 };
 
 }  // anonymous namespace
-
-#define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__);
-#define ALOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__);
-#define ALOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__);
-#ifdef NDEBUG
-#define ALOGV(...)
-#else
-#define ALOGV(...) \
-    __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__);
-#endif
-
-/* Returns 2nd arg.  Used to substitute default value if caller's vararg list
- * is empty.
- */
-#define __android_second(first, second, ...) second
-
-/* If passed multiple args, returns ',' followed by all but 1st arg, otherwise
- * returns nothing.
- */
-#define __android_rest(first, ...) , ##__VA_ARGS__
-
-#define android_printAssert(cond, tag, fmt...) \
-    __android_log_assert(cond, tag,            \
-                         __android_second(0, ##fmt, NULL) __android_rest(fmt))
-
-#define CONDITION(cond) (__builtin_expect((cond) != 0, 0))
-
-#ifndef LOG_ALWAYS_FATAL_IF
-#define LOG_ALWAYS_FATAL_IF(cond, ...)                                \
-    ((CONDITION(cond))                                                \
-         ? ((void)android_printAssert(#cond, LOG_TAG, ##__VA_ARGS__)) \
-         : (void)0)
-#endif
-
-#ifndef LOG_ALWAYS_FATAL
-#define LOG_ALWAYS_FATAL(...) \
-    (((void)android_printAssert(NULL, LOG_TAG, ##__VA_ARGS__)))
-#endif
-
-/*
- * Simplified macro to send a warning system log message using current LOG_TAG.
- */
-#ifndef SLOGW
-#define SLOGW(...) \
-    ((void)__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__))
-#endif
-
-#ifndef SLOGW_IF
-#define SLOGW_IF(cond, ...)                                                    \
-    ((__predict_false(cond))                                                   \
-         ? ((void)__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)) \
-         : (void)0)
-#endif
-
-/*
- * Versions of LOG_ALWAYS_FATAL_IF and LOG_ALWAYS_FATAL that
- * are stripped out of release builds.
- */
-#if LOG_NDEBUG
-
-#ifndef LOG_FATAL_IF
-#define LOG_FATAL_IF(cond, ...) ((void)0)
-#endif
-#ifndef LOG_FATAL
-#define LOG_FATAL(...) ((void)0)
-#endif
-
-#else
-
-#ifndef LOG_FATAL_IF
-#define LOG_FATAL_IF(cond, ...) LOG_ALWAYS_FATAL_IF(cond, ##__VA_ARGS__)
-#endif
-#ifndef LOG_FATAL
-#define LOG_FATAL(...) LOG_ALWAYS_FATAL(__VA_ARGS__)
-#endif
-
-#endif
-
-/*
- * Assertion that generates a log message when the assertion fails.
- * Stripped out of release builds.  Uses the current LOG_TAG.
- */
-#ifndef ALOG_ASSERT
-#define ALOG_ASSERT(cond, ...) LOG_FATAL_IF(!(cond), ##__VA_ARGS__)
-#endif
-
-#define LOG_TRACE(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
 #ifndef NELEM
 #define NELEM(x) ((int)(sizeof(x) / sizeof((x)[0])))
@@ -213,6 +81,30 @@ static struct {
 } gInsetsClassInfo;
 
 /*
+ * JNI fields of the Configuration Java class.
+ */
+static struct ConfigurationClassInfo {
+    jfieldID colorMode;
+    jfieldID densityDpi;
+    jfieldID fontScale;
+    jfieldID fontWeightAdjustment;
+    jfieldID hardKeyboardHidden;
+    jfieldID keyboard;
+    jfieldID keyboardHidden;
+    jfieldID mcc;
+    jfieldID mnc;
+    jfieldID navigation;
+    jfieldID navigationHidden;
+    jfieldID orientation;
+    jfieldID screenHeightDp;
+    jfieldID screenLayout;
+    jfieldID screenWidthDp;
+    jfieldID smallestScreenWidthDp;
+    jfieldID touchscreen;
+    jfieldID uiMode;
+} gConfigurationClassInfo;
+
+/*
  * JNI methods of the WindowInsetsCompat.Type Java class.
  */
 static struct {
@@ -228,6 +120,7 @@ struct ActivityWork {
     int32_t cmd;
     int64_t arg1;
     int64_t arg2;
+    int64_t arg3;
 };
 
 /*
@@ -240,19 +133,46 @@ enum {
     CMD_SET_WINDOW_FLAGS,
     CMD_SHOW_SOFT_INPUT,
     CMD_HIDE_SOFT_INPUT,
-    CMD_SET_SOFT_INPUT_STATE
+    CMD_SET_SOFT_INPUT_STATE,
+    CMD_SET_IME_EDITOR_INFO
 };
+
+/*
+ * Last known Configuration values. They may be accessed from the different
+ * thread, this is why they are made atomic.
+ */
+static struct Configuration {
+    std::atomic_int colorMode;
+    std::atomic_int densityDpi;
+    std::atomic<float> fontScale;
+    std::atomic_int fontWeightAdjustment;
+    std::atomic_int hardKeyboardHidden;
+    std::atomic_int keyboard;
+    std::atomic_int keyboardHidden;
+    std::atomic_int mcc;
+    std::atomic_int mnc;
+    std::atomic_int navigation;
+    std::atomic_int navigationHidden;
+    std::atomic_int orientation;
+    std::atomic_int screenHeightDp;
+    std::atomic_int screenLayout;
+    std::atomic_int screenWidthDp;
+    std::atomic_int smallestScreenWidthDp;
+    std::atomic_int touchscreen;
+    std::atomic_int uiMode;
+} gConfiguration;
 
 /*
  * Write a command to be executed by the GameActivity on the application main
  * thread.
  */
-static void write_work(int fd, int32_t cmd, int64_t arg1 = 0,
-                       int64_t arg2 = 0) {
+static void write_work(int fd, int32_t cmd, int64_t arg1 = 0, int64_t arg2 = 0,
+                       int64_t arg3 = 0) {
     ActivityWork work;
     work.cmd = cmd;
     work.arg1 = arg1;
     work.arg2 = arg2;
+    work.arg3 = arg3;
 
     LOG_TRACE("write_work: cmd=%d", cmd);
 restart:
@@ -291,12 +211,10 @@ static bool read_work(int fd, ActivityWork *outWork) {
  * Native state for interacting with the GameActivity class.
  */
 struct NativeCode : public GameActivity {
-    NativeCode(void *_dlhandle, GameActivity_createFunc *_createFunc) {
+    NativeCode() {
         memset((GameActivity *)this, 0, sizeof(GameActivity));
         memset(&callbacks, 0, sizeof(callbacks));
         memset(&insetsState, 0, sizeof(insetsState));
-        dlhandle = _dlhandle;
-        createActivityFunc = _createFunc;
         nativeWindow = NULL;
         mainWorkRead = mainWorkWrite = -1;
         gameTextInput = NULL;
@@ -324,12 +242,6 @@ struct NativeCode : public GameActivity {
         setSurface(NULL);
         if (mainWorkRead >= 0) close(mainWorkRead);
         if (mainWorkWrite >= 0) close(mainWorkWrite);
-        if (dlhandle != NULL) {
-            // for now don't unload...  we probably should clean this
-            // up and only keep one open dlhandle per proc, since there
-            // is really no benefit to unloading the code.
-            // dlclose(dlhandle);
-        }
     }
 
     void setSurface(jobject _surface) {
@@ -344,9 +256,6 @@ struct NativeCode : public GameActivity {
     }
 
     GameActivityCallbacks callbacks;
-
-    void *dlhandle;
-    GameActivity_createFunc *createActivityFunc;
 
     std::string internalDataPathObj;
     std::string externalDataPathObj;
@@ -373,6 +282,8 @@ struct NativeCode : public GameActivity {
 
     ARect insetsState[GAMECOMMON_INSETS_TYPE_COUNT];
 };
+
+static void readConfigurationValues(NativeCode *code, jobject javaConfig);
 
 extern "C" void GameActivity_finish(GameActivity *activity) {
     NativeCode *code = static_cast<NativeCode *>(activity);
@@ -476,6 +387,13 @@ static int mainWorkCallback(int fd, int events, void *data) {
         case CMD_HIDE_SOFT_INPUT: {
             GameTextInput_hideIme(code->gameTextInput, work.arg1);
         } break;
+        case CMD_SET_IME_EDITOR_INFO: {
+            code->env->CallVoidMethod(
+                code->javaGameActivity,
+                gGameActivityClassInfo.setImeEditorInfoFields, work.arg1,
+                work.arg2, work.arg3);
+            checkAndClearException(code->env, "setImeEditorInfo");
+        } break;
         default:
             ALOGW("Unknown work command: %d", work.cmd);
             break;
@@ -485,40 +403,16 @@ static int mainWorkCallback(int fd, int events, void *data) {
 }
 
 // ------------------------------------------------------------------------
-
 static thread_local std::string g_error_msg;
 
-static jlong loadNativeCode_native(JNIEnv *env, jobject javaGameActivity,
-                                   jstring path, jstring funcName,
-                                   jstring internalDataDir, jstring obbDir,
-                                   jstring externalDataDir, jobject jAssetMgr,
-                                   jbyteArray savedState) {
-    LOG_TRACE("loadNativeCode_native");
-    const char *pathStr = env->GetStringUTFChars(path, NULL);
+static jlong initializeNativeCode_native(
+    JNIEnv *env, jobject javaGameActivity, jstring internalDataDir,
+    jstring obbDir, jstring externalDataDir, jobject jAssetMgr,
+    jbyteArray savedState, jobject javaConfig) {
+    LOG_TRACE("initializeNativeCode_native");
     NativeCode *code = NULL;
 
-    void *handle = dlopen(pathStr, RTLD_LAZY);
-
-    env->ReleaseStringUTFChars(path, pathStr);
-
-    if (handle == nullptr) {
-        g_error_msg = dlerror();
-        ALOGE("GameActivity dlopen(\"%s\") failed: %s", pathStr,
-              g_error_msg.c_str());
-        return 0;
-    }
-
-    const char *funcStr = env->GetStringUTFChars(funcName, NULL);
-    code = new NativeCode(handle,
-                          (GameActivity_createFunc *)dlsym(handle, funcStr));
-    env->ReleaseStringUTFChars(funcName, funcStr);
-
-    if (code->createActivityFunc == nullptr) {
-        g_error_msg = dlerror();
-        ALOGW("GameActivity_onCreate not found: %s", g_error_msg.c_str());
-        delete code;
-        return 0;
-    }
+    code = new NativeCode();
 
     code->looper = ALooper_forThread();
     if (code->looper == nullptr) {
@@ -588,7 +482,10 @@ static jlong loadNativeCode_native(JNIEnv *env, jobject javaGameActivity,
         rawSavedState = env->GetByteArrayElements(savedState, NULL);
         rawSavedSize = env->GetArrayLength(savedState);
     }
-    code->createActivityFunc(code, rawSavedState, rawSavedSize);
+
+    readConfigurationValues(code, javaConfig);
+
+    GameActivity_onCreate_C(code, rawSavedState, rawSavedSize);
 
     code->gameTextInput = GameTextInput_init(env, 0);
     GameTextInput_setEventCallback(code->gameTextInput,
@@ -609,9 +506,9 @@ static jstring getDlError_native(JNIEnv *env, jobject javaGameActivity) {
     return result;
 }
 
-static void unloadNativeCode_native(JNIEnv *env, jobject javaGameActivity,
+static void terminateNativeCode_native(JNIEnv *env, jobject javaGameActivity,
                                     jlong handle) {
-    LOG_TRACE("unloadNativeCode_native");
+    LOG_TRACE("terminateNativeCode_native");
     if (handle != 0) {
         NativeCode *code = (NativeCode *)handle;
         delete code;
@@ -695,11 +592,57 @@ static void onStop_native(JNIEnv *env, jobject javaGameActivity, jlong handle) {
     }
 }
 
+static void readConfigurationValues(NativeCode *code, jobject javaConfig) {
+    if (gConfigurationClassInfo.colorMode != NULL) {
+        gConfiguration.colorMode = code->env->GetIntField(
+            javaConfig, gConfigurationClassInfo.colorMode);
+    }
+
+    gConfiguration.densityDpi =
+        code->env->GetIntField(javaConfig, gConfigurationClassInfo.densityDpi);
+    gConfiguration.fontScale =
+        code->env->GetFloatField(javaConfig, gConfigurationClassInfo.fontScale);
+
+    if (gConfigurationClassInfo.fontWeightAdjustment != NULL) {
+        gConfiguration.fontWeightAdjustment = code->env->GetIntField(
+            javaConfig, gConfigurationClassInfo.fontWeightAdjustment);
+    }
+
+    gConfiguration.hardKeyboardHidden = code->env->GetIntField(
+        javaConfig, gConfigurationClassInfo.hardKeyboardHidden);
+    gConfiguration.mcc =
+        code->env->GetIntField(javaConfig, gConfigurationClassInfo.mcc);
+    gConfiguration.mnc =
+        code->env->GetIntField(javaConfig, gConfigurationClassInfo.mnc);
+    gConfiguration.navigation =
+        code->env->GetIntField(javaConfig, gConfigurationClassInfo.navigation);
+    gConfiguration.navigationHidden = code->env->GetIntField(
+        javaConfig, gConfigurationClassInfo.navigationHidden);
+    gConfiguration.orientation =
+        code->env->GetIntField(javaConfig, gConfigurationClassInfo.orientation);
+    gConfiguration.screenHeightDp = code->env->GetIntField(
+        javaConfig, gConfigurationClassInfo.screenHeightDp);
+    gConfiguration.screenLayout = code->env->GetIntField(
+        javaConfig, gConfigurationClassInfo.screenLayout);
+    gConfiguration.screenWidthDp = code->env->GetIntField(
+        javaConfig, gConfigurationClassInfo.screenWidthDp);
+    gConfiguration.smallestScreenWidthDp = code->env->GetIntField(
+        javaConfig, gConfigurationClassInfo.smallestScreenWidthDp);
+    gConfiguration.touchscreen =
+        code->env->GetIntField(javaConfig, gConfigurationClassInfo.touchscreen);
+    gConfiguration.uiMode =
+        code->env->GetIntField(javaConfig, gConfigurationClassInfo.uiMode);
+
+    checkAndClearException(code->env, "Configuration.get");
+}
+
 static void onConfigurationChanged_native(JNIEnv *env, jobject javaGameActivity,
-                                          jlong handle) {
+                                          jlong handle, jobject javaNewConfig) {
     LOG_TRACE("onConfigurationChanged_native");
     if (handle != 0) {
         NativeCode *code = (NativeCode *)handle;
+        readConfigurationValues(code, javaNewConfig);
+
         if (code->callbacks.onConfigurationChanged != NULL) {
             code->callbacks.onConfigurationChanged(code);
         }
@@ -776,8 +719,12 @@ static void onSurfaceChanged_native(JNIEnv *env, jobject javaGameActivity,
             // Maybe it was resized?
             int32_t newWidth = ANativeWindow_getWidth(code->nativeWindow);
             int32_t newHeight = ANativeWindow_getHeight(code->nativeWindow);
+
             if (newWidth != code->lastWindowWidth ||
                 newHeight != code->lastWindowHeight) {
+                code->lastWindowWidth = newWidth;
+                code->lastWindowHeight = newHeight;
+
                 if (code->callbacks.onNativeWindowResized != NULL) {
                     code->callbacks.onNativeWindowResized(
                         code, code->nativeWindow, newWidth, newHeight);
@@ -817,347 +764,84 @@ static void onSurfaceDestroyed_native(JNIEnv *env, jobject javaGameActivity,
     }
 }
 
-static bool enabledAxes[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT] = {
-    /* AMOTION_EVENT_AXIS_X */ true,
-    /* AMOTION_EVENT_AXIS_Y */ true,
-    // Disable all other axes by default (they can be enabled using
-    // `GameActivityPointerAxes_enableAxis`).
-    false};
-
-extern "C" void GameActivityPointerAxes_enableAxis(int32_t axis) {
-    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
-        return;
-    }
-
-    enabledAxes[axis] = true;
-}
-
-extern "C" void GameActivityPointerAxes_disableAxis(int32_t axis) {
-    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
-        return;
-    }
-
-    enabledAxes[axis] = false;
-}
-
-static bool enabledHistoricalAxes[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT] = {
-    // Disable all axes by default (they can be enabled using
-    // `GameActivityPointerAxes_enableHistoricalAxis`).
-    false};
-
-extern "C" void GameActivityHistoricalPointerAxes_enableAxis(int32_t axis) {
-    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
-        return;
-    }
-
-    enabledHistoricalAxes[axis] = true;
-}
-
-extern "C" void GameActivityHistoricalPointerAxes_disableAxis(int32_t axis) {
-    if (axis < 0 || axis >= GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT) {
-        return;
-    }
-
-    enabledHistoricalAxes[axis] = false;
-}
-
 extern "C" void GameActivity_setImeEditorInfo(GameActivity *activity,
                                               int inputType, int actionId,
                                               int imeOptions) {
-    JNIEnv *env;
-    if (activity->vm->AttachCurrentThread(&env, NULL) == JNI_OK) {
-        env->CallVoidMethod(activity->javaGameActivity,
-                            gGameActivityClassInfo.setImeEditorInfoFields,
-                            inputType, actionId, imeOptions);
-    }
+    NativeCode *code = static_cast<NativeCode *>(activity);
+    write_work(code->mainWorkWrite, CMD_SET_IME_EDITOR_INFO, inputType,
+               actionId, imeOptions);
 }
 
-static struct {
-    jmethodID getDeviceId;
-    jmethodID getSource;
-    jmethodID getAction;
-
-    jmethodID getEventTime;
-    jmethodID getDownTime;
-
-    jmethodID getFlags;
-    jmethodID getMetaState;
-
-    jmethodID getActionButton;
-    jmethodID getButtonState;
-    jmethodID getClassification;
-    jmethodID getEdgeFlags;
-
-    jmethodID getPointerCount;
-    jmethodID getPointerId;
-    jmethodID getToolType;
-    jmethodID getRawX;
-    jmethodID getRawY;
-    jmethodID getXPrecision;
-    jmethodID getYPrecision;
-    jmethodID getAxisValue;
-
-    jmethodID getHistorySize;
-    jmethodID getHistoricalEventTime;
-    jmethodID getHistoricalAxisValue;
-} gMotionEventClassInfo;
-
-extern "C" int GameActivityMotionEvent_fromJava(
-    JNIEnv *env, jobject motionEvent, GameActivityMotionEvent *out_event,
-    GameActivityHistoricalPointerAxes *out_historical) {
-    static bool gMotionEventClassInfoInitialized = false;
-    if (!gMotionEventClassInfoInitialized) {
-        int sdkVersion = GetSystemPropAsInt("ro.build.version.sdk");
-        gMotionEventClassInfo = {0};
-        jclass motionEventClass = env->FindClass("android/view/MotionEvent");
-        gMotionEventClassInfo.getDeviceId =
-            env->GetMethodID(motionEventClass, "getDeviceId", "()I");
-        gMotionEventClassInfo.getSource =
-            env->GetMethodID(motionEventClass, "getSource", "()I");
-        gMotionEventClassInfo.getAction =
-            env->GetMethodID(motionEventClass, "getAction", "()I");
-        gMotionEventClassInfo.getEventTime =
-            env->GetMethodID(motionEventClass, "getEventTime", "()J");
-        gMotionEventClassInfo.getDownTime =
-            env->GetMethodID(motionEventClass, "getDownTime", "()J");
-        gMotionEventClassInfo.getFlags =
-            env->GetMethodID(motionEventClass, "getFlags", "()I");
-        gMotionEventClassInfo.getMetaState =
-            env->GetMethodID(motionEventClass, "getMetaState", "()I");
-        if (sdkVersion >= 23) {
-            gMotionEventClassInfo.getActionButton =
-                env->GetMethodID(motionEventClass, "getActionButton", "()I");
-        }
-        if (sdkVersion >= 14) {
-            gMotionEventClassInfo.getButtonState =
-                env->GetMethodID(motionEventClass, "getButtonState", "()I");
-        }
-        if (sdkVersion >= 29) {
-            gMotionEventClassInfo.getClassification =
-                env->GetMethodID(motionEventClass, "getClassification", "()I");
-        }
-        gMotionEventClassInfo.getEdgeFlags =
-            env->GetMethodID(motionEventClass, "getEdgeFlags", "()I");
-        gMotionEventClassInfo.getPointerCount =
-            env->GetMethodID(motionEventClass, "getPointerCount", "()I");
-        gMotionEventClassInfo.getPointerId =
-            env->GetMethodID(motionEventClass, "getPointerId", "(I)I");
-        gMotionEventClassInfo.getToolType =
-            env->GetMethodID(motionEventClass, "getToolType", "(I)I");
-        if (sdkVersion >= 29) {
-            gMotionEventClassInfo.getRawX =
-                env->GetMethodID(motionEventClass, "getRawX", "(I)F");
-            gMotionEventClassInfo.getRawY =
-                env->GetMethodID(motionEventClass, "getRawY", "(I)F");
-        }
-        gMotionEventClassInfo.getXPrecision =
-            env->GetMethodID(motionEventClass, "getXPrecision", "()F");
-        gMotionEventClassInfo.getYPrecision =
-            env->GetMethodID(motionEventClass, "getYPrecision", "()F");
-        gMotionEventClassInfo.getAxisValue =
-            env->GetMethodID(motionEventClass, "getAxisValue", "(II)F");
-
-        gMotionEventClassInfo.getHistorySize =
-            env->GetMethodID(motionEventClass, "getHistorySize", "()I");
-        gMotionEventClassInfo.getHistoricalEventTime =
-            env->GetMethodID(motionEventClass, "getHistoricalEventTime", "(I)J");
-        gMotionEventClassInfo.getHistoricalAxisValue =
-            env->GetMethodID(motionEventClass, "getHistoricalAxisValue", "(III)F");
-
-        gMotionEventClassInfoInitialized = true;
-    }
-
-    int historySize =
-        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getHistorySize);
-    historySize =
-        std::min(historySize, GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT);
-
-    int localEnabledHistoricalAxis[GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT];
-    int enabledHistoricalAxisCount = 0;
-
-    for (int axisIndex = 0;
-         axisIndex < GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT;
-         ++axisIndex) {
-        if (enabledHistoricalAxes[axisIndex]) {
-            localEnabledHistoricalAxis[enabledHistoricalAxisCount++] = axisIndex;
-        }
-    }
-    out_event->historicalCount = enabledHistoricalAxisCount == 0 ? 0 : historySize;
-    out_event->historicalStart = 0; // Free for caller to use
-
-    // The historical event times aren't unique per-pointer but for simplicity
-    // we output a per-pointer event time, copied from here...
-    int64_t historicalEventTimes[GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT];
-    for (int histIndex = 0; histIndex < historySize; ++histIndex) {
-        historicalEventTimes[histIndex] =
-            env->CallLongMethod(motionEvent,
-                gMotionEventClassInfo.getHistoricalEventTime, histIndex) *
-                1000000;
-    }
-
-    int pointerCount =
-        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getPointerCount);
-    pointerCount =
-        std::min(pointerCount, GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT);
-    out_event->pointerCount = pointerCount;
-    for (int i = 0; i < pointerCount; ++i) {
-        out_event->pointers[i] = {
-            /*id=*/env->CallIntMethod(motionEvent,
-                                      gMotionEventClassInfo.getPointerId, i),
-            /*toolType=*/env->CallIntMethod(motionEvent,
-                                            gMotionEventClassInfo.getToolType, i),
-            /*axisValues=*/{0},
-            /*rawX=*/gMotionEventClassInfo.getRawX
-                ? env->CallFloatMethod(motionEvent,
-                                       gMotionEventClassInfo.getRawX, i)
-                : 0,
-            /*rawY=*/gMotionEventClassInfo.getRawY
-                ? env->CallFloatMethod(motionEvent,
-                                       gMotionEventClassInfo.getRawY, i)
-                : 0,
-        };
-
-        for (int axisIndex = 0;
-             axisIndex < GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT; ++axisIndex) {
-            if (enabledAxes[axisIndex]) {
-                out_event->pointers[i].axisValues[axisIndex] =
-                    env->CallFloatMethod(motionEvent,
-                                         gMotionEventClassInfo.getAxisValue,
-                                         axisIndex, i);
-            }
-        }
-
-        if (enabledHistoricalAxisCount > 0) {
-            for (int histIndex = 0; histIndex < historySize; ++histIndex) {
-                int pointerHistIndex = historySize * i;
-                out_historical[pointerHistIndex].eventTime = historicalEventTimes[histIndex];
-                for (int c = 0; c < enabledHistoricalAxisCount; ++c) {
-                    int axisIndex = localEnabledHistoricalAxis[c];
-                    out_historical[pointerHistIndex].axisValues[axisIndex] =
-                        env->CallFloatMethod(motionEvent,
-                                             gMotionEventClassInfo.getHistoricalAxisValue,
-                                             axisIndex, i, histIndex);
-                }
-            }
-        }
-    }
-
-    out_event->deviceId =
-        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getDeviceId);
-    out_event->source =
-        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getSource);
-    out_event->action =
-        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getAction);
-    out_event->eventTime =
-        env->CallLongMethod(motionEvent, gMotionEventClassInfo.getEventTime) *
-        1000000;
-    out_event->downTime =
-        env->CallLongMethod(motionEvent, gMotionEventClassInfo.getDownTime) *
-        1000000;
-    out_event->flags =
-        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getFlags);
-    out_event->metaState =
-        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getMetaState);
-    out_event->actionButton =
-        gMotionEventClassInfo.getActionButton
-            ? env->CallIntMethod(motionEvent,
-                                 gMotionEventClassInfo.getActionButton)
-            : 0;
-    out_event->buttonState =
-        gMotionEventClassInfo.getButtonState
-            ? env->CallIntMethod(motionEvent,
-                                 gMotionEventClassInfo.getButtonState)
-            : 0;
-    out_event->classification =
-        gMotionEventClassInfo.getClassification
-            ? env->CallIntMethod(motionEvent,
-                                 gMotionEventClassInfo.getClassification)
-            : 0;
-    out_event->edgeFlags =
-        env->CallIntMethod(motionEvent, gMotionEventClassInfo.getEdgeFlags);
-    out_event->precisionX =
-        env->CallFloatMethod(motionEvent, gMotionEventClassInfo.getXPrecision);
-    out_event->precisionY =
-        env->CallFloatMethod(motionEvent, gMotionEventClassInfo.getYPrecision);
-
-    return out_event->pointerCount * out_event->historicalCount;
+extern "C" int GameActivity_getColorMode(GameActivity *) {
+    return gConfiguration.colorMode;
 }
 
-static struct {
-    jmethodID getDeviceId;
-    jmethodID getSource;
-    jmethodID getAction;
+extern "C" int GameActivity_getDensityDpi(GameActivity *) {
+    return gConfiguration.densityDpi;
+}
 
-    jmethodID getEventTime;
-    jmethodID getDownTime;
+extern "C" float GameActivity_getFontScale(GameActivity *) {
+    return gConfiguration.fontScale;
+}
 
-    jmethodID getFlags;
-    jmethodID getMetaState;
+extern "C" int GameActivity_getFontWeightAdjustment(GameActivity *) {
+    return gConfiguration.fontWeightAdjustment;
+}
 
-    jmethodID getModifiers;
-    jmethodID getRepeatCount;
-    jmethodID getKeyCode;
-    jmethodID getScanCode;
-} gKeyEventClassInfo;
+extern "C" int GameActivity_getHardKeyboardHidden(GameActivity *) {
+    return gConfiguration.hardKeyboardHidden;
+}
 
-extern "C" void GameActivityKeyEvent_fromJava(JNIEnv *env, jobject keyEvent,
-                                              GameActivityKeyEvent *out_event) {
-    static bool gKeyEventClassInfoInitialized = false;
-    if (!gKeyEventClassInfoInitialized) {
-        int sdkVersion = GetSystemPropAsInt("ro.build.version.sdk");
-        gKeyEventClassInfo = {0};
-        jclass keyEventClass = env->FindClass("android/view/KeyEvent");
-        gKeyEventClassInfo.getDeviceId =
-            env->GetMethodID(keyEventClass, "getDeviceId", "()I");
-        gKeyEventClassInfo.getSource =
-            env->GetMethodID(keyEventClass, "getSource", "()I");
-        gKeyEventClassInfo.getAction =
-            env->GetMethodID(keyEventClass, "getAction", "()I");
-        gKeyEventClassInfo.getEventTime =
-            env->GetMethodID(keyEventClass, "getEventTime", "()J");
-        gKeyEventClassInfo.getDownTime =
-            env->GetMethodID(keyEventClass, "getDownTime", "()J");
-        gKeyEventClassInfo.getFlags =
-            env->GetMethodID(keyEventClass, "getFlags", "()I");
-        gKeyEventClassInfo.getMetaState =
-            env->GetMethodID(keyEventClass, "getMetaState", "()I");
-        if (sdkVersion >= 13) {
-            gKeyEventClassInfo.getModifiers =
-                env->GetMethodID(keyEventClass, "getModifiers", "()I");
-        }
-        gKeyEventClassInfo.getRepeatCount =
-            env->GetMethodID(keyEventClass, "getRepeatCount", "()I");
-        gKeyEventClassInfo.getKeyCode =
-            env->GetMethodID(keyEventClass, "getKeyCode", "()I");
-        gKeyEventClassInfo.getScanCode =
-            env->GetMethodID(keyEventClass, "getScanCode", "()I");
+extern "C" int GameActivity_getKeyboard(GameActivity *) {
+    return gConfiguration.keyboard;
+}
 
-        gKeyEventClassInfoInitialized = true;
-    }
+extern "C" int GameActivity_getKeyboardHidden(GameActivity *) {
+    return gConfiguration.keyboardHidden;
+}
 
-    *out_event = {
-        /*deviceId=*/env->CallIntMethod(keyEvent,
-                                        gKeyEventClassInfo.getDeviceId),
-        /*source=*/env->CallIntMethod(keyEvent, gKeyEventClassInfo.getSource),
-        /*action=*/env->CallIntMethod(keyEvent, gKeyEventClassInfo.getAction),
-        // TODO: introduce a millisecondsToNanoseconds helper:
-        /*eventTime=*/
-        env->CallLongMethod(keyEvent, gKeyEventClassInfo.getEventTime) *
-            1000000,
-        /*downTime=*/
-        env->CallLongMethod(keyEvent, gKeyEventClassInfo.getDownTime) * 1000000,
-        /*flags=*/env->CallIntMethod(keyEvent, gKeyEventClassInfo.getFlags),
-        /*metaState=*/
-        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getMetaState),
-        /*modifiers=*/gKeyEventClassInfo.getModifiers
-            ? env->CallIntMethod(keyEvent, gKeyEventClassInfo.getModifiers)
-            : 0,
-        /*repeatCount=*/
-        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getRepeatCount),
-        /*keyCode=*/
-        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getKeyCode),
-        /*scanCode=*/
-        env->CallIntMethod(keyEvent, gKeyEventClassInfo.getScanCode)};
+extern "C" int GameActivity_getMcc(GameActivity *) {
+    return gConfiguration.mcc;
+}
+
+extern "C" int GameActivity_getMnc(GameActivity *) {
+    return gConfiguration.mnc;
+}
+
+extern "C" int GameActivity_getNavigation(GameActivity *) {
+    return gConfiguration.navigation;
+}
+
+extern "C" int GameActivity_getNavigationHidden(GameActivity *) {
+    return gConfiguration.navigationHidden;
+}
+
+extern "C" int GameActivity_getOrientation(GameActivity *) {
+    return gConfiguration.orientation;
+}
+
+extern "C" int GameActivity_getScreenHeightDp(GameActivity *) {
+    return gConfiguration.screenHeightDp;
+}
+
+extern "C" int GameActivity_getScreenLayout(GameActivity *) {
+    return gConfiguration.screenLayout;
+}
+
+extern "C" int GameActivity_getScreenWidthDp(GameActivity *) {
+    return gConfiguration.screenWidthDp;
+}
+
+extern "C" int GameActivity_getSmallestScreenWidthDp(GameActivity *) {
+    return gConfiguration.smallestScreenWidthDp;
+}
+
+extern "C" int GameActivity_getTouchscreen(GameActivity *) {
+    return gConfiguration.touchscreen;
+}
+
+extern "C" int GameActivity_getUIMode(GameActivity *) {
+    return gConfiguration.uiMode;
 }
 
 static bool onTouchEvent_native(JNIEnv *env, jobject javaGameActivity,
@@ -1167,11 +851,9 @@ static bool onTouchEvent_native(JNIEnv *env, jobject javaGameActivity,
     if (code->callbacks.onTouchEvent == nullptr) return false;
 
     static GameActivityMotionEvent c_event;
-    // Note the actual data is written contiguously as numPointers x historySize
-    // entries.
-    static GameActivityHistoricalPointerAxes historical[GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT * GAMEACTIVITY_MAX_NUM_HISTORICAL_IN_MOTION_EVENT];
-    int historicalLen = GameActivityMotionEvent_fromJava(env, motionEvent, &c_event, historical);
-    return code->callbacks.onTouchEvent(code, &c_event, historical, historicalLen);
+    GameActivityMotionEvent_fromJava(env, motionEvent, &c_event);
+    return code->callbacks.onTouchEvent(code, &c_event);
+
 }
 
 static bool onKeyUp_native(JNIEnv *env, jobject javaGameActivity, jlong handle,
@@ -1247,19 +929,37 @@ static void setInputConnection_native(JNIEnv *env, jobject activity,
     GameTextInput_setInputConnection(code->gameTextInput, inputConnection);
 }
 
+static void onContentRectChangedNative_native(JNIEnv *env, jobject activity,
+                                              jlong handle, jint x, jint y,
+                                              jint w, jint h) {
+    if (handle != 0) {
+        NativeCode *code = (NativeCode *)handle;
+
+        if (code->callbacks.onContentRectChanged != nullptr) {
+            ARect rect;
+            rect.left = x;
+            rect.top = y;
+            rect.right = x+w;
+            rect.bottom = y+h;
+            code->callbacks.onContentRectChanged(code, &rect);
+        }
+    }
+}
+
 static const JNINativeMethod g_methods[] = {
-    {"loadNativeCode",
-     "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/"
-     "String;Ljava/lang/String;Landroid/content/res/AssetManager;[B)J",
-     (void *)loadNativeCode_native},
+    {"initializeNativeCode",
+     "(Ljava/lang/String;Ljava/lang/String;"
+     "Ljava/lang/String;Landroid/content/res/AssetManager;"
+     "[BLandroid/content/res/Configuration;)J",
+     (void *)initializeNativeCode_native},
     {"getDlError", "()Ljava/lang/String;", (void *)getDlError_native},
-    {"unloadNativeCode", "(J)V", (void *)unloadNativeCode_native},
+    {"terminateNativeCode", "(J)V", (void *)terminateNativeCode_native},
     {"onStartNative", "(J)V", (void *)onStart_native},
     {"onResumeNative", "(J)V", (void *)onResume_native},
     {"onSaveInstanceStateNative", "(J)[B", (void *)onSaveInstanceState_native},
     {"onPauseNative", "(J)V", (void *)onPause_native},
     {"onStopNative", "(J)V", (void *)onStop_native},
-    {"onConfigurationChangedNative", "(J)V",
+    {"onConfigurationChangedNative", "(JLandroid/content/res/Configuration;)V",
      (void *)onConfigurationChanged_native},
     {"onTrimMemoryNative", "(JI)V", (void *)onTrimMemory_native},
     {"onWindowFocusChangedNative", "(JZ)V",
@@ -1284,13 +984,16 @@ static const JNINativeMethod g_methods[] = {
     {"setInputConnectionNative",
      "(JLcom/google/androidgamesdk/gametextinput/InputConnection;)V",
      (void *)setInputConnection_native},
+    {"onContentRectChangedNative", "(JIIII)V",
+     (void *)onContentRectChangedNative_native},
 };
 
 static const char *const kGameActivityPathName =
     "com/google/androidgamesdk/GameActivity";
 
 static const char *const kInsetsPathName = "androidx/core/graphics/Insets";
-
+static const char *const kConfigurationPathName =
+    "android/content/res/Configuration";
 static const char *const kWindowInsetsCompatTypePathName =
     "androidx/core/view/WindowInsetsCompat$Type";
 
@@ -1348,12 +1051,59 @@ extern "C" int GameActivity_register(JNIEnv *env) {
                   "getWaterfallInsets", "()Landroidx/core/graphics/Insets;");
     GET_METHOD_ID(gGameActivityClassInfo.setImeEditorInfoFields, activity_class,
                   "setImeEditorInfoFields", "(III)V");
+
     jclass insets_class;
     FIND_CLASS(insets_class, kInsetsPathName);
     GET_FIELD_ID(gInsetsClassInfo.left, insets_class, "left", "I");
     GET_FIELD_ID(gInsetsClassInfo.right, insets_class, "right", "I");
     GET_FIELD_ID(gInsetsClassInfo.top, insets_class, "top", "I");
     GET_FIELD_ID(gInsetsClassInfo.bottom, insets_class, "bottom", "I");
+
+    jclass configuration_class;
+    FIND_CLASS(configuration_class, kConfigurationPathName);
+
+    if (android_get_device_api_level() >= 26) {
+        GET_FIELD_ID(gConfigurationClassInfo.colorMode, configuration_class,
+                     "colorMode", "I");
+    }
+
+    GET_FIELD_ID(gConfigurationClassInfo.densityDpi, configuration_class,
+                 "densityDpi", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.fontScale, configuration_class,
+                 "fontScale", "F");
+
+    if (android_get_device_api_level() >= 31) {
+        GET_FIELD_ID(gConfigurationClassInfo.fontWeightAdjustment,
+                     configuration_class, "fontWeightAdjustment", "I");
+    }
+
+    GET_FIELD_ID(gConfigurationClassInfo.hardKeyboardHidden,
+                 configuration_class, "hardKeyboardHidden", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.keyboard, configuration_class,
+                 "keyboard", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.keyboardHidden, configuration_class,
+                 "keyboardHidden", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.mcc, configuration_class, "mcc", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.mnc, configuration_class, "mnc", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.navigation, configuration_class,
+                 "navigation", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.navigationHidden, configuration_class,
+                 "navigationHidden", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.orientation, configuration_class,
+                 "orientation", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.screenHeightDp, configuration_class,
+                 "screenHeightDp", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.screenLayout, configuration_class,
+                 "screenLayout", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.screenWidthDp, configuration_class,
+                 "screenWidthDp", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.smallestScreenWidthDp,
+                 configuration_class, "smallestScreenWidthDp", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.touchscreen, configuration_class,
+                 "touchscreen", "I");
+    GET_FIELD_ID(gConfigurationClassInfo.uiMode, configuration_class, "uiMode",
+                 "I");
+
     jclass windowInsetsCompatType_class;
     FIND_CLASS(windowInsetsCompatType_class, kWindowInsetsCompatTypePathName);
     gWindowInsetsCompatTypeClassInfo.clazz =
@@ -1384,15 +1134,14 @@ extern "C" int GameActivity_register(JNIEnv *env) {
 // Rust because Rust/Cargo don't give us a way to directly export symbols
 // from C/C++ code: https://github.com/rust-lang/rfcs/issues/2771
 //
-// Register this method so that GameActiviy_register does not need to be called
-// manually.
-extern "C" jlong Java_com_google_androidgamesdk_GameActivity_loadNativeCode_C(
-    JNIEnv *env, jobject javaGameActivity, jstring path, jstring funcName,
-    jstring internalDataDir, jstring obbDir, jstring externalDataDir,
-    jobject jAssetMgr, jbyteArray savedState) {
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_androidgamesdk_GameActivity_initializeNativeCode_C(
+    JNIEnv *env, jobject javaGameActivity, jstring internalDataDir,
+    jstring obbDir, jstring externalDataDir, jobject jAssetMgr,
+    jbyteArray savedState, jobject javaConfig) {
     GameActivity_register(env);
-    jlong nativeCode = loadNativeCode_native(
-        env, javaGameActivity, path, funcName, internalDataDir, obbDir,
-        externalDataDir, jAssetMgr, savedState);
+    jlong nativeCode = initializeNativeCode_native(
+        env, javaGameActivity, internalDataDir, obbDir, externalDataDir,
+        jAssetMgr, savedState, javaConfig);
     return nativeCode;
 }

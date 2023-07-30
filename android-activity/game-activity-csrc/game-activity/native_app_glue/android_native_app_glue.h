@@ -30,27 +30,6 @@
 
 #include "game-activity/GameActivity.h"
 
-#if (defined NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS_OVERRIDE)
-#define NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS \
-    NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS_OVERRIDE
-#else
-#define NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS 16
-#endif
-
-#if (defined NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES_OVERRIDE)
-#define NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES \
-    NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES_OVERRIDE
-#else
-#define NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES 64
-#endif
-
-#if (defined NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE)
-#define NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS \
-    NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE
-#else
-#define NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS 4
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -126,10 +105,10 @@ struct android_poll_source {
 
 struct android_input_buffer {
     /**
-     * Pointer to a read-only array of pointers to GameActivityMotionEvent.
+     * Pointer to a read-only array of GameActivityMotionEvent.
      * Only the first motionEventsCount events are valid.
      */
-    GameActivityMotionEvent motionEvents[NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS];
+    GameActivityMotionEvent *motionEvents;
 
     /**
      * The number of valid motion events in `motionEvents`.
@@ -137,36 +116,25 @@ struct android_input_buffer {
     uint64_t motionEventsCount;
 
     /**
-     * Pointer to a read-only array of pointers to GameActivityHistoricalPointerAxes.
-     *
-     * Only the first historicalSamplesCount samples are valid.
-     * Refer to event->historicalStart, event->pointerCount and event->historicalCount
-     * to access the specific samples that relate to an event.
-     *
-     * Each slice of samples for one event has a length of
-     * (event->pointerCount and event->historicalCount) and is in pointer-major
-     * order so the historic samples for each pointer are contiguous.
-     * E.g. you would access historic sample index 3 for pointer 2 of an event with:
-     *
-     *   historicalAxisSamples[event->historicalStart + (event->historicalCount * 2) + 3];
+     * The size of the `motionEvents` buffer.
      */
-    GameActivityHistoricalPointerAxes historicalAxisSamples[NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES];
+    uint64_t motionEventsBufferSize;
 
     /**
-     * The number of valid historical samples in `historicalAxisSamples`.
-     */
-    uint64_t historicalSamplesCount;
-
-    /**
-     * Pointer to a read-only array of pointers to GameActivityKeyEvent.
+     * Pointer to a read-only array of GameActivityKeyEvent.
      * Only the first keyEventsCount events are valid.
      */
-    GameActivityKeyEvent keyEvents[NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS];
+    GameActivityKeyEvent *keyEvents;
 
     /**
      * The number of valid "Key" events in `keyEvents`.
      */
     uint64_t keyEventsCount;
+
+    /**
+     * The size of the `keyEvents` buffer.
+     */
+    uint64_t keyEventsBufferSize;
 };
 
 /**
@@ -532,8 +500,6 @@ void android_app_set_motion_event_filter(struct android_app* app,
  */
 bool android_app_input_available_wake_up(struct android_app* app);
 
-void GameActivity_onCreate_C(GameActivity* activity, void* savedState,
-                            size_t savedStateSize);
 #ifdef __cplusplus
 }
 #endif

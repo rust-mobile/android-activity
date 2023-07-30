@@ -1,13 +1,20 @@
 #![allow(dead_code)]
 
 fn build_glue_for_game_activity() {
-    for f in ["GameActivity.h", "GameActivity.cpp"] {
+    for f in [
+        "GameActivity.h",
+        "GameActivity.cpp",
+        "GameActivityEvents.h",
+        "GameActivityEvents.cpp",
+        "GameActivityLog.h",
+    ] {
         println!("cargo:rerun-if-changed=game-activity-csrc/game-activity/{f}");
     }
     cc::Build::new()
         .cpp(true)
         .include("game-activity-csrc")
         .file("game-activity-csrc/game-activity/GameActivity.cpp")
+        .file("game-activity-csrc/game-activity/GameActivityEvents.cpp")
         .extra_warnings(false)
         .cpp_link_stdlib("c++_static")
         .compile("libgame_activity.a");

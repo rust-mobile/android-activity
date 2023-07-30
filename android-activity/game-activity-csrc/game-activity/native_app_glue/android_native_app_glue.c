@@ -17,12 +17,16 @@
 #include "android_native_app_glue.h"
 
 #include <android/log.h>
+#include <assert.h>
 #include <errno.h>
 #include <jni.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+#define NATIVE_APP_GLUE_MOTION_EVENTS_DEFAULT_BUF_SIZE 16
+#define NATIVE_APP_GLUE_KEY_EVENTS_DEFAULT_BUF_SIZE 4
 
 #define LOGI(...) \
     ((void)__android_log_print(ANDROID_LOG_INFO, "threaded_app", __VA_ARGS__))
@@ -189,6 +193,7 @@ static void process_cmd(struct android_app* app,
 // This is run on a separate thread (i.e: not the main thread).
 static void* android_app_entry(void* param) {
     struct android_app* android_app = (struct android_app*)param;
+    int input_buf_idx = 0;
 
     LOGV("android_app_entry called");
     android_app->config = AConfiguration_new();
@@ -200,6 +205,19 @@ static void* android_app_entry(void* param) {
                                     android_app->activity->assetManager);
 
     print_cur_config(android_app);
+
+    /* initialize event buffers */
+    for (input_buf_idx = 0; input_buf_idx < NATIVE_APP_GLUE_MAX_INPUT_BUFFERS; input_buf_idx++) {
+        struct android_input_buffer *buf = &android_app->inputBuffers[input_buf_idx];
+
+        buf->motionEventsBufferSize = NATIVE_APP_GLUE_MOTION_EVENTS_DEFAULT_BUF_SIZE;
+        buf->motionEvents = (GameActivityMotionEvent *) malloc(sizeof(GameActivityMotionEvent) *
+                                                               buf->motionEventsBufferSize);
+
+        buf->keyEventsBufferSize = NATIVE_APP_GLUE_KEY_EVENTS_DEFAULT_BUF_SIZE;
+        buf->keyEvents = (GameActivityKeyEvent *) malloc(sizeof(GameActivityKeyEvent) *
+                                                         buf->keyEventsBufferSize);
+    }
 
     android_app->cmdPollSource.id = LOOPER_ID_MAIN;
     android_app->cmdPollSource.app = android_app;
@@ -348,6 +366,8 @@ static void android_app_set_activity_state(struct android_app* android_app,
 }
 
 static void android_app_free(struct android_app* android_app) {
+    int input_buf_idx = 0;
+
     pthread_mutex_lock(&android_app->mutex);
 
     // It's possible that onDestroy is called after we have already 'destroyed'
@@ -362,6 +382,14 @@ static void android_app_free(struct android_app* android_app) {
         pthread_cond_wait(&android_app->cond, &android_app->mutex);
     }
     pthread_mutex_unlock(&android_app->mutex);
+
+    for (input_buf_idx = 0; input_buf_idx < NATIVE_APP_GLUE_MAX_INPUT_BUFFERS; input_buf_idx++) {
+        struct android_input_buffer *buf = &android_app->inputBuffers[input_buf_idx];
+
+        android_app_clear_motion_events(buf);
+        free(buf->motionEvents);
+        free(buf->keyEvents);
+    }
 
     close(android_app->msgread);
     close(android_app->msgwrite);
@@ -485,7 +513,6 @@ void android_app_set_motion_event_filter(struct android_app* app,
 
 bool android_app_input_available_wake_up(struct android_app* app) {
     pthread_mutex_lock(&app->mutex);
-    // TODO: use atomic ops for this
     bool available = app->inputAvailableWakeUp;
     app->inputAvailableWakeUp = false;
     pthread_mutex_unlock(&app->mutex);
@@ -500,7 +527,6 @@ static void notifyInput(struct android_app* android_app) {
     }
 
     if (android_app->looper != NULL) {
-        LOGV("Input Notify: %p", android_app);
         // for the app thread to know why it received the wake() up
         android_app->inputAvailableWakeUp = true;
         android_app->inputSwapPending = true;
@@ -509,9 +535,7 @@ static void notifyInput(struct android_app* android_app) {
 }
 
 static bool onTouchEvent(GameActivity* activity,
-                         const GameActivityMotionEvent* event,
-                         const GameActivityHistoricalPointerAxes* historical,
-                         int historicalLen) {
+                         const GameActivityMotionEvent* event) {
     struct android_app* android_app = ToApp(activity);
     pthread_mutex_lock(&android_app->mutex);
 
@@ -534,34 +558,21 @@ static bool onTouchEvent(GameActivity* activity,
         &android_app->inputBuffers[android_app->currentInputBuffer];
 
     // Add to the list of active motion events
-    if (inputBuffer->motionEventsCount <
-        NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS) {
-        int new_ix = inputBuffer->motionEventsCount;
-        memcpy(&inputBuffer->motionEvents[new_ix], event,
-               sizeof(GameActivityMotionEvent));
-        ++inputBuffer->motionEventsCount;
+    if (inputBuffer->motionEventsCount >= inputBuffer->motionEventsBufferSize) {
+        inputBuffer->motionEventsBufferSize *= 2;
+        inputBuffer->motionEvents = (GameActivityMotionEvent *) realloc(inputBuffer->motionEvents,
+            sizeof(GameActivityMotionEvent) * inputBuffer->motionEventsBufferSize);
 
-        if (inputBuffer->historicalSamplesCount + historicalLen <=
-            NATIVE_APP_GLUE_MAX_HISTORICAL_POINTER_SAMPLES) {
-
-            int start_ix = inputBuffer->historicalSamplesCount;
-            memcpy(&inputBuffer->historicalAxisSamples[start_ix], historical,
-                    sizeof(historical[0]) * historicalLen);
-            inputBuffer->historicalSamplesCount += event->historicalCount;
-
-            inputBuffer->motionEvents[new_ix].historicalStart = start_ix;
-            inputBuffer->motionEvents[new_ix].historicalCount = historicalLen;
-        } else {
-            inputBuffer->motionEvents[new_ix].historicalCount = 0;
+        if (inputBuffer->motionEvents == NULL) {
+            LOGE("onTouchEvent: out of memory");
+            abort();
         }
-
-        notifyInput(android_app);
-    } else {
-        LOGW_ONCE("Motion event will be dropped because the number of unconsumed motion"
-             " events exceeded NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS (%d). Consider setting"
-             " NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS_OVERRIDE to a larger value",
-             NATIVE_APP_GLUE_MAX_NUM_MOTION_EVENTS);
     }
+
+    int new_ix = inputBuffer->motionEventsCount;
+    memcpy(&inputBuffer->motionEvents[new_ix], event, sizeof(GameActivityMotionEvent));
+    ++inputBuffer->motionEventsCount;
+    notifyInput(android_app);
 
     pthread_mutex_unlock(&android_app->mutex);
     return true;
@@ -592,7 +603,15 @@ struct android_input_buffer* android_app_swap_input_buffers(
 }
 
 void android_app_clear_motion_events(struct android_input_buffer* inputBuffer) {
-    inputBuffer->motionEventsCount = 0;
+    // We do not need to lock here if the inputBuffer has already been swapped
+    // as is handled by the game loop thread
+    while (inputBuffer->motionEventsCount > 0) {
+        GameActivityMotionEvent_destroy(
+            &inputBuffer->motionEvents[inputBuffer->motionEventsCount - 1]);
+
+        inputBuffer->motionEventsCount--;
+    }
+    assert(inputBuffer->motionEventsCount == 0);
 }
 
 void android_app_set_key_event_filter(struct android_app* app,
@@ -625,19 +644,21 @@ static bool onKey(GameActivity* activity, const GameActivityKeyEvent* event) {
         &android_app->inputBuffers[android_app->currentInputBuffer];
 
     // Add to the list of active key down events
-    if (inputBuffer->keyEventsCount < NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS) {
-        int new_ix = inputBuffer->keyEventsCount;
-        memcpy(&inputBuffer->keyEvents[new_ix], event,
-               sizeof(GameActivityKeyEvent));
-        ++inputBuffer->keyEventsCount;
+    if (inputBuffer->keyEventsCount >= inputBuffer->keyEventsBufferSize) {
+        inputBuffer->keyEventsBufferSize = inputBuffer->keyEventsBufferSize * 2;
+        inputBuffer->keyEvents = (GameActivityKeyEvent *) realloc(inputBuffer->keyEvents,
+            sizeof(GameActivityKeyEvent) * inputBuffer->keyEventsBufferSize);
 
-        notifyInput(android_app);
-    } else {
-        LOGW_ONCE("Key event will be dropped because the number of unconsumed key events exceeded"
-             " NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS (%d). Consider setting"
-             " NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS_OVERRIDE to a larger value",
-             NATIVE_APP_GLUE_MAX_NUM_KEY_EVENTS);
+        if (inputBuffer->keyEvents == NULL) {
+            LOGE("onKey: out of memory");
+            abort();
+        }
     }
+
+    int new_ix = inputBuffer->keyEventsCount;
+    memcpy(&inputBuffer->keyEvents[new_ix], event, sizeof(GameActivityKeyEvent));
+    ++inputBuffer->keyEventsCount;
+    notifyInput(android_app);
 
     pthread_mutex_unlock(&android_app->mutex);
     return true;
@@ -662,6 +683,23 @@ static void onWindowInsetsChanged(GameActivity* activity) {
     android_app_write_cmd(ToApp(activity), APP_CMD_WINDOW_INSETS_CHANGED);
 }
 
+static void onContentRectChanged(GameActivity* activity, const ARect *rect) {
+    LOGV("ContentRectChanged: %p -- (%d %d) (%d %d)", activity, rect->left, rect->top,
+         rect->right, rect->bottom);
+
+    struct android_app* android_app = ToApp(activity);
+
+    pthread_mutex_lock(&android_app->mutex);
+    android_app->contentRect = *rect;
+
+    android_app_write_cmd(android_app, APP_CMD_CONTENT_RECT_CHANGED);
+    pthread_mutex_unlock(&android_app->mutex);
+}
+
+// XXX: This symbol is renamed with a _C suffix and then re-exported from
+// Rust because Rust/Cargo don't give us a way to directly export symbols
+// from C/C++ code: https://github.com/rust-lang/rfcs/issues/2771
+//
 JNIEXPORT
 void GameActivity_onCreate_C(GameActivity* activity, void* savedState,
                            size_t savedStateSize) {
@@ -685,6 +723,7 @@ void GameActivity_onCreate_C(GameActivity* activity, void* savedState,
         onNativeWindowRedrawNeeded;
     activity->callbacks->onNativeWindowResized = onNativeWindowResized;
     activity->callbacks->onWindowInsetsChanged = onWindowInsetsChanged;
+    activity->callbacks->onContentRectChanged = onContentRectChanged;
     LOGV("Callbacks set: %p", activity->callbacks);
 
     activity->instance =
