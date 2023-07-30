@@ -1,11 +1,18 @@
+<!-- markdownlint-disable MD022 MD024 MD032  -->
+
 # Changelog
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.3] - 2022-07-30
+### Fixed
+- Fixed a deadlock in the `native-activity` backend while waiting for the native thread after getting an `onDestroy` callback from Java ([#94](https://github.com/rust-mobile/android-activity/pull/94))
 
-## [0.4.2] - 2022-02-16
+- Fixed numerous deadlocks in the `game-activity` backend with how it would wait for the native thread in various Java callbacks, after the app has returned from `android_main` ([#98](https://github.com/rust-mobile/android-activity/pull/98))
+
+## [0.4.2] - 2022-06-17
 ### Changed
 - The `Activity.finish()` method is now called when `android_main` returns so the `Activity` will be destroyed ([#67](https://github.com/rust-mobile/android-activity/issues/67))
 - The `native-activity` backend now propagates `NativeWindow` redraw/resize and `ContentRectChanged` callbacks to main loop ([#70](https://github.com/rust-mobile/android-activity/pull/70))
