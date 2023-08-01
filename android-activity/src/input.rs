@@ -81,3 +81,41 @@ impl From<Source> for Class {
         source.into()
     }
 }
+
+/// This struct holds a span within a region of text from `start` to `end`.
+///
+/// The `start` index may be greater than the `end` index (swapping `start` and `end` will represent the same span)
+///
+/// The lower index is inclusive and the higher index is exclusive.
+///
+/// An empty span or cursor position is specified with `start == end`.
+///
+#[derive(Debug, Clone, Copy)]
+pub struct TextSpan {
+    /// The start of the span (inclusive)
+    pub start: usize,
+
+    /// The end of the span (exclusive)
+    pub end: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct TextInputState {
+    pub text: String,
+
+    /// A selection defined on the text.
+    ///
+    /// To set the cursor position, start and end should have the same value.
+    ///
+    /// Changing the selection has no effect on the compose_region.
+    pub selection: TextSpan,
+
+    /// A composing region defined on the text.
+    ///
+    /// When being set, then if there was a composing region, the region is replaced.
+    ///
+    /// The given indices will be clamped to the `text` bounds
+    ///
+    /// If the resulting region is zero-sized, no region is marked (equivalent to passing `None`)
+    pub compose_region: Option<TextSpan>,
+}

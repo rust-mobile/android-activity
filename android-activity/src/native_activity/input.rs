@@ -337,4 +337,5 @@ impl<'a> KeyEvent<'a> {
 pub enum InputEvent<'a> {
     MotionEvent(self::MotionEvent<'a>),
     KeyEvent(self::KeyEvent<'a>),
+    TextEvent(crate::input::TextInputState),
 }
