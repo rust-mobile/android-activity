@@ -275,6 +275,7 @@ pub use activity_impl::AndroidAppWaker;
 bitflags! {
     /// Flags for [`AndroidApp::set_window_flags`]
     /// as per the [android.view.WindowManager.LayoutParams Java API](https://developer.android.com/reference/android/view/WindowManager.LayoutParams)
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     pub struct WindowManagerFlags: u32 {
         /// As long as this window is visible to the user, allow the lock
         /// screen to activate while the screen is on.  This can be used

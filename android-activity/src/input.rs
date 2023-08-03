@@ -36,6 +36,7 @@ pub enum Source {
 }
 
 bitflags! {
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     struct SourceFlags: u32 {
         const CLASS_MASK = 0x000000ff;
 
