@@ -300,7 +300,7 @@ typedef struct GameActivityKeyEvent {
   int32_t repeatCount;
   int32_t keyCode;
   int32_t scanCode;
-  int32_t unicodeChar;
+  // int32_t unicodeChar;
 } GameActivityKeyEvent;
 
 #ifdef __cplusplus
