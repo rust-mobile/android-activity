@@ -10,18 +10,12 @@ documentation = "https://docs.rs/android-activity"
 description = "Glue for building Rust applications on Android with NativeActivity or GameActivity"
 license = "MIT OR Apache-2.0"
 
-# XXX: Even though we have our own MSRV policy that says we only promise to
-# support stable releases over the last three months we actually end up
-# constrained by the MSRV policy of Winit, which is currently based on
-# supporting Alacritty on Debian Sid, and requires a > 10 month old Rust version
+# 1.68 was when Rust last updated the Android NDK version used to build the
+# standard library which avoids needing the -lunwind workaround in build tools.
 #
-# This Winit policiy is unfortunately in conflict with what makes sense for
-# Android because versions below 1.68 for Android requires awkward toolchain
-# linker workarounds, and can't even be compiled with newer versions of
-# `cargo ndk` that removed these linker workarounds.
-#
-# TODO: Open a PR for Winit's CI to test Android builds using a newer toolchain.
-rust-version = "1.64"
+# We depend on cargo-ndk for building which has dropped support for the above
+# linker workaround.
+rust-version = "1.68.0"
 
 [features]
 # Note: we don't enable any backend by default since features
