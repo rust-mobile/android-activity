@@ -9,7 +9,7 @@ repository = "https://github.com/rust-mobile/android-activity"
 documentation = "https://docs.rs/android-activity"
 description = "Glue for building Rust applications on Android with NativeActivity or GameActivity"
 license = "MIT OR Apache-2.0"
-rust-version = "1.64"
+rust-version = "1.68.0"
 
 [features]
 # Note: we don't enable any backend by default since features

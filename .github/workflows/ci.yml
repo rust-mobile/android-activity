@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         # See top README for MSRV policy
-        rust_version: [1.64.0, stable]
+        rust_version: [1.68.0, stable]
     steps:
       - uses: actions/checkout@v3
 
@@ -34,9 +34,7 @@ jobs:
           i686-linux-android
 
       - name: Install cargo-ndk
-        # We're currently sticking with cargo-ndk 2, until we bump our
-        # MSRV to 1.68+
-        run: cargo install cargo-ndk --version "^2"
+        run: cargo install cargo-ndk
 
       - name: Setup Java
         uses: actions/setup-java@v3
