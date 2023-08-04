@@ -63,6 +63,11 @@ public class MainActivity extends GameActivity {
         super.onCreate(savedInstanceState);
     }
 
+    protected void onResume() {
+        super.onResume();
+        hideSystemUI();
+    }
+
     public boolean isGooglePlayGames() {
         PackageManager pm = getPackageManager();
         return pm.hasSystemFeature("com.google.android.play.feature.HPE_EXPERIENCE");
