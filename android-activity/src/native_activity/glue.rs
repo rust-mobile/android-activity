@@ -828,6 +828,7 @@ unsafe extern "C" fn on_content_rect_changed(
 
 /// This is the native entrypoint for our cdylib library that `ANativeActivity` will look for via `dlsym`
 #[no_mangle]
+#[allow(unused_unsafe)] // Otherwise rust 1.64 moans about using unsafe{} in unsafe functions
 extern "C" fn ANativeActivity_onCreate(
     activity: *mut ndk_sys::ANativeActivity,
     saved_state: *const libc::c_void,
