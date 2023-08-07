@@ -17,6 +17,7 @@ use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
 use crate::{
+    jni_utils::CloneJavaVM,
     util::android_log,
     util::{abort_on_panic, log_panic},
     ConfigurationRef,
@@ -878,24 +879,21 @@ extern "C" fn ANativeActivity_onCreate(
         std::thread::spawn(move || {
             let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
 
-            let jvm = unsafe {
+            let jvm = abort_on_panic(|| unsafe {
                 let na = activity;
-                let jvm = (*na).vm;
+                let jvm: *mut jni_sys::JavaVM = (*na).vm;
                 let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
                 ndk_context::initialize_android_context(jvm.cast(), activity.cast());
 
+                let jvm = CloneJavaVM::from_raw(jvm).unwrap();
                 // Since this is a newly spawned thread then the JVM hasn't been attached
                 // to the thread yet. Attach before calling the applications main function
                 // so they can safely make JNI calls
-                let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
-                if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
-                    attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
-                }
-
+                jvm.attach_current_thread_permanently().unwrap();
                 jvm
-            };
+            });
 
-            let app = AndroidApp::new(rust_glue.clone());
+            let app = AndroidApp::new(rust_glue.clone(), jvm.clone());
 
             rust_glue.notify_main_thread_running();
 
@@ -921,9 +919,9 @@ extern "C" fn ANativeActivity_onCreate(
                 //  to the main thread of the process where the Java finish call will take place"
                 ndk_sys::ANativeActivity_finish(activity);
 
-                if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
-                    detach_current_thread(jvm);
-                }
+                // This should detach automatically but lets detach explicitly to avoid depending
+                // on the TLS trickery in `jni-rs`
+                jvm.detach_current_thread();
 
                 ndk_context::release_android_context();
             }

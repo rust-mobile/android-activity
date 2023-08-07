@@ -62,6 +62,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
+use input::KeyCharacterMap;
 use libc::c_void;
 use ndk::asset::AssetManager;
 use ndk::native_window::NativeWindow;
@@ -96,15 +97,12 @@ You may need to add a `[patch]` into your Cargo.toml to ensure a specific versio
 android-activity is used across all of your application's crates."#
 );
 
-#[cfg(any(feature = "native-activity", doc))]
-mod native_activity;
-#[cfg(any(feature = "native-activity", doc))]
-use native_activity as activity_impl;
+#[cfg_attr(any(feature = "native-activity", doc), path = "native_activity/mod.rs")]
+#[cfg_attr(any(feature = "game-activity", doc), path = "game_activity/mod.rs")]
+pub(crate) mod activity_impl;
 
-#[cfg(feature = "game-activity")]
-mod game_activity;
-#[cfg(feature = "game-activity")]
-use game_activity as activity_impl;
+pub mod error;
+use error::Result;
 
 pub mod input;
 
@@ -112,6 +110,8 @@ mod config;
 pub use config::ConfigurationRef;
 
 mod util;
+
+mod jni_utils;
 
 /// A rectangle with integer edge coordinates. Used to represent window insets, for example.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -163,14 +163,14 @@ pub use activity_impl::StateSaver;
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum MainEvent<'a> {
-    /// New input events are available via [`AndroidApp::input_events()`]
+    /// New input events are available via [`AndroidApp::input_events_iter()`]
     ///
     /// _Note: Even if more input is received this event will not be resent
-    /// until [`AndroidApp::input_events()`] has been called, which enables
+    /// until [`AndroidApp::input_events_iter()`] has been called, which enables
     /// applications to batch up input processing without there being lots of
     /// redundant event loop wake ups._
     ///
-    /// [`AndroidApp::input_events()`]: AndroidApp::input_events
+    /// [`AndroidApp::input_events_iter()`]: AndroidApp::input_events_iter
     InputAvailable,
 
     /// Command from main thread: a new [`NativeWindow`] is ready for use.  Upon
@@ -629,24 +629,139 @@ impl AndroidApp {
         self.inner.read().unwrap().set_text_input_state(state);
     }
 
-    /// Query and process all out-standing input event
+    /// Get an exclusive, lending iterator over buffered input events
     ///
-    /// `callback` should return [`InputStatus::Unhandled`] for any input events that aren't directly
-    /// handled by the application, or else [`InputStatus::Handled`]. Unhandled events may lead to a
-    /// fallback interpretation of the event.
+    /// Applications are expected to call this in-sync with their rendering or
+    /// in response to a [`MainEvent::InputAvailable`] event being delivered.
     ///
-    /// Applications are generally either expected to call this in-sync with their rendering or
-    /// in response to a [`MainEvent::InputAvailable`] event being delivered. _Note though that your
-    /// application is will only be delivered a single [`MainEvent::InputAvailable`] event between calls
-    /// to this API._
+    /// _**Note:** your application is will only be delivered a single
+    /// [`MainEvent::InputAvailable`] event between calls to this API._
     ///
-    /// To reduce overhead, by default only [`input::Axis::X`] and [`input::Axis::Y`] are enabled
+    /// To reduce overhead, by default, only [`input::Axis::X`] and [`input::Axis::Y`] are enabled
     /// and other axis should be enabled explicitly via [`Self::enable_motion_axis`].
-    pub fn input_events<F>(&self, callback: F)
-    where
-        F: FnMut(&input::InputEvent) -> InputStatus,
-    {
-        self.inner.read().unwrap().input_events(callback)
+    ///
+    /// This isn't the most ergonomic iteration API since we can't return a standard `Iterator`:
+    /// - This API returns a lending iterator may borrow from the internal buffer
+    ///   of pending events without copying them.
+    /// - For each event we want to ensure the application reports whether the
+    ///   event was handled.
+    ///
+    /// # Example
+    /// Code to iterate all pending input events would look something like this:
+    ///
+    /// ```rust
+    /// match app.input_events_iter() {
+    ///     Ok(mut iter) => {
+    ///         loop {
+    ///             let read_input = iter.next(|event| {
+    ///                 let handled = match event {
+    ///                     InputEvent::KeyEvent(key_event) => {
+    ///                         // Snip
+    ///                     }
+    ///                     InputEvent::MotionEvent(motion_event) => {
+    ///                         // Snip
+    ///                     }
+    ///                     event => {
+    ///                         // Snip
+    ///                     }
+    ///                 };
+    ///
+    ///                 handled
+    ///             });
+    ///
+    ///             if !read_input {
+    ///                 break;
+    ///             }
+    ///         }
+    ///     }
+    ///     Err(err) => {
+    ///         log::error!("Failed to get input events iterator: {err:?}");
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// This must only be called from your `android_main()` thread and it may panic if called
+    /// from another thread.
+    pub fn input_events_iter(&self) -> Result<input::InputIterator> {
+        let receiver = {
+            let guard = self.inner.read().unwrap();
+            guard.input_events_receiver()?
+        };
+
+        Ok(input::InputIterator {
+            inner: receiver.into(),
+        })
+    }
+
+    /// Lookup the [`KeyCharacterMap`] for the given input `device_id`
+    ///
+    /// Use [`KeyCharacterMap::get`] to map key codes + meta state into unicode characters
+    /// or dead keys that compose with the next key.
+    ///
+    /// # Example
+    ///
+    /// Code to handle unicode character mapping as well as combining dead keys could look some thing like:
+    ///
+    /// ```rust
+    /// let mut combining_accent = None;
+    /// // Snip
+    ///
+    /// let combined_key_char = if let Ok(map) = app.device_key_character_map(device_id) {
+    ///     match map.get(key_event.key_code(), key_event.meta_state()) {
+    ///         Ok(KeyMapChar::Unicode(unicode)) => {
+    ///             let combined_unicode = if let Some(accent) = combining_accent {
+    ///                 match map.get_dead_char(accent, unicode) {
+    ///                     Ok(Some(key)) => {
+    ///                         info!("KeyEvent: Combined '{unicode}' with accent '{accent}' to give '{key}'");
+    ///                         Some(key)
+    ///                     }
+    ///                     Ok(None) => None,
+    ///                     Err(err) => {
+    ///                         log::error!("KeyEvent: Failed to combine 'dead key' accent '{accent}' with '{unicode}': {err:?}");
+    ///                         None
+    ///                     }
+    ///                 }
+    ///             } else {
+    ///                 info!("KeyEvent: Pressed '{unicode}'");
+    ///                 Some(unicode)
+    ///             };
+    ///             combining_accent = None;
+    ///             combined_unicode.map(|unicode| KeyMapChar::Unicode(unicode))
+    ///         }
+    ///         Ok(KeyMapChar::CombiningAccent(accent)) => {
+    ///             info!("KeyEvent: Pressed 'dead key' combining accent '{accent}'");
+    ///             combining_accent = Some(accent);
+    ///             Some(KeyMapChar::CombiningAccent(accent))
+    ///         }
+    ///         Ok(KeyMapChar::None) => {
+    ///             info!("KeyEvent: Pressed non-unicode key");
+    ///             combining_accent = None;
+    ///             None
+    ///         }
+    ///         Err(err) => {
+    ///             log::error!("KeyEvent: Failed to get key map character: {err:?}");
+    ///             combining_accent = None;
+    ///             None
+    ///         }
+    ///     }
+    /// } else {
+    ///     None
+    /// };
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Since this API needs to use JNI internally to call into the Android JVM it may return
+    /// a [`error::AppError::JavaError`] in case there is a spurious JNI error or an exception
+    /// is caught.
+    pub fn device_key_character_map(&self, device_id: i32) -> Result<KeyCharacterMap> {
+        Ok(self
+            .inner
+            .read()
+            .unwrap()
+            .device_key_character_map(device_id)?)
     }
 
     /// The user-visible SDK version of the framework

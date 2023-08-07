@@ -1,5 +1,6 @@
 #![cfg(feature = "game-activity")]
 
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -8,7 +9,8 @@ use std::ops::Deref;
 use std::os::unix::prelude::*;
 use std::panic::catch_unwind;
 use std::ptr::NonNull;
-use std::sync::{Arc, RwLock};
+use std::sync::Weak;
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 use std::{ptr, thread};
 
@@ -24,6 +26,9 @@ use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
+use crate::error::InternalResult;
+use crate::input::{KeyCharacterMap, KeyCharacterMapBinding};
+use crate::jni_utils::{self, CloneJavaVM};
 use crate::util::{abort_on_panic, android_log, log_panic};
 use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
@@ -90,7 +95,7 @@ impl<'a> StateLoader<'a> {
             if !(*app_ptr).savedState.is_null() && (*app_ptr).savedStateSize > 0 {
                 let buf: &mut [u8] = std::slice::from_raw_parts_mut(
                     (*app_ptr).savedState.cast(),
-                    (*app_ptr).savedStateSize as usize,
+                    (*app_ptr).savedStateSize,
                 );
                 let state = buf.to_vec();
                 Some(state)
@@ -120,7 +125,16 @@ impl AndroidAppWaker {
 }
 
 impl AndroidApp {
-    pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>) -> Self {
+    pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>, jvm: CloneJavaVM) -> Self {
+        let mut env = jvm.get_env().unwrap(); // We attach to the thread before creating the AndroidApp
+
+        let key_map_binding = match KeyCharacterMapBinding::new(&mut env) {
+            Ok(b) => b,
+            Err(err) => {
+                panic!("Failed to create KeyCharacterMap JNI bindings: {err:?}");
+            }
+        };
+
         // Note: we don't use from_ptr since we don't own the android_app.config
         // and need to keep in mind that the Drop handler is going to call
         // AConfiguration_delete()
@@ -128,15 +142,19 @@ impl AndroidApp {
 
         Self {
             inner: Arc::new(RwLock::new(AndroidAppInner {
+                jvm,
                 native_app: NativeAppGlue { ptr },
                 config: ConfigurationRef::new(config),
                 native_window: Default::default(),
+                key_map_binding: Arc::new(key_map_binding),
+                key_maps: Mutex::new(HashMap::new()),
+                input_receiver: Mutex::new(None),
             })),
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct NativeAppGlue {
     ptr: NonNull<ffi::android_app>,
 }
@@ -150,11 +168,112 @@ impl Deref for NativeAppGlue {
 unsafe impl Send for NativeAppGlue {}
 unsafe impl Sync for NativeAppGlue {}
 
+impl NativeAppGlue {
+    // TODO: move into a trait
+    pub fn text_input_state(&self) -> TextInputState {
+        unsafe {
+            let activity = (*self.as_ptr()).activity;
+            let mut out_state = TextInputState {
+                text: String::new(),
+                selection: TextSpan { start: 0, end: 0 },
+                compose_region: None,
+            };
+            let out_ptr = &mut out_state as *mut TextInputState;
+
+            let app_ptr = self.as_ptr();
+            (*app_ptr).textInputState = 0;
+
+            // NEON WARNING:
+            //
+            // It's not clearly documented but the GameActivity API over the
+            // GameTextInput library directly exposes _modified_ UTF8 text
+            // from Java so we need to be careful to convert text to and
+            // from UTF8
+            //
+            // GameTextInput also uses a pre-allocated, fixed-sized buffer for
+            // the current text state and has shared `currentState_` that
+            // appears to have no lock to guard access from multiple threads.
+            //
+            // There's also no locking at the GameActivity level, so I'm fairly
+            // certain that `GameActivity_getTextInputState` isn't thread
+            // safe: https://issuetracker.google.com/issues/294112477
+            //
+            // Overall this is all quite gnarly - and probably a good reminder
+            // of why we want to use Rust instead of C/C++.
+            ffi::GameActivity_getTextInputState(
+                activity,
+                Some(AndroidAppInner::map_input_state_to_text_event_callback),
+                out_ptr.cast(),
+            );
+
+            out_state
+        }
+    }
+
+    // TODO: move into a trait
+    pub fn set_text_input_state(&self, state: TextInputState) {
+        unsafe {
+            let activity = (*self.as_ptr()).activity;
+            let modified_utf8 = cesu8::to_java_cesu8(&state.text);
+            let text_length = modified_utf8.len() as i32;
+            let modified_utf8_bytes = modified_utf8.as_ptr();
+            let ffi_state = ffi::GameTextInputState {
+                text_UTF8: modified_utf8_bytes.cast(), // NB: may be signed or unsigned depending on target
+                text_length,
+                selection: ffi::GameTextInputSpan {
+                    start: state.selection.start as i32,
+                    end: state.selection.end as i32,
+                },
+                composingRegion: match state.compose_region {
+                    Some(span) => {
+                        // The GameText subclass of InputConnection only has a special case for removing the
+                        // compose region if `start == -1` but the docs for `setComposingRegion` imply that
+                        // the region should effectively be removed if any empty region is given (unlike for the
+                        // selection region, it's not meaningful to maintain an empty compose region)
+                        //
+                        // We aim for more consistent behaviour by normalizing any empty region into `(-1, -1)`
+                        // to remove the compose region.
+                        //
+                        // NB `setComposingRegion` itself is documented to clamp start/end to the text bounds
+                        // so apart from this special-case handling in GameText's implementation of
+                        // `setComposingRegion` then there's nothing special about `(-1, -1)` - it's just an empty
+                        // region that should get clamped to `(0, 0)` and then get removed.
+                        if span.start == span.end {
+                            ffi::GameTextInputSpan { start: -1, end: -1 }
+                        } else {
+                            ffi::GameTextInputSpan {
+                                start: span.start as i32,
+                                end: span.end as i32,
+                            }
+                        }
+                    }
+                    None => ffi::GameTextInputSpan { start: -1, end: -1 },
+                },
+            };
+            ffi::GameActivity_setTextInputState(activity, &ffi_state as *const _);
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct AndroidAppInner {
+    pub(crate) jvm: CloneJavaVM,
     native_app: NativeAppGlue,
     config: ConfigurationRef,
     native_window: RwLock<Option<NativeWindow>>,
+
+    /// Shared JNI bindings for the `KeyCharacterMap` class
+    key_map_binding: Arc<KeyCharacterMapBinding>,
+
+    /// A table of `KeyCharacterMap`s per `InputDevice` ID
+    /// these are used to be able to map key presses to unicode
+    /// characters
+    key_maps: Mutex<HashMap<i32, KeyCharacterMap>>,
+
+    /// While an app is reading input events it holds an
+    /// InputReceiver reference which we track to ensure
+    /// we don't hand out more than one receiver at a time
+    input_receiver: Mutex<Option<Weak<InputReceiver>>>,
 }
 
 impl AndroidAppInner {
@@ -370,9 +489,9 @@ impl AndroidAppInner {
         let text_modified_utf8: *const u8 = (*state).text_UTF8.cast();
         let text_modified_utf8 =
             std::slice::from_raw_parts(text_modified_utf8, (*state).text_length as usize);
-        match cesu8::from_java_cesu8(&text_modified_utf8) {
+        match cesu8::from_java_cesu8(text_modified_utf8) {
             Ok(str) => {
-                let len = *&str.len();
+                let len = str.len();
                 (*out_ptr).text = String::from(str);
 
                 let selection_start = (*state).selection.start.clamp(0, len as i32 + 1);
@@ -398,82 +517,34 @@ impl AndroidAppInner {
 
     // TODO: move into a trait
     pub fn text_input_state(&self) -> TextInputState {
-        unsafe {
-            let activity = (*self.native_app.as_ptr()).activity;
-            let mut out_state = TextInputState {
-                text: String::new(),
-                selection: TextSpan { start: 0, end: 0 },
-                compose_region: None,
-            };
-            let out_ptr = &mut out_state as *mut TextInputState;
-
-            // NEON WARNING:
-            //
-            // It's not clearly documented but the GameActivity API over the
-            // GameTextInput library directly exposes _modified_ UTF8 text
-            // from Java so we need to be careful to convert text to and
-            // from UTF8
-            //
-            // GameTextInput also uses a pre-allocated, fixed-sized buffer for the current
-            // text state but GameTextInput doesn't actually provide it's own thread
-            // safe API to safely access this state  so we have to cooperate with
-            // the GameActivity code that does locking when reading/writing the state
-            // (I.e. we can't just punch through to the GameTextInput layer from here).
-            //
-            // Overall this is all quite gnarly - and probably a good reminder of why
-            // we want to use Rust instead of C/C++.
-            ffi::GameActivity_getTextInputState(
-                activity,
-                Some(AndroidAppInner::map_input_state_to_text_event_callback),
-                out_ptr.cast(),
-            );
-
-            out_state
-        }
+        self.native_app.text_input_state()
     }
 
     // TODO: move into a trait
     pub fn set_text_input_state(&self, state: TextInputState) {
-        unsafe {
-            let activity = (*self.native_app.as_ptr()).activity;
-            let modified_utf8 = cesu8::to_java_cesu8(&state.text);
-            let text_length = modified_utf8.len() as i32;
-            let modified_utf8_bytes = modified_utf8.as_ptr();
-            let ffi_state = ffi::GameTextInputState {
-                text_UTF8: modified_utf8_bytes.cast(), // NB: may be signed or unsigned depending on target
-                text_length,
-                selection: ffi::GameTextInputSpan {
-                    start: state.selection.start as i32,
-                    end: state.selection.end as i32,
-                },
-                composingRegion: match state.compose_region {
-                    Some(span) => {
-                        // The GameText subclass of InputConnection only has a special case for removing the
-                        // compose region if `start == -1` but the docs for `setComposingRegion` imply that
-                        // the region should effectively be removed if any empty region is given (unlike for the
-                        // selection region, it's not meaningful to maintain an empty compose region)
-                        //
-                        // We aim for more consistent behaviour by normalizing any empty region into `(-1, -1)`
-                        // to remove the compose region.
-                        //
-                        // NB `setComposingRegion` itself is documented to clamp start/end to the text bounds
-                        // so apart from this special-case handling in GameText's implementation of
-                        // `setComposingRegion` then there's nothing special about `(-1, -1)` - it's just an empty
-                        // region that should get clamped to `(0, 0)` and then get removed.
-                        if span.start == span.end {
-                            ffi::GameTextInputSpan { start: -1, end: -1 }
-                        } else {
-                            ffi::GameTextInputSpan {
-                                start: span.start as i32,
-                                end: span.end as i32,
-                            }
-                        }
-                    }
-                    None => ffi::GameTextInputSpan { start: -1, end: -1 },
-                },
-            };
-            ffi::GameActivity_setTextInputState(activity, &ffi_state as *const _);
-        }
+        self.native_app.set_text_input_state(state);
+    }
+
+    pub(crate) fn device_key_character_map(
+        &self,
+        device_id: i32,
+    ) -> InternalResult<KeyCharacterMap> {
+        let mut guard = self.key_maps.lock().unwrap();
+
+        let key_map = match guard.entry(device_id) {
+            std::collections::hash_map::Entry::Occupied(occupied) => occupied.get().clone(),
+            std::collections::hash_map::Entry::Vacant(vacant) => {
+                let character_map = jni_utils::device_key_character_map(
+                    self.jvm.clone(),
+                    self.key_map_binding.clone(),
+                    device_id,
+                )?;
+                vacant.insert(character_map.clone());
+                character_map
+            }
+        };
+
+        Ok(key_map)
     }
 
     pub fn enable_motion_axis(&mut self, axis: Axis) {
@@ -519,49 +590,26 @@ impl AndroidAppInner {
         }
     }
 
-    fn dispatch_key_and_motion_events<F>(&self, mut callback: F)
-    where
-        F: FnMut(&InputEvent) -> InputStatus,
-    {
-        let buf = unsafe {
-            let app_ptr = self.native_app.as_ptr();
-            let input_buffer = ffi::android_app_swap_input_buffers(app_ptr);
-            if input_buffer.is_null() {
-                return;
-            }
-            InputBuffer::from_ptr(NonNull::new_unchecked(input_buffer))
-        };
+    pub(crate) fn input_events_receiver(&self) -> InternalResult<Arc<InputReceiver>> {
+        let mut guard = self.input_receiver.lock().unwrap();
 
-        let mut keys_iter = KeyEventsLendingIterator::new(&buf);
-        while let Some(key_event) = keys_iter.next() {
-            callback(&InputEvent::KeyEvent(key_event));
-        }
-        let mut motion_iter = MotionEventsLendingIterator::new(&buf);
-        while let Some(motion_event) = motion_iter.next() {
-            callback(&InputEvent::MotionEvent(motion_event));
-        }
-    }
-
-    fn dispatch_text_events<F>(&self, mut callback: F)
-    where
-        F: FnMut(&InputEvent) -> InputStatus,
-    {
-        unsafe {
-            let app_ptr = self.native_app.as_ptr();
-            if (*app_ptr).textInputState != 0 {
-                let state = self.text_input_state();
-                callback(&InputEvent::TextEvent(state));
-                (*app_ptr).textInputState = 0;
+        // Make sure we don't hand out more than one receiver at a time because
+        // turning the reciever into an interator will perform a swap_buffers
+        // for the buffered input events which shouldn't happen while we're in
+        // the middle of iterating events
+        if let Some(receiver) = &*guard {
+            if receiver.strong_count() > 0 {
+                return Err(crate::error::InternalAppError::InputUnavailable);
             }
         }
-    }
+        *guard = None;
 
-    pub fn input_events<F>(&self, mut callback: F)
-    where
-        F: FnMut(&InputEvent) -> InputStatus,
-    {
-        self.dispatch_key_and_motion_events(&mut callback);
-        self.dispatch_text_events(&mut callback);
+        let receiver = Arc::new(InputReceiver {
+            native_app: self.native_app.clone(),
+        });
+
+        *guard = Some(Arc::downgrade(&receiver));
+        Ok(receiver)
     }
 
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
@@ -586,33 +634,28 @@ impl AndroidAppInner {
     }
 }
 
-struct MotionEventsLendingIterator<'a> {
+struct MotionEventsLendingIterator {
     pos: usize,
     count: usize,
-    buffer: &'a InputBuffer<'a>,
 }
 
-// A kind of lending iterator but since our MSRV is 1.60 we can't handle this
-// via a generic trait. The iteration of motion events is entirely private
-// though so this is ok for now.
-impl<'a> MotionEventsLendingIterator<'a> {
-    fn new(buffer: &'a InputBuffer<'a>) -> Self {
+impl MotionEventsLendingIterator {
+    fn new(buffer: &InputBuffer) -> Self {
         Self {
             pos: 0,
             count: buffer.motion_events_count(),
-            buffer,
         }
     }
-    fn next(&mut self) -> Option<MotionEvent<'a>> {
+    fn next<'buf>(&mut self, buffer: &'buf InputBuffer) -> Option<MotionEvent<'buf>> {
         if self.pos < self.count {
             // Safety:
             // - This iterator currently has exclusive access to the front buffer of events
             // - We know the buffer is non-null
             // - `pos` is less than the number of events stored in the buffer
             let ga_event = unsafe {
-                (*self.buffer.ptr.as_ptr())
+                (*buffer.ptr.as_ptr())
                     .motionEvents
-                    .offset(self.pos as isize)
+                    .add(self.pos)
                     .as_ref()
                     .unwrap()
             };
@@ -625,33 +668,28 @@ impl<'a> MotionEventsLendingIterator<'a> {
     }
 }
 
-struct KeyEventsLendingIterator<'a> {
+struct KeyEventsLendingIterator {
     pos: usize,
     count: usize,
-    buffer: &'a InputBuffer<'a>,
 }
 
-// A kind of lending iterator but since our MSRV is 1.60 we can't handle this
-// via a generic trait. The iteration of key events is entirely private
-// though so this is ok for now.
-impl<'a> KeyEventsLendingIterator<'a> {
-    fn new(buffer: &'a InputBuffer<'a>) -> Self {
+impl KeyEventsLendingIterator {
+    fn new(buffer: &InputBuffer) -> Self {
         Self {
             pos: 0,
             count: buffer.key_events_count(),
-            buffer,
         }
     }
-    fn next(&mut self) -> Option<KeyEvent<'a>> {
+    fn next<'buf>(&mut self, buffer: &'buf InputBuffer) -> Option<KeyEvent<'buf>> {
         if self.pos < self.count {
             // Safety:
             // - This iterator currently has exclusive access to the front buffer of events
             // - We know the buffer is non-null
             // - `pos` is less than the number of events stored in the buffer
             let ga_event = unsafe {
-                (*self.buffer.ptr.as_ptr())
+                (*buffer.ptr.as_ptr())
                     .keyEvents
-                    .offset(self.pos as isize)
+                    .add(self.pos)
                     .as_ref()
                     .unwrap()
             };
@@ -673,7 +711,7 @@ impl<'a> InputBuffer<'a> {
     pub(crate) fn from_ptr(ptr: NonNull<ffi::android_input_buffer>) -> InputBuffer<'a> {
         Self {
             ptr,
-            _lifetime: PhantomData::default(),
+            _lifetime: PhantomData,
         }
     }
 
@@ -692,6 +730,118 @@ impl<'a> Drop for InputBuffer<'a> {
             ffi::android_app_clear_motion_events(self.ptr.as_ptr());
             ffi::android_app_clear_key_events(self.ptr.as_ptr());
         }
+    }
+}
+
+/// Conceptually we can think of this like the receiver end of an
+/// input events channel.
+///
+/// After being passed back to AndroidApp it gets turned into a
+/// lending iterator for pending input events.
+///
+/// It serves two purposes:
+/// 1. It represents an exclusive access to input events (the application
+///    can only have one receiver at a time) and it's intended to support
+///    the double-buffering design for input events in GameActivity where
+///    we issue a swap_buffers before iterating events and wouldn't want
+///    another swap to be possible before finishing - especially since
+///    we want to borrow directly from the buffer while dispatching.
+/// 2. It doesn't borrow from AndroidAppInner so we can pass it back to
+///    AndroidApp which can drop its lock around AndroidAppInner and
+///    it can then be turned into a lending iterator. (We wouldn't
+///    be able to pass the iterator back to the application if it
+///    borrowed from within the lock and we need to drop the lock
+///    because otherwise the app wouldn't be able to access the AndroidApp
+///    API in any way while iterating events)
+#[derive(Debug)]
+pub(crate) struct InputReceiver {
+    // Safety: the native_app effectively has a static lifetime and it
+    // has its own internal locking when calling
+    // `android_app_swap_input_buffers`
+    native_app: NativeAppGlue,
+}
+
+impl<'a> From<Arc<InputReceiver>> for InputIteratorInner<'a> {
+    fn from(receiver: Arc<InputReceiver>) -> Self {
+        let buffered = unsafe {
+            let app_ptr = receiver.native_app.as_ptr();
+            let input_buffer = ffi::android_app_swap_input_buffers(app_ptr);
+            if input_buffer.is_null() {
+                None
+            } else {
+                let buffer = InputBuffer::from_ptr(NonNull::new_unchecked(input_buffer));
+                let keys_iter = KeyEventsLendingIterator::new(&buffer);
+                let motion_iter = MotionEventsLendingIterator::new(&buffer);
+                Some(BufferedEvents::<'a> {
+                    buffer,
+                    keys_iter,
+                    motion_iter,
+                })
+            }
+        };
+
+        let native_app = receiver.native_app.clone();
+        Self {
+            _receiver: receiver,
+            buffered,
+            native_app,
+            text_event_checked: false,
+        }
+    }
+}
+
+struct BufferedEvents<'a> {
+    buffer: InputBuffer<'a>,
+    keys_iter: KeyEventsLendingIterator,
+    motion_iter: MotionEventsLendingIterator,
+}
+
+pub(crate) struct InputIteratorInner<'a> {
+    // Held to maintain exclusive access to buffered input events
+    _receiver: Arc<InputReceiver>,
+
+    buffered: Option<BufferedEvents<'a>>,
+    native_app: NativeAppGlue,
+    text_event_checked: bool,
+}
+
+impl<'a> InputIteratorInner<'a> {
+    pub(crate) fn next<F>(&mut self, callback: F) -> bool
+    where
+        F: FnOnce(&input::InputEvent) -> InputStatus,
+    {
+        if let Some(buffered) = &mut self.buffered {
+            if let Some(key_event) = buffered.keys_iter.next(&buffered.buffer) {
+                let _ = callback(&InputEvent::KeyEvent(key_event));
+                return true;
+            }
+            if let Some(motion_event) = buffered.motion_iter.next(&buffered.buffer) {
+                let _ = callback(&InputEvent::MotionEvent(motion_event));
+                return true;
+            }
+            self.buffered = None;
+        }
+
+        if !self.text_event_checked {
+            self.text_event_checked = true;
+            unsafe {
+                let app_ptr = self.native_app.as_ptr();
+
+                // XXX: It looks like the GameActivity implementation should
+                // be using atomic ops to set this flag, and require us to
+                // use atomics to check and clear it too.
+                //
+                // We currently just hope that with the lack of atomic ops that
+                // the compiler isn't reordering code so this gets flagged
+                // before the java main thread really updates the state.
+                if (*app_ptr).textInputState != 0 {
+                    let state = self.native_app.text_input_state(); // Will clear .textInputState
+                    let _ = callback(&InputEvent::TextEvent(state));
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 
@@ -789,19 +939,16 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
             let activity: jobject = (*(*native_app).activity).javaGameActivity;
             ndk_context::initialize_android_context(jvm.cast(), activity.cast());
 
+            let jvm = CloneJavaVM::from_raw(jvm).unwrap();
             // Since this is a newly spawned thread then the JVM hasn't been attached
             // to the thread yet. Attach before calling the applications main function
             // so they can safely make JNI calls
-            let mut jenv_out: *mut core::ffi::c_void = std::ptr::null_mut();
-            if let Some(attach_current_thread) = (*(*jvm)).AttachCurrentThread {
-                attach_current_thread(jvm, &mut jenv_out, std::ptr::null_mut());
-            }
-
+            jvm.attach_current_thread_permanently().unwrap();
             jvm
         };
 
         unsafe {
-            let app = AndroidApp::from_ptr(NonNull::new(native_app).unwrap());
+            let app = AndroidApp::from_ptr(NonNull::new(native_app).unwrap(), jvm.clone());
 
             // We want to specifically catch any panic from the application's android_main
             // so we can finish + destroy the Activity gracefully via the JVM
@@ -824,9 +971,9 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
             //  to the main thread of the process where the Java finish call will take place"
             ffi::GameActivity_finish((*native_app).activity);
 
-            if let Some(detach_current_thread) = (*(*jvm)).DetachCurrentThread {
-                detach_current_thread(jvm);
-            }
+            // This should detach automatically but lets detach explicitly to avoid depending
+            // on the TLS trickery in `jni-rs`
+            jvm.detach_current_thread();
 
             ndk_context::release_android_context();
         }

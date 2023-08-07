@@ -2,6 +2,10 @@ use bitflags::bitflags;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 pub use crate::activity_impl::input::*;
+use crate::InputStatus;
+
+mod sdk;
+pub use sdk::*;
 
 /// An enum representing the source of an [`MotionEvent`] or [`KeyEvent`]
 ///
@@ -119,4 +123,23 @@ pub struct TextInputState {
     ///
     /// If the resulting region is zero-sized, no region is marked (equivalent to passing `None`)
     pub compose_region: Option<TextSpan>,
+}
+
+/// An exclusive, lending iterator for input events
+pub struct InputIterator<'a> {
+    pub(crate) inner: crate::activity_impl::InputIteratorInner<'a>,
+}
+
+impl<'a> InputIterator<'a> {
+    /// Reads and handles the next input event by passing it to the given `callback`
+    ///
+    /// `callback` should return [`InputStatus::Unhandled`] for any input events that aren't directly
+    /// handled by the application, or else [`InputStatus::Handled`]. Unhandled events may lead to a
+    /// fallback interpretation of the event.
+    pub fn next<F>(&mut self, callback: F) -> bool
+    where
+        F: FnOnce(&crate::activity_impl::input::InputEvent) -> InputStatus,
+    {
+        self.inner.next(callback)
+    }
 }

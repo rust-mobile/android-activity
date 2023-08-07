@@ -16,7 +16,7 @@
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::convert::TryInto;
 
-use crate::game_activity::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
+use crate::activity_impl::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
 use crate::input::{Class, Source};
 
 // Note: try to keep this wrapper API compatible with the AInputEvent API if possible
@@ -1270,6 +1270,12 @@ impl<'a> KeyEvent<'a> {
     /// See [the KeyEvent docs](https://developer.android.com/reference/android/view/KeyEvent#getAction())
     #[inline]
     pub fn action(&self) -> KeyAction {
+        let action = self.ga_event.action as u32;
+        action.try_into().unwrap()
+    }
+
+    #[inline]
+    pub fn action_button(&self) -> KeyAction {
         let action = self.ga_event.action as u32;
         action.try_into().unwrap()
     }
