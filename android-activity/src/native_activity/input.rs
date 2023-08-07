@@ -1,11 +1,11 @@
 use std::marker::PhantomData;
 
-pub use ndk::event::{
-    Axis, ButtonState, EdgeFlags, KeyAction, KeyEventFlags, Keycode, MetaState, MotionAction,
-    MotionEventFlags, Pointer, PointersIter,
-};
+pub use ndk::event::{Pointer, PointersIter};
 
-use crate::input::{Class, Source};
+use crate::input::{
+    ButtonState, Class, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction, MotionEventFlags,
+    Source,
+};
 
 /// A motion event
 ///
@@ -60,7 +60,7 @@ impl<'a> MotionEvent<'a> {
     /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getActionMasked())
     #[inline]
     pub fn action(&self) -> MotionAction {
-        self.ndk_event.action()
+        self.ndk_event.action().into()
     }
 
     /// Returns the pointer index of an `Up` or `Down` event.
@@ -136,7 +136,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getmetastate)
     #[inline]
     pub fn meta_state(&self) -> MetaState {
-        self.ndk_event.meta_state()
+        self.ndk_event.meta_state().into()
     }
 
     /// Returns the button state during this event, as a bitfield.
@@ -145,7 +145,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getbuttonstate)
     #[inline]
     pub fn button_state(&self) -> ButtonState {
-        self.ndk_event.button_state()
+        self.ndk_event.button_state().into()
     }
 
     /// Returns the time of the start of this gesture, in the `java.lang.System.nanoTime()` time
@@ -164,7 +164,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getedgeflags)
     #[inline]
     pub fn edge_flags(&self) -> EdgeFlags {
-        self.ndk_event.edge_flags()
+        self.ndk_event.edge_flags().into()
     }
 
     /// Returns the time of this event, in the `java.lang.System.nanoTime()` time base
@@ -182,7 +182,7 @@ impl<'a> MotionEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getflags)
     #[inline]
     pub fn flags(&self) -> MotionEventFlags {
-        self.ndk_event.flags()
+        self.ndk_event.flags().into()
     }
 
     /* Missing from GameActivity currently...
@@ -277,7 +277,7 @@ impl<'a> KeyEvent<'a> {
     /// See [the KeyEvent docs](https://developer.android.com/reference/android/view/KeyEvent#getAction())
     #[inline]
     pub fn action(&self) -> KeyAction {
-        self.ndk_event.action()
+        self.ndk_event.action().into()
     }
 
     /// Returns the last time the key was pressed.  This is on the scale of
@@ -306,7 +306,7 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getkeycode)
     #[inline]
     pub fn key_code(&self) -> Keycode {
-        self.ndk_event.key_code()
+        self.ndk_event.key_code().into()
     }
 
     /// Returns the number of repeats of a key.
@@ -333,7 +333,7 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getmetastate)
     #[inline]
     pub fn meta_state(&self) -> MetaState {
-        self.ndk_event.meta_state()
+        self.ndk_event.meta_state().into()
     }
 }
 

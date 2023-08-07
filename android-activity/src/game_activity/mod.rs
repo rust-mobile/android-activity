@@ -27,7 +27,7 @@ use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
 use crate::error::InternalResult;
-use crate::input::{KeyCharacterMap, KeyCharacterMapBinding};
+use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding};
 use crate::jni_utils::{self, CloneJavaVM};
 use crate::util::{abort_on_panic, android_log, log_panic};
 use crate::{
@@ -38,7 +38,7 @@ mod ffi;
 
 pub mod input;
 use crate::input::{TextInputState, TextSpan};
-use input::{Axis, InputEvent, KeyEvent, MotionEvent};
+use input::{InputEvent, KeyEvent, MotionEvent};
 
 // The only time it's safe to update the android_app->savedState pointer is
 // while handling a SaveState event, so this API is only exposed for those
