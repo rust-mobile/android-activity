@@ -2637,7 +2637,6 @@ pub struct GameActivityKeyEvent {
     pub repeatCount: i32,
     pub keyCode: i32,
     pub scanCode: i32,
-    pub unicodeChar: i32,
 }
 #[test]
 fn bindgen_test_layout_GameActivityKeyEvent() {
@@ -2645,7 +2644,7 @@ fn bindgen_test_layout_GameActivityKeyEvent() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::std::mem::size_of::<GameActivityKeyEvent>(),
-        56usize,
+        52usize,
         concat!("Size of: ", stringify!(GameActivityKeyEvent))
     );
     assert_eq!(
@@ -2761,16 +2760,6 @@ fn bindgen_test_layout_GameActivityKeyEvent() {
             stringify!(GameActivityKeyEvent),
             "::",
             stringify!(scanCode)
-        )
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).unicodeChar) as usize - ptr as usize },
-        52usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(GameActivityKeyEvent),
-            "::",
-            stringify!(unicodeChar)
         )
     );
 }
