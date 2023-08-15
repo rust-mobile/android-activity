@@ -13,7 +13,7 @@ use log::{error, trace};
 use ndk::input_queue::InputQueue;
 use ndk::{asset::AssetManager, native_window::NativeWindow};
 
-use crate::error::{InternalAppError, InternalResult};
+use crate::error::InternalResult;
 use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding};
 use crate::input::{TextInputState, TextSpan};
 use crate::jni_utils::{self, CloneJavaVM};
@@ -434,11 +434,10 @@ impl AndroidAppInner {
         let queue = self
             .native_activity
             .looper_attached_input_queue(self.looper(), LOOPER_ID_INPUT);
-        let queue = match queue {
-            Some(queue) => queue,
-            None => return Err(InternalAppError::InputUnavailable),
-        };
 
+        // Note: we don't treat it as an error if there is no queue, so if applications
+        // iterate input before a queue has been created (e.g. before onStart) then
+        // it will simply behave like there are no events available currently.
         let receiver = Arc::new(InputReceiver { queue });
 
         *guard = Some(Arc::downgrade(&receiver));
@@ -463,7 +462,7 @@ impl AndroidAppInner {
 
 #[derive(Debug)]
 pub(crate) struct InputReceiver {
-    queue: InputQueue,
+    queue: Option<InputQueue>,
 }
 
 impl<'a> From<Arc<InputReceiver>> for InputIteratorInner<'a> {
@@ -486,6 +485,15 @@ impl<'a> InputIteratorInner<'a> {
     where
         F: FnOnce(&input::InputEvent) -> InputStatus,
     {
+        // XXX: would use `let Some(queue) = &self.receiver.queue else { return
+        // false; }` but we're stuck supporting Rust 1.64 for Winit currently
+        let queue = if let Some(queue) = &self.receiver.queue {
+            queue
+        } else {
+            log::trace!("no queue available for events");
+            return false;
+        };
+
         // Note: we basically ignore errors from get_event() currently. Looking
         // at the source code for Android's InputQueue, the only error that
         // can be returned here is 'WOULD_BLOCK', which we want to just treat as
@@ -493,10 +501,10 @@ impl<'a> InputIteratorInner<'a> {
         //
         // ref: https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/jni/android_view_InputQueue.cpp
         //
-        if let Ok(Some(ndk_event)) = self.receiver.queue.get_event() {
-            log::info!("queue: got event: {ndk_event:?}");
+        if let Ok(Some(ndk_event)) = queue.get_event() {
+            log::trace!("queue: got event: {ndk_event:?}");
 
-            if let Some(ndk_event) = self.receiver.queue.pre_dispatch(ndk_event) {
+            if let Some(ndk_event) = queue.pre_dispatch(ndk_event) {
                 let event = match ndk_event {
                     ndk::event::InputEvent::MotionEvent(e) => {
                         input::InputEvent::MotionEvent(input::MotionEvent::new(e))
@@ -524,20 +532,18 @@ impl<'a> InputIteratorInner<'a> {
                     Ok(handled) => handled,
                     Err(payload) => {
                         log::error!("Calling `finish_event` after panic in input event handler, to try and avoid being killed via an ANR");
-                        self.receiver.queue.finish_event(ndk_event, false);
+                        queue.finish_event(ndk_event, false);
                         std::panic::resume_unwind(payload);
                     }
                 };
 
-                log::info!("queue: finishing event");
-                self.receiver
-                    .queue
-                    .finish_event(ndk_event, handled == InputStatus::Handled);
+                log::trace!("queue: finishing event");
+                queue.finish_event(ndk_event, handled == InputStatus::Handled);
             }
 
             true
         } else {
-            log::info!("queue: no more events");
+            log::trace!("queue: no more events");
             false
         }
     }
