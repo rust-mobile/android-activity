@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0-beta.1] - 2023-08-15
+### Changed
+- Pulled in `ndk-sys 0.5.0-beta.0` and `ndk 0.8.0-beta.0` ([#113](https://github.com/rust-mobile/android-activity/pull/113))
+
+## [0.5.0-beta.0] - 2023-08-15
+
 ### Added
 - Added `KeyEvent::meta_state()` for being able to query the state of meta keys, needed for character mapping ([#102](https://github.com/rust-mobile/android-activity/pull/102))
 - Added `KeyCharacterMap` JNI bindings to the corresponding Android SDK API ([#102](https://github.com/rust-mobile/android-activity/pull/102))
@@ -63,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     ```
 
     </details>
+- Added `TextEvent` Input Method event for supporting text editing via virtual keyboards ([#24](https://github.com/rust-mobile/android-activity/pull/24))
 
 ### Changed
 - GameActivity updated to 2.0.2 (requires the corresponding 2.0.2 `.aar` release from Google) ([#88](https://github.com/rust-mobile/android-activity/pull/88))
@@ -104,19 +111,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     </details>
 
-## [0.4.3] - 2022-07-30
+## [0.4.3] - 2023-07-30
 ### Fixed
 - Fixed a deadlock in the `native-activity` backend while waiting for the native thread after getting an `onDestroy` callback from Java ([#94](https://github.com/rust-mobile/android-activity/pull/94))
 - Fixed numerous deadlocks in the `game-activity` backend with how it would wait for the native thread in various Java callbacks, after the app has returned from `android_main` ([#98](https://github.com/rust-mobile/android-activity/pull/98))
 
-## [0.4.2] - 2022-06-17
+## [0.4.2] - 2023-06-17
 ### Changed
 - The `Activity.finish()` method is now called when `android_main` returns so the `Activity` will be destroyed ([#67](https://github.com/rust-mobile/android-activity/issues/67))
 - The `native-activity` backend now propagates `NativeWindow` redraw/resize and `ContentRectChanged` callbacks to main loop ([#70](https://github.com/rust-mobile/android-activity/pull/70))
 - The `game-activity` implementation of `pointer_index()` was fixed to not always return `0` ([#80](https://github.com/rust-mobile/android-activity/pull/84))
 - Added `panic` guards around application's `android_main()` and native code that could potentially unwind across a Java FFI boundary ([#68](https://github.com/rust-mobile/android-activity/pull/68))
 
-## [0.4.1] - 2022-02-16
+## [0.4.1] - 2023-02-16
 ### Added
 - Added `AndroidApp::vm_as_ptr()` to expose JNI `JavaVM` pointer ([#60](https://github.com/rust-mobile/android-activity/issues/60))
 - Added `AndroidApp::activity_as_ptr()` to expose Android `Activity` JNI reference as pointer ([#60](https://github.com/rust-mobile/android-activity/issues/60))
