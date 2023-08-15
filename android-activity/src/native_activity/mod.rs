@@ -14,7 +14,7 @@ use ndk::input_queue::InputQueue;
 use ndk::{asset::AssetManager, native_window::NativeWindow};
 
 use crate::error::{InternalAppError, InternalResult};
-use crate::input::{KeyCharacterMap, KeyCharacterMapBinding};
+use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding};
 use crate::input::{TextInputState, TextSpan};
 use crate::jni_utils::{self, CloneJavaVM};
 use crate::{
@@ -410,11 +410,11 @@ impl AndroidAppInner {
         Ok(key_map)
     }
 
-    pub fn enable_motion_axis(&self, _axis: input::Axis) {
+    pub fn enable_motion_axis(&self, _axis: Axis) {
         // NOP - The InputQueue API doesn't let us optimize which axis values are read
     }
 
-    pub fn disable_motion_axis(&self, _axis: input::Axis) {
+    pub fn disable_motion_axis(&self, _axis: Axis) {
         // NOP - The InputQueue API doesn't let us optimize which axis values are read
     }
 

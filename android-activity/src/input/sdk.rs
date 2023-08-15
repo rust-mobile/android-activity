@@ -8,7 +8,7 @@ use jni::{
 use jni_sys::jint;
 
 use crate::{
-    activity_impl::input::{Keycode, MetaState},
+    input::{Keycode, MetaState},
     jni_utils::CloneJavaVM,
 };
 
