@@ -185,14 +185,14 @@ impl AndroidAppInner {
 
     pub fn poll_events<F>(&self, timeout: Option<Duration>, mut callback: F)
     where
-        F: FnMut(PollEvent),
+        F: FnMut(PollEvent<'_>),
     {
         trace!("poll_events");
 
         unsafe {
             let mut fd: i32 = 0;
             let mut events: i32 = 0;
-            let mut source: *mut core::ffi::c_void = ptr::null_mut();
+            let mut source: *mut c_void = ptr::null_mut();
 
             let timeout_milliseconds = if let Some(timeout) = timeout {
                 timeout.as_millis() as i32
@@ -209,7 +209,7 @@ impl AndroidAppInner {
                 timeout_milliseconds,
                 &mut fd,
                 &mut events,
-                &mut source as *mut *mut core::ffi::c_void,
+                &mut source as *mut *mut c_void,
             );
             trace!("pollAll id = {id}");
             match id {
