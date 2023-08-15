@@ -912,13 +912,19 @@ extern "Rust" {
 pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
     abort_on_panic(|| {
         // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
-        let mut logpipe: [RawFd; 2] = Default::default();
-        libc::pipe(logpipe.as_mut_ptr());
-        libc::dup2(logpipe[1], libc::STDOUT_FILENO);
-        libc::dup2(logpipe[1], libc::STDERR_FILENO);
+
+        let file = {
+            let mut logpipe: [RawFd; 2] = Default::default();
+            libc::pipe2(logpipe.as_mut_ptr(), libc::O_CLOEXEC);
+            libc::dup2(logpipe[1], libc::STDOUT_FILENO);
+            libc::dup2(logpipe[1], libc::STDERR_FILENO);
+            libc::close(logpipe[1]);
+
+            File::from_raw_fd(logpipe[0])
+        };
+
         thread::spawn(move || {
             let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-            let file = File::from_raw_fd(logpipe[0]);
             let mut reader = BufReader::new(file);
             let mut buffer = String::new();
             loop {

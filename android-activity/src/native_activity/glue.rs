@@ -835,28 +835,31 @@ extern "C" fn ANativeActivity_onCreate(
 ) {
     abort_on_panic(|| {
         // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
-        unsafe {
+        let file = unsafe {
             let mut logpipe: [RawFd; 2] = Default::default();
-            libc::pipe(logpipe.as_mut_ptr());
+            libc::pipe2(logpipe.as_mut_ptr(), libc::O_CLOEXEC);
             libc::dup2(logpipe[1], libc::STDOUT_FILENO);
             libc::dup2(logpipe[1], libc::STDERR_FILENO);
-            std::thread::spawn(move || {
-                let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-                let file = File::from_raw_fd(logpipe[0]);
-                let mut reader = BufReader::new(file);
-                let mut buffer = String::new();
-                loop {
-                    buffer.clear();
-                    if let Ok(len) = reader.read_line(&mut buffer) {
-                        if len == 0 {
-                            break;
-                        } else if let Ok(msg) = CString::new(buffer.clone()) {
-                            android_log(Level::Info, tag, &msg);
-                        }
+            libc::close(logpipe[1]);
+
+            File::from_raw_fd(logpipe[0])
+        };
+
+        std::thread::spawn(move || {
+            let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
+            let mut reader = BufReader::new(file);
+            let mut buffer = String::new();
+            loop {
+                buffer.clear();
+                if let Ok(len) = reader.read_line(&mut buffer) {
+                    if len == 0 {
+                        break;
+                    } else if let Ok(msg) = CString::new(buffer.clone()) {
+                        android_log(Level::Info, tag, &msg);
                     }
                 }
-            });
-        }
+            }
+        });
 
         log::trace!(
             "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
