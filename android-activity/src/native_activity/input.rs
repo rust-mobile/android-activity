@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-pub use ndk::event::{Pointer, PointersIter};
+pub use ndk::event::{Axis, Pointer, PointersIter};
 
 use crate::input::{
     ButtonState, Class, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction, MotionEventFlags,

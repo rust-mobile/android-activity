@@ -199,66 +199,6 @@ impl From<ndk::event::MotionAction> for MotionAction {
     }
 }
 
-/// An axis of a motion event.
-///
-/// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-32)
-#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
-#[repr(u32)]
-pub enum Axis {
-    X = ndk_sys::AMOTION_EVENT_AXIS_X,
-    Y = ndk_sys::AMOTION_EVENT_AXIS_Y,
-    Pressure = ndk_sys::AMOTION_EVENT_AXIS_PRESSURE,
-    Size = ndk_sys::AMOTION_EVENT_AXIS_SIZE,
-    TouchMajor = ndk_sys::AMOTION_EVENT_AXIS_TOUCH_MAJOR,
-    TouchMinor = ndk_sys::AMOTION_EVENT_AXIS_TOUCH_MINOR,
-    ToolMajor = ndk_sys::AMOTION_EVENT_AXIS_TOOL_MAJOR,
-    ToolMinor = ndk_sys::AMOTION_EVENT_AXIS_TOOL_MINOR,
-    Orientation = ndk_sys::AMOTION_EVENT_AXIS_ORIENTATION,
-    Vscroll = ndk_sys::AMOTION_EVENT_AXIS_VSCROLL,
-    Hscroll = ndk_sys::AMOTION_EVENT_AXIS_HSCROLL,
-    Z = ndk_sys::AMOTION_EVENT_AXIS_Z,
-    Rx = ndk_sys::AMOTION_EVENT_AXIS_RX,
-    Ry = ndk_sys::AMOTION_EVENT_AXIS_RY,
-    Rz = ndk_sys::AMOTION_EVENT_AXIS_RZ,
-    HatX = ndk_sys::AMOTION_EVENT_AXIS_HAT_X,
-    HatY = ndk_sys::AMOTION_EVENT_AXIS_HAT_Y,
-    Ltrigger = ndk_sys::AMOTION_EVENT_AXIS_LTRIGGER,
-    Rtrigger = ndk_sys::AMOTION_EVENT_AXIS_RTRIGGER,
-    Throttle = ndk_sys::AMOTION_EVENT_AXIS_THROTTLE,
-    Rudder = ndk_sys::AMOTION_EVENT_AXIS_RUDDER,
-    Wheel = ndk_sys::AMOTION_EVENT_AXIS_WHEEL,
-    Gas = ndk_sys::AMOTION_EVENT_AXIS_GAS,
-    Brake = ndk_sys::AMOTION_EVENT_AXIS_BRAKE,
-    Distance = ndk_sys::AMOTION_EVENT_AXIS_DISTANCE,
-    Tilt = ndk_sys::AMOTION_EVENT_AXIS_TILT,
-    Scroll = ndk_sys::AMOTION_EVENT_AXIS_SCROLL,
-    RelativeX = ndk_sys::AMOTION_EVENT_AXIS_RELATIVE_X,
-    RelativeY = ndk_sys::AMOTION_EVENT_AXIS_RELATIVE_Y,
-    Generic1 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_1,
-    Generic2 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_2,
-    Generic3 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_3,
-    Generic4 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_4,
-    Generic5 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_5,
-    Generic6 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_6,
-    Generic7 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_7,
-    Generic8 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_8,
-    Generic9 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_9,
-    Generic10 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_10,
-    Generic11 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_11,
-    Generic12 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_12,
-    Generic13 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_13,
-    Generic14 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_14,
-    Generic15 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_15,
-    Generic16 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_16,
-}
-
-impl From<ndk::event::Axis> for Axis {
-    fn from(value: ndk::event::Axis) -> Self {
-        let inner: u32 = value.into();
-        inner.try_into().unwrap() // TODO: replace with into() when we can bump MSRV to 1.68!
-    }
-}
-
 /// The tool type of a pointer.
 ///
 /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-48)
