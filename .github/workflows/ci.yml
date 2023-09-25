@@ -16,9 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # XXX: We are currently constrained by Winit's MSRV policy + CI system
-        # See Cargo.toml for details
-        rust_version: [1.64.0, stable]
+        # See top README for MSRV policy
+        rust_version: [1.68.0, stable]
     steps:
       - uses: actions/checkout@v3
 
@@ -35,10 +34,7 @@ jobs:
           i686-linux-android
 
       - name: Install cargo-ndk
-        # XXX: We have to use an old version of cargo-ndk that supports the
-        # libgcc linker workaround for rust < 1.68 because Winit's CI system
-        # currently requires this crate to be buildable with 1.64
-        run: cargo install cargo-ndk --version "^2"
+        run: cargo install cargo-ndk
 
       - name: Build game-activity
         working-directory: android-activity

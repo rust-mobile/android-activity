@@ -909,7 +909,6 @@ extern "Rust" {
 // `app_main` function. This is run on a dedicated thread spawned
 // by android_native_app_glue.
 #[no_mangle]
-#[allow(unused_unsafe)] // Otherwise rust 1.64 moans about using unsafe{} in unsafe functions
 pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
     abort_on_panic(|| {
         // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
