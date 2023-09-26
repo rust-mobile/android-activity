@@ -18,7 +18,7 @@ use std::convert::TryInto;
 use crate::activity_impl::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
 use crate::input::{
     Axis, ButtonState, Class, EdgeFlags, KeyAction, KeyEventFlags, Keycode, MetaState,
-    MotionAction, MotionEventFlags, Source, ToolType,
+    MotionAction, MotionEventFlags, Pointer, PointersIter, Source, ToolType,
 };
 
 // Note: try to keep this wrapper API compatible with the AInputEvent API if possible
@@ -116,9 +116,11 @@ impl<'a> MotionEvent<'a> {
     #[inline]
     pub fn pointers(&self) -> PointersIter<'_> {
         PointersIter {
-            event: self,
-            next_index: 0,
-            count: self.pointer_count(),
+            inner: PointersIterImpl {
+                event: self,
+                next_index: 0,
+                count: self.pointer_count(),
+            },
         }
     }
 
@@ -130,7 +132,9 @@ impl<'a> MotionEvent<'a> {
         if index >= self.pointer_count() {
             panic!("Pointer index {} is out of bounds", index);
         }
-        Pointer { event: self, index }
+        Pointer {
+            inner: PointerImpl { event: self, index },
+        }
     }
 
     /*
@@ -251,12 +255,12 @@ impl<'a> MotionEvent<'a> {
 
 /// A view into the data of a specific pointer in a motion event.
 #[derive(Debug)]
-pub struct Pointer<'a> {
+pub(crate) struct PointerImpl<'a> {
     event: &'a MotionEvent<'a>,
     index: usize,
 }
 
-impl<'a> Pointer<'a> {
+impl<'a> PointerImpl<'a> {
     #[inline]
     pub fn pointer_index(&self) -> usize {
         self.index
@@ -275,16 +279,6 @@ impl<'a> Pointer<'a> {
     }
 
     #[inline]
-    pub fn orientation(&self) -> f32 {
-        self.axis_value(Axis::Orientation)
-    }
-
-    #[inline]
-    pub fn pressure(&self) -> f32 {
-        self.axis_value(Axis::Pressure)
-    }
-
-    #[inline]
     pub fn raw_x(&self) -> f32 {
         let pointer = &self.event.ga_event.pointers[self.index];
         pointer.rawX
@@ -297,41 +291,6 @@ impl<'a> Pointer<'a> {
     }
 
     #[inline]
-    pub fn x(&self) -> f32 {
-        self.axis_value(Axis::X)
-    }
-
-    #[inline]
-    pub fn y(&self) -> f32 {
-        self.axis_value(Axis::Y)
-    }
-
-    #[inline]
-    pub fn size(&self) -> f32 {
-        self.axis_value(Axis::Size)
-    }
-
-    #[inline]
-    pub fn tool_major(&self) -> f32 {
-        self.axis_value(Axis::ToolMajor)
-    }
-
-    #[inline]
-    pub fn tool_minor(&self) -> f32 {
-        self.axis_value(Axis::ToolMinor)
-    }
-
-    #[inline]
-    pub fn touch_major(&self) -> f32 {
-        self.axis_value(Axis::TouchMajor)
-    }
-
-    #[inline]
-    pub fn touch_minor(&self) -> f32 {
-        self.axis_value(Axis::TouchMinor)
-    }
-
-    #[inline]
     pub fn tool_type(&self) -> ToolType {
         let pointer = &self.event.ga_event.pointers[self.index];
         let tool_type = pointer.toolType as u32;
@@ -341,19 +300,21 @@ impl<'a> Pointer<'a> {
 
 /// An iterator over the pointers in a [`MotionEvent`].
 #[derive(Debug)]
-pub struct PointersIter<'a> {
+pub(crate) struct PointersIterImpl<'a> {
     event: &'a MotionEvent<'a>,
     next_index: usize,
     count: usize,
 }
 
-impl<'a> Iterator for PointersIter<'a> {
+impl<'a> Iterator for PointersIterImpl<'a> {
     type Item = Pointer<'a>;
     fn next(&mut self) -> Option<Pointer<'a>> {
         if self.next_index < self.count {
             let ptr = Pointer {
-                event: self.event,
-                index: self.next_index,
+                inner: PointerImpl {
+                    event: self.event,
+                    index: self.next_index,
+                },
             };
             self.next_index += 1;
             Some(ptr)
@@ -368,7 +329,7 @@ impl<'a> Iterator for PointersIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for PointersIter<'a> {
+impl<'a> ExactSizeIterator for PointersIterImpl<'a> {
     fn len(&self) -> usize {
         self.count - self.next_index
     }

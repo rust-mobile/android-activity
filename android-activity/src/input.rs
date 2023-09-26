@@ -816,3 +816,109 @@ impl<'a> InputIterator<'a> {
         self.inner.next(callback)
     }
 }
+
+/// A view into the data of a specific pointer in a motion event.
+#[derive(Debug)]
+pub struct Pointer<'a> {
+    pub(crate) inner: PointerImpl<'a>,
+}
+
+impl<'a> Pointer<'a> {
+    #[inline]
+    pub fn pointer_index(&self) -> usize {
+        self.inner.pointer_index()
+    }
+
+    #[inline]
+    pub fn pointer_id(&self) -> i32 {
+        self.inner.pointer_id()
+    }
+
+    #[inline]
+    pub fn axis_value(&self, axis: Axis) -> f32 {
+        self.inner.axis_value(axis)
+    }
+
+    #[inline]
+    pub fn orientation(&self) -> f32 {
+        self.axis_value(Axis::Orientation)
+    }
+
+    #[inline]
+    pub fn pressure(&self) -> f32 {
+        self.axis_value(Axis::Pressure)
+    }
+
+    #[inline]
+    pub fn raw_x(&self) -> f32 {
+        self.inner.raw_x()
+    }
+
+    #[inline]
+    pub fn raw_y(&self) -> f32 {
+        self.inner.raw_y()
+    }
+
+    #[inline]
+    pub fn x(&self) -> f32 {
+        self.axis_value(Axis::X)
+    }
+
+    #[inline]
+    pub fn y(&self) -> f32 {
+        self.axis_value(Axis::Y)
+    }
+
+    #[inline]
+    pub fn size(&self) -> f32 {
+        self.axis_value(Axis::Size)
+    }
+
+    #[inline]
+    pub fn tool_major(&self) -> f32 {
+        self.axis_value(Axis::ToolMajor)
+    }
+
+    #[inline]
+    pub fn tool_minor(&self) -> f32 {
+        self.axis_value(Axis::ToolMinor)
+    }
+
+    #[inline]
+    pub fn touch_major(&self) -> f32 {
+        self.axis_value(Axis::TouchMajor)
+    }
+
+    #[inline]
+    pub fn touch_minor(&self) -> f32 {
+        self.axis_value(Axis::TouchMinor)
+    }
+
+    #[inline]
+    pub fn tool_type(&self) -> ToolType {
+        self.inner.tool_type()
+    }
+}
+
+/// An iterator over the pointers in a [`MotionEvent`].
+#[derive(Debug)]
+pub struct PointersIter<'a> {
+    pub(crate) inner: PointersIterImpl<'a>,
+}
+
+impl<'a> Iterator for PointersIter<'a> {
+    type Item = Pointer<'a>;
+    fn next(&mut self) -> Option<Pointer<'a>> {
+        self.inner.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<'a> ExactSizeIterator for PointersIter<'a> {
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+}
