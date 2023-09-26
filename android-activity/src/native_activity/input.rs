@@ -1,10 +1,8 @@
 use std::marker::PhantomData;
 
-pub use ndk::event::{Pointer, PointersIter};
-
 use crate::input::{
-    ButtonState, Class, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction, MotionEventFlags,
-    Source,
+    Axis, ButtonState, Class, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction,
+    MotionEventFlags, Pointer, PointersIter, Source, ToolType,
 };
 
 /// A motion event
@@ -99,7 +97,11 @@ impl<'a> MotionEvent<'a> {
     /// An iterator over the pointers in this motion event
     #[inline]
     pub fn pointers(&self) -> PointersIter<'_> {
-        self.ndk_event.pointers()
+        PointersIter {
+            inner: PointersIterImpl {
+                ndk_pointers_iter: self.ndk_event.pointers(),
+            },
+        }
     }
 
     /// The pointer at a given pointer index. Panics if the pointer index is out of bounds.
@@ -107,7 +109,11 @@ impl<'a> MotionEvent<'a> {
     /// If you need to loop over all the pointers, prefer the [`pointers()`](Self::pointers) method.
     #[inline]
     pub fn pointer_at_index(&self, index: usize) -> Pointer<'_> {
-        self.ndk_event.pointer_at_index(index)
+        Pointer {
+            inner: PointerImpl {
+                ndk_pointer: self.ndk_event.pointer_at_index(index),
+            },
+        }
     }
 
     /*
@@ -221,6 +227,72 @@ impl<'a> MotionEvent<'a> {
     #[inline]
     pub fn y_precision(&self) -> f32 {
         self.ndk_event.y_precision()
+    }
+}
+
+/// A view into the data of a specific pointer in a motion event.
+#[derive(Debug)]
+pub(crate) struct PointerImpl<'a> {
+    ndk_pointer: ndk::event::Pointer<'a>,
+}
+
+impl<'a> PointerImpl<'a> {
+    #[inline]
+    pub fn pointer_index(&self) -> usize {
+        self.ndk_pointer.pointer_index()
+    }
+
+    #[inline]
+    pub fn pointer_id(&self) -> i32 {
+        self.ndk_pointer.pointer_id()
+    }
+
+    #[inline]
+    pub fn axis_value(&self, axis: Axis) -> f32 {
+        let value: u32 = axis.into();
+        let ndk_axis = value.try_into().unwrap();
+        self.ndk_pointer.axis_value(ndk_axis)
+    }
+
+    #[inline]
+    pub fn raw_x(&self) -> f32 {
+        self.ndk_pointer.raw_x()
+    }
+
+    #[inline]
+    pub fn raw_y(&self) -> f32 {
+        self.ndk_pointer.raw_y()
+    }
+
+    #[inline]
+    pub fn tool_type(&self) -> ToolType {
+        let value: u32 = self.ndk_pointer.tool_type().into();
+        value.try_into().unwrap()
+    }
+}
+
+/// An iterator over the pointers in a [`MotionEvent`].
+#[derive(Debug)]
+pub(crate) struct PointersIterImpl<'a> {
+    ndk_pointers_iter: ndk::event::PointersIter<'a>,
+}
+
+impl<'a> Iterator for PointersIterImpl<'a> {
+    type Item = Pointer<'a>;
+    fn next(&mut self) -> Option<Pointer<'a>> {
+        self.ndk_pointers_iter.next().map(|ndk_pointer| Pointer {
+            inner: PointerImpl { ndk_pointer },
+        })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.ndk_pointers_iter.size_hint()
+    }
+}
+
+impl<'a> ExactSizeIterator for PointersIterImpl<'a> {
+    fn len(&self) -> usize {
+        self.ndk_pointers_iter.len()
     }
 }
 
