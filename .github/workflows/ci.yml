@@ -19,7 +19,7 @@ jobs:
         # See top README for MSRV policy
         rust_version: [1.68.0, stable]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: hecrj/setup-rust-action@v1
         with:
@@ -85,7 +85,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions-rs/toolchain@v1
         with:
