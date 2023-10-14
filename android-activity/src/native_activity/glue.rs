@@ -909,7 +909,7 @@ extern "C" fn ANativeActivity_onCreate(
                     // code to look up non-standard Java classes.
                     android_main(app);
                 })
-                .unwrap_or_else(|panic| log_panic(panic));
+                .unwrap_or_else(log_panic);
 
                 // Let JVM know that our Activity can be destroyed before detaching from the JVM
                 //

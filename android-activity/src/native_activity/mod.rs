@@ -494,14 +494,13 @@ impl<'a> InputIteratorInner<'a> {
             return false;
         };
 
-        // Note: we basically ignore errors from get_event() currently. Looking
-        // at the source code for Android's InputQueue, the only error that
-        // can be returned here is 'WOULD_BLOCK', which we want to just treat as
-        // meaning the queue is empty.
+        // Note: we basically ignore errors from event() currently. Looking at the source code for
+        // Android's InputQueue, the only error that can be returned here is 'WOULD_BLOCK', which we
+        // want to just treat as meaning the queue is empty.
         //
         // ref: https://github.com/aosp-mirror/platform_frameworks_base/blob/master/core/jni/android_view_InputQueue.cpp
         //
-        if let Ok(Some(ndk_event)) = queue.get_event() {
+        if let Ok(Some(ndk_event)) = queue.event() {
             log::trace!("queue: got event: {ndk_event:?}");
 
             if let Some(ndk_event) = queue.pre_dispatch(ndk_event) {
