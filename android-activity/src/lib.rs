@@ -51,6 +51,49 @@
 //!
 //! These are undone after `android_main()` returns
 //!
+//! # Android Extensible Enums
+//!
+//! There are numerous enums in the `android-activity` API which are effectively
+//! bindings to enums declared in the Android SDK which need to be considered
+//! _runtime_ extensible.
+//!
+//! Any enum variants that come from the Android SDK may be extended in future
+//! versions of Android and your code could be exposed to new variants if you
+//! build an application that might be installed on new versions of Android.
+//!
+//! This crate follows a convention of adding a hidden `__Unknown(u32)` variant
+//! to these enum to ensure we can always do lossless conversions between the
+//! integers from the SDK and our corresponding Rust enums. This can be
+//! important in case you need to pass certain variants back to the SDK
+//! regardless of whether you knew about that variants specific semantics at
+//! compile time.
+//!
+//! You should never include this `__Unknown(u32)` variant within any exhaustive
+//! pattern match and should instead treat the enums like `#[non_exhaustive]`
+//! enums that require you to add a catch-all for any `unknown => {}` values.
+//!
+//! Any code that would exhaustively include the `__Unknown(u32)` variant when
+//! pattern matching can not be guaranteed to be forwards compatible with new
+//! releases of `android-activity` which may add new Rust variants to these
+//! enums without requiring a breaking semver bump.
+//!
+//! You can (infallibly) convert these enums to and from primitive `u32` values
+//! using `.into()`:
+//!
+//! For example, here is how you could ensure forwards compatibility with both
+//! compile-time and runtime extensions of a `SomeEnum` enum:
+//!
+//! ```rust
+//! match some_enum {
+//!     SomeEnum::Foo => {},
+//!     SomeEnum::Bar => {},
+//!     unhandled => {
+//!         let sdk_val: u32 = unhandled.into();
+//!         println!("Unhandled enum variant {some_enum:?} has SDK value: {sdk_val}");
+//!     }
+//! }
+//! ```
+//!
 //! [`Activity`]: https://developer.android.com/reference/android/app/Activity
 //! [`NativeActivity`]: https://developer.android.com/reference/android/app/NativeActivity
 //! [ndk_concepts]: https://developer.android.com/ndk/guides/concepts#naa
