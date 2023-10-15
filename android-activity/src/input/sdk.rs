@@ -17,7 +17,22 @@ use crate::{
     jni_utils,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// An enum representing the types of keyboards that may generate key events
+///
+/// See [getKeyboardType() docs](https://developer.android.com/reference/android/view/KeyCharacterMap#getKeyboardType())
+///
+/// # Android Extensible Enum
+///
+/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// should be handled similar to a `#[non_exhaustive]` enum to maintain
+/// forwards compatibility.
+///
+/// This implements `Into<u32>` and `From<u32>` for converting to/from Android
+/// SDK integer values.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, num_enum::FromPrimitive, num_enum::IntoPrimitive,
+)]
+#[repr(u32)]
 pub enum KeyboardType {
     /// A numeric (12-key) keyboard.
     ///
@@ -50,33 +65,9 @@ pub enum KeyboardType {
     /// A special function keyboard consists only of non-printing keys such as HOME and POWER that are not actually used for typing.
     SpecialFunction,
 
-    /// An unknown type of keyboard
-    Unknown(i32),
-}
-
-impl From<i32> for KeyboardType {
-    fn from(value: i32) -> Self {
-        match value {
-            1 => KeyboardType::Numeric,
-            2 => KeyboardType::Predictive,
-            3 => KeyboardType::Alpha,
-            4 => KeyboardType::Full,
-            5 => KeyboardType::SpecialFunction,
-            unknown => KeyboardType::Unknown(unknown),
-        }
-    }
-}
-impl From<KeyboardType> for i32 {
-    fn from(value: KeyboardType) -> i32 {
-        match value {
-            KeyboardType::Numeric => 1,
-            KeyboardType::Predictive => 2,
-            KeyboardType::Alpha => 3,
-            KeyboardType::Full => 4,
-            KeyboardType::SpecialFunction => 5,
-            KeyboardType::Unknown(unknown) => unknown,
-        }
-    }
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
 }
 
 /// Either represents, a unicode character or combining accent from a
@@ -353,6 +344,7 @@ impl KeyCharacterMap {
         let keyboard_type = self
             .binding
             .get_keyboard_type(&mut env, self.key_map.as_obj())?;
+        let keyboard_type = keyboard_type as u32;
         Ok(keyboard_type.into())
     }
 }

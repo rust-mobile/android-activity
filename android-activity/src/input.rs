@@ -1,5 +1,4 @@
 use bitflags::bitflags;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 pub use crate::activity_impl::input::*;
 use crate::InputStatus;
@@ -10,7 +9,17 @@ pub use sdk::*;
 /// An enum representing the source of an [`MotionEvent`] or [`KeyEvent`]
 ///
 /// See [the InputDevice docs](https://developer.android.com/reference/android/view/InputDevice#SOURCE_ANY)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
+///
+/// # Android Extensible Enum
+///
+/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// should be handled similar to a `#[non_exhaustive]` enum to maintain
+/// forwards compatibility.
+///
+/// This implements `Into<u32>` and `From<u32>` for converting to/from Android
+/// SDK integer values.
+///
+#[derive(Debug, Clone, Copy, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[repr(u32)]
 pub enum Source {
     BluetoothStylus = 0x0000c002,
@@ -36,9 +45,36 @@ pub enum Source {
     TouchNavigation = 0x00200000,
     Trackball = 0x00010004,
 
-    Unknown = 0,
+    // We need to consider that the enum variants may be extended across
+    // different versions of Android (i.e. effectively at runtime) but at the
+    // same time we don't want it to be an API break to extend this enum in
+    // future releases of `android-activity` with new variants from the latest
+    // NDK/SDK.
+    //
+    // We can't just use `#[non_exhaustive]` because that only really helps
+    // when adding new variants in sync with android-activity releases.
+    //
+    // On the other hand we also can't rely on a catch-all `Unknown(u32)` that
+    // only really helps with unknown variants seen at runtime.
+    //
+    // What we aim for instead is to have a hidden catch-all variant that
+    // is considered (practically) unmatchable so code is forced to have
+    // a `unknown => {}` catch-all pattern match that will cover unknown variants
+    // either in the form of Rust variants added in future versions or
+    // in the form of an `__Unknown(u32)` integer that represents an unknown
+    // variant seen at runtime.
+    //
+    // Any `unknown => {}` pattern match can rely on `IntoPrimitive` to convert
+    // the `unknown` variant to the integer that comes from the Android SDK
+    // in case that values needs to be passed on, even without knowing its
+    // semantic meaning at compile time.
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
 }
 
+// ndk_sys doesn't currently have the `TRACKBALL` flag so we define our
+// own internal class constants for now
 bitflags! {
     #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     struct SourceFlags: u32 {
@@ -53,37 +89,31 @@ bitflags! {
     }
 }
 
-/// An enum representing the class of a [`MotionEvent`] or [`KeyEvent`] source
-///
-/// See [the InputDevice docs](https://developer.android.com/reference/android/view/InputDevice#SOURCE_CLASS_MASK)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Class {
-    None,
-    Button,
-    Pointer,
-    Trackball,
-    Position,
-    Joystick,
-}
-
-impl From<u32> for Class {
-    fn from(source: u32) -> Self {
-        let class = SourceFlags::from_bits_truncate(source);
-        match class {
-            SourceFlags::BUTTON => Class::Button,
-            SourceFlags::POINTER => Class::Pointer,
-            SourceFlags::TRACKBALL => Class::Trackball,
-            SourceFlags::POSITION => Class::Position,
-            SourceFlags::JOYSTICK => Class::Joystick,
-            _ => Class::None,
-        }
+impl Source {
+    #[inline]
+    pub fn is_button_class(self) -> bool {
+        let class = SourceFlags::from_bits_truncate(self.into());
+        class.contains(SourceFlags::BUTTON)
     }
-}
-
-impl From<Source> for Class {
-    fn from(source: Source) -> Self {
-        let source: u32 = source.into();
-        source.into()
+    #[inline]
+    pub fn is_pointer_class(self) -> bool {
+        let class = SourceFlags::from_bits_truncate(self.into());
+        class.contains(SourceFlags::POINTER)
+    }
+    #[inline]
+    pub fn is_trackball_class(self) -> bool {
+        let class = SourceFlags::from_bits_truncate(self.into());
+        class.contains(SourceFlags::TRACKBALL)
+    }
+    #[inline]
+    pub fn is_position_class(self) -> bool {
+        let class = SourceFlags::from_bits_truncate(self.into());
+        class.contains(SourceFlags::POSITION)
+    }
+    #[inline]
+    pub fn is_joystick_class(self) -> bool {
+        let class = SourceFlags::from_bits_truncate(self.into());
+        class.contains(SourceFlags::JOYSTICK)
     }
 }
 
@@ -174,7 +204,17 @@ impl From<ndk::event::MetaState> for MetaState {
 ///
 /// See [the NDK
 /// docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-29)
-#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
+///
+/// # Android Extensible Enum
+///
+/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// should be handled similar to a `#[non_exhaustive]` enum to maintain
+/// forwards compatibility.
+///
+/// This implements `Into<u32>` and `From<u32>` for converting to/from Android
+/// SDK integer values.
+///
+#[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[repr(u32)]
 pub enum MotionAction {
     Down = ndk_sys::AMOTION_EVENT_ACTION_DOWN,
@@ -190,19 +230,26 @@ pub enum MotionAction {
     HoverExit = ndk_sys::AMOTION_EVENT_ACTION_HOVER_EXIT,
     ButtonPress = ndk_sys::AMOTION_EVENT_ACTION_BUTTON_PRESS,
     ButtonRelease = ndk_sys::AMOTION_EVENT_ACTION_BUTTON_RELEASE,
-}
 
-impl From<ndk::event::MotionAction> for MotionAction {
-    fn from(value: ndk::event::MotionAction) -> Self {
-        let inner: u32 = value.into();
-        inner.try_into().unwrap() // TODO: use into() when we bump the MSRV to 1.68
-    }
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
 }
 
 /// An axis of a motion event.
 ///
 /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-32)
-#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
+///
+/// # Android Extensible Enum
+///
+/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// should be handled similar to a `#[non_exhaustive]` enum to maintain
+/// forwards compatibility.
+///
+/// This implements `Into<u32>` and `From<u32>` for converting to/from Android
+/// SDK integer values.
+///
+#[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[repr(u32)]
 pub enum Axis {
     X = ndk_sys::AMOTION_EVENT_AXIS_X,
@@ -250,19 +297,26 @@ pub enum Axis {
     Generic14 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_14,
     Generic15 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_15,
     Generic16 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_16,
-}
 
-impl From<ndk::event::Axis> for Axis {
-    fn from(value: ndk::event::Axis) -> Self {
-        let inner: u32 = value.into();
-        inner.try_into().unwrap() // TODO: replace with into() when we can bump MSRV to 1.68!
-    }
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
 }
 
 /// The tool type of a pointer.
 ///
 /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-48)
-#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
+///
+/// # Android Extensible Enum
+///
+/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// should be handled similar to a `#[non_exhaustive]` enum to maintain
+/// forwards compatibility.
+///
+/// Implements `Into<u32>` and `From<u32>` for converting to/from Android SDK
+/// integer values.
+///
+#[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[repr(u32)]
 pub enum ToolType {
     /// Unknown tool type.
@@ -284,6 +338,10 @@ pub enum ToolType {
 
     /// The tool is a palm and should be rejected
     Palm = ndk_sys::AMOTION_EVENT_TOOL_TYPE_PALM,
+
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
 }
 
 /// A bitfield representing the state of buttons during a motion event.
@@ -382,25 +440,42 @@ impl From<ndk::event::MotionEventFlags> for MotionEventFlags {
 /// Key actions.
 ///
 /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-27)
-#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
+///
+/// # Android Extensible Enum
+///
+/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// should be handled similar to a `#[non_exhaustive]` enum to maintain
+/// forwards compatibility.
+///
+/// Implements `Into<u32>` and `From<u32>` for converting to/from Android SDK
+/// integer values.
+///
+#[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[repr(u32)]
 pub enum KeyAction {
     Down = ndk_sys::AKEY_EVENT_ACTION_DOWN,
     Up = ndk_sys::AKEY_EVENT_ACTION_UP,
     Multiple = ndk_sys::AKEY_EVENT_ACTION_MULTIPLE,
-}
 
-impl From<ndk::event::KeyAction> for KeyAction {
-    fn from(value: ndk::event::KeyAction) -> Self {
-        let inner: u32 = value.into();
-        inner.try_into().unwrap() // TODO: replace with into() when we can bump MSRV to 1.68!
-    }
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
 }
 
 /// Key codes.
 ///
 /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-39)
-#[derive(Copy, Clone, Debug, PartialEq, Eq, TryFromPrimitive, IntoPrimitive)]
+///
+/// # Android Extensible Enum
+///
+/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// should be handled similar to a `#[non_exhaustive]` enum to maintain
+/// forwards compatibility.
+///
+/// Implements `Into<u32>` and `From<u32>` for converting to/from Android SDK
+/// integer values.
+///
+#[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[repr(u32)]
 pub enum Keycode {
     Unknown = ndk_sys::AKEYCODE_UNKNOWN,
@@ -692,13 +767,10 @@ pub enum Keycode {
     ThumbsUp = ndk_sys::AKEYCODE_THUMBS_UP,
     ThumbsDown = ndk_sys::AKEYCODE_THUMBS_DOWN,
     ProfileSwitch = ndk_sys::AKEYCODE_PROFILE_SWITCH,
-}
 
-impl From<ndk::event::Keycode> for Keycode {
-    fn from(value: ndk::event::Keycode) -> Self {
-        let inner: u32 = value.into();
-        inner.try_into().unwrap() // TODO: replace with into() when we can bump MSRV to 1.68!
-    }
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
 }
 
 /// Flags associated with [`KeyEvent`].

@@ -13,12 +13,10 @@
 // The `Class` was also bound differently to `android-ndk-rs` considering how the class is defined
 // by masking bits from the `Source`.
 
-use std::convert::TryInto;
-
 use crate::activity_impl::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
 use crate::input::{
-    Axis, ButtonState, Class, EdgeFlags, KeyAction, KeyEventFlags, Keycode, MetaState,
-    MotionAction, MotionEventFlags, Pointer, PointersIter, Source, ToolType,
+    Axis, ButtonState, EdgeFlags, KeyAction, KeyEventFlags, Keycode, MetaState, MotionAction,
+    MotionEventFlags, Pointer, PointersIter, Source, ToolType,
 };
 
 // Note: try to keep this wrapper API compatible with the AInputEvent API if possible
@@ -50,14 +48,7 @@ impl<'a> MotionEvent<'a> {
     #[inline]
     pub fn source(&self) -> Source {
         let source = self.ga_event.source as u32;
-        source.try_into().unwrap_or(Source::Unknown)
-    }
-
-    /// Get the class of the event source.
-    ///
-    #[inline]
-    pub fn class(&self) -> Class {
-        Class::from(self.source())
+        source.into()
     }
 
     /// Get the device id associated with the event.
@@ -73,7 +64,7 @@ impl<'a> MotionEvent<'a> {
     #[inline]
     pub fn action(&self) -> MotionAction {
         let action = self.ga_event.action as u32 & ndk_sys::AMOTION_EVENT_ACTION_MASK;
-        action.try_into().unwrap()
+        action.into()
     }
 
     /// Returns the pointer index of an `Up` or `Down` event.
@@ -275,7 +266,8 @@ impl<'a> PointerImpl<'a> {
     #[inline]
     pub fn axis_value(&self, axis: Axis) -> f32 {
         let pointer = &self.event.ga_event.pointers[self.index];
-        pointer.axisValues[axis as u32 as usize]
+        let axis: u32 = axis.into();
+        pointer.axisValues[axis as usize]
     }
 
     #[inline]
@@ -294,7 +286,7 @@ impl<'a> PointerImpl<'a> {
     pub fn tool_type(&self) -> ToolType {
         let pointer = &self.event.ga_event.pointers[self.index];
         let tool_type = pointer.toolType as u32;
-        tool_type.try_into().unwrap()
+        tool_type.into()
     }
 }
 
@@ -662,14 +654,7 @@ impl<'a> KeyEvent<'a> {
     #[inline]
     pub fn source(&self) -> Source {
         let source = self.ga_event.source as u32;
-        source.try_into().unwrap_or(Source::Unknown)
-    }
-
-    /// Get the class of the event source.
-    ///
-    #[inline]
-    pub fn class(&self) -> Class {
-        Class::from(self.source())
+        source.into()
     }
 
     /// Get the device id associated with the event.
@@ -685,13 +670,13 @@ impl<'a> KeyEvent<'a> {
     #[inline]
     pub fn action(&self) -> KeyAction {
         let action = self.ga_event.action as u32;
-        action.try_into().unwrap()
+        action.into()
     }
 
     #[inline]
     pub fn action_button(&self) -> KeyAction {
         let action = self.ga_event.action as u32;
-        action.try_into().unwrap()
+        action.into()
     }
 
     /// Returns the last time the key was pressed.  This is on the scale of
@@ -721,7 +706,7 @@ impl<'a> KeyEvent<'a> {
     #[inline]
     pub fn key_code(&self) -> Keycode {
         let keycode = self.ga_event.keyCode as u32;
-        keycode.try_into().unwrap_or(Keycode::Unknown)
+        keycode.into()
     }
 
     /// Returns the number of repeats of a key.
