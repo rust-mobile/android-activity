@@ -35,6 +35,18 @@
 //! marshalled between the Java thread that owns the `Activity` and the native
 //! thread that runs the `android_main()` code.
 //!
+//! # Cheaply Clonable [`AndroidApp`]
+//!
+//! [`AndroidApp`] is intended to be something that can be cheaply passed around
+//! by referenced within an application. It is reference counted and can be
+//! cheaply cloned.
+//!
+//! # `Send` and `Sync` [`AndroidApp`]
+//!
+//! Although an [`AndroidApp`] implements `Send` and `Sync` you do need to take
+//! into consideration that some APIs, such as [`AndroidApp::poll_events()`] are
+//! explicitly documented to only be usable from your `android_main()` thread.
+//!
 //! # Main Thread Initialization
 //!
 //! Before `android_main()` is called, the following application state
@@ -488,6 +500,18 @@ bitflags! {
 /// well as monitor events, such as lifecycle and input events, that are
 /// marshalled between the Java thread that owns the `Activity` and the native
 /// thread that runs the `android_main()` code.
+///
+/// # Cheaply Clonable [`AndroidApp`]
+///
+/// [`AndroidApp`] is intended to be something that can be cheaply passed around
+/// by referenced within an application. It is reference counted and can be
+/// cheaply cloned.
+///
+/// # `Send` and `Sync` [`AndroidApp`]
+///
+/// Although an [`AndroidApp`] implements `Send` and `Sync` you do need to take
+/// into consideration that some APIs, such as [`AndroidApp::poll_events()`] are
+/// explicitly documented to only be usable from your `android_main()` thread.
 ///
 #[derive(Debug, Clone)]
 pub struct AndroidApp {
