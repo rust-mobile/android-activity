@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2023-10-16
+### Added
+- Added `MotionEvent::action_button()` exposing the button associated with button press/release actions ()
+
+### Changed
+- rust-version bumped to 0.68 ([#123](https://github.com/rust-mobile/android-activity/pull/123))
+- *Breaking*: updates to `ndk 0.8` and `ndk-sys 0.5` ([#128](https://github.com/rust-mobile/android-activity/pull/128))
+- The `Pointer` and `PointerIter` types from the `ndk` crate are no longer directly exposed in the public API ([#122](https://github.com/rust-mobile/android-activity/pull/122))
+- All input API enums based on Android SDK enums have been made runtime extensible via hidden `__Unknown(u32)` variants ([#131](https://github.com/rust-mobile/android-activity/pull/131))
+
 ## [0.5.0-beta.1] - 2023-08-15
 ### Changed
 - Pulled in `ndk-sys 0.5.0-beta.0` and `ndk 0.8.0-beta.0` ([#113](https://github.com/rust-mobile/android-activity/pull/113))
