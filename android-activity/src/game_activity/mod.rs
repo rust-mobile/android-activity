@@ -1,21 +1,17 @@
 #![cfg(feature = "game-activity")]
 
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::marker::PhantomData;
 use std::ops::Deref;
-use std::os::unix::prelude::*;
 use std::panic::catch_unwind;
+use std::ptr;
 use std::ptr::NonNull;
 use std::sync::Weak;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
-use std::{ptr, thread};
 
 use libc::c_void;
-use log::{error, trace, Level};
+use log::{error, trace};
 
 use jni_sys::*;
 
@@ -29,9 +25,9 @@ use ndk::native_window::NativeWindow;
 use crate::error::InternalResult;
 use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding};
 use crate::jni_utils::{self, CloneJavaVM};
-use crate::util::{abort_on_panic, android_log, log_panic};
+use crate::util::{abort_on_panic, forward_stdio_to_logcat, log_panic, try_get_path_from_ptr};
 use crate::{
-    util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
+    AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
 
 mod ffi;
@@ -617,21 +613,21 @@ impl AndroidAppInner {
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
             let app_ptr = self.native_app.as_ptr();
-            util::try_get_path_from_ptr((*(*app_ptr).activity).internalDataPath)
+            try_get_path_from_ptr((*(*app_ptr).activity).internalDataPath)
         }
     }
 
     pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
             let app_ptr = self.native_app.as_ptr();
-            util::try_get_path_from_ptr((*(*app_ptr).activity).externalDataPath)
+            try_get_path_from_ptr((*(*app_ptr).activity).externalDataPath)
         }
     }
 
     pub fn obb_path(&self) -> Option<std::path::PathBuf> {
         unsafe {
             let app_ptr = self.native_app.as_ptr();
-            util::try_get_path_from_ptr((*(*app_ptr).activity).obbPath)
+            try_get_path_from_ptr((*(*app_ptr).activity).obbPath)
         }
     }
 }
@@ -913,33 +909,7 @@ extern "Rust" {
 #[no_mangle]
 pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
     abort_on_panic(|| {
-        // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
-
-        let file = {
-            let mut logpipe: [RawFd; 2] = Default::default();
-            libc::pipe2(logpipe.as_mut_ptr(), libc::O_CLOEXEC);
-            libc::dup2(logpipe[1], libc::STDOUT_FILENO);
-            libc::dup2(logpipe[1], libc::STDERR_FILENO);
-            libc::close(logpipe[1]);
-
-            File::from_raw_fd(logpipe[0])
-        };
-
-        thread::spawn(move || {
-            let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-            let mut reader = BufReader::new(file);
-            let mut buffer = String::new();
-            loop {
-                buffer.clear();
-                if let Ok(len) = reader.read_line(&mut buffer) {
-                    if len == 0 {
-                        break;
-                    } else if let Ok(msg) = CString::new(buffer.clone()) {
-                        android_log(Level::Info, tag, &msg);
-                    }
-                }
-            }
-        });
+        let _join_log_forwarder = forward_stdio_to_logcat();
 
         let jvm = unsafe {
             let jvm = (*(*native_app).activity).vm;
