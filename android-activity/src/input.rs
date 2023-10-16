@@ -20,6 +20,7 @@ pub use sdk::*;
 /// SDK integer values.
 ///
 #[derive(Debug, Clone, Copy, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
 #[repr(u32)]
 pub enum Source {
     BluetoothStylus = 0x0000c002,
@@ -215,6 +216,7 @@ impl From<ndk::event::MetaState> for MetaState {
 /// SDK integer values.
 ///
 #[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
 #[repr(u32)]
 pub enum MotionAction {
     Down = ndk_sys::AMOTION_EVENT_ACTION_DOWN,
@@ -250,6 +252,7 @@ pub enum MotionAction {
 /// SDK integer values.
 ///
 #[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
 #[repr(u32)]
 pub enum Axis {
     X = ndk_sys::AMOTION_EVENT_AXIS_X,
@@ -317,6 +320,7 @@ pub enum Axis {
 /// integer values.
 ///
 #[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
 #[repr(u32)]
 pub enum ToolType {
     /// Unknown tool type.
@@ -451,6 +455,7 @@ impl From<ndk::event::MotionEventFlags> for MotionEventFlags {
 /// integer values.
 ///
 #[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
 #[repr(u32)]
 pub enum KeyAction {
     Down = ndk_sys::AKEY_EVENT_ACTION_DOWN,
@@ -476,6 +481,7 @@ pub enum KeyAction {
 /// integer values.
 ///
 #[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
 #[repr(u32)]
 pub enum Keycode {
     Unknown = ndk_sys::AKEYCODE_UNKNOWN,

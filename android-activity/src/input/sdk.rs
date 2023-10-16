@@ -32,6 +32,7 @@ use crate::{
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, num_enum::FromPrimitive, num_enum::IntoPrimitive,
 )]
+#[non_exhaustive]
 #[repr(u32)]
 pub enum KeyboardType {
     /// A numeric (12-key) keyboard.
