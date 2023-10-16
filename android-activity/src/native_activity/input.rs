@@ -51,10 +51,10 @@ impl<'a> MotionEvent<'a> {
     /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getActionMasked())
     #[inline]
     pub fn action(&self) -> MotionAction {
-        // XXX: we use `AInputEvent_getAction` directly since we have our own
-        // `KeyAction` enum that we share between backends, which may also
+        // XXX: we use `AMotionEvent_getAction` directly since we have our own
+        // `MotionAction` enum that we share between backends, which may also
         // capture unknown variants added in new versions of Android.
-        let action = unsafe { ndk_sys::AKeyEvent_getAction(self.ndk_event.ptr().as_ptr()) as u32 };
+        let action = unsafe { ndk_sys::AMotionEvent_getAction(self.ndk_event.ptr().as_ptr()) as u32 };
         action.into()
     }
 
