@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::input::{
-    Axis, ButtonState, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction, MotionEventFlags,
-    Pointer, PointersIter, Source, ToolType,
+    Axis, Button, ButtonState, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction,
+    MotionEventFlags, Pointer, PointersIter, Source, ToolType,
 };
 
 /// A motion event
@@ -54,8 +54,22 @@ impl<'a> MotionEvent<'a> {
         // XXX: we use `AMotionEvent_getAction` directly since we have our own
         // `MotionAction` enum that we share between backends, which may also
         // capture unknown variants added in new versions of Android.
-        let action = unsafe { ndk_sys::AMotionEvent_getAction(self.ndk_event.ptr().as_ptr()) as u32 };
+        let action =
+            unsafe { ndk_sys::AMotionEvent_getAction(self.ndk_event.ptr().as_ptr()) as u32 };
         action.into()
+    }
+
+    /// Returns which button has been modified during a press or release action.
+    ///
+    /// For actions other than [`MotionAction::ButtonPress`] and
+    /// [`MotionAction::ButtonRelease`] the returned value is undefined.
+    ///
+    /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getActionButton())
+    #[inline]
+    pub fn action_button(&self) -> Button {
+        let action_button =
+            unsafe { ndk_sys::AMotionEvent_getActionButton(self.ndk_event.ptr().as_ptr()) as u32 };
+        action_button.into()
     }
 
     /// Returns the pointer index of an `Up` or `Down` event.
