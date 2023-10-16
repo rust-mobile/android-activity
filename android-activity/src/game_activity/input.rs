@@ -15,8 +15,8 @@
 
 use crate::activity_impl::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
 use crate::input::{
-    Axis, ButtonState, EdgeFlags, KeyAction, KeyEventFlags, Keycode, MetaState, MotionAction,
-    MotionEventFlags, Pointer, PointersIter, Source, ToolType,
+    Axis, Button, ButtonState, EdgeFlags, KeyAction, KeyEventFlags, Keycode, MetaState,
+    MotionAction, MotionEventFlags, Pointer, PointersIter, Source, ToolType,
 };
 
 // Note: try to keep this wrapper API compatible with the AInputEvent API if possible
@@ -64,6 +64,18 @@ impl<'a> MotionEvent<'a> {
     #[inline]
     pub fn action(&self) -> MotionAction {
         let action = self.ga_event.action as u32 & ndk_sys::AMOTION_EVENT_ACTION_MASK;
+        action.into()
+    }
+
+    /// Returns which button has been modified during a press or release action.
+    ///
+    /// For actions other than [`MotionAction::ButtonPress`] and
+    /// [`MotionAction::ButtonRelease`] the returned value is undefined.
+    ///
+    /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getActionButton())
+    #[inline]
+    pub fn action_button(&self) -> Button {
+        let action = self.ga_event.actionButton as u32;
         action.into()
     }
 

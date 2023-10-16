@@ -238,6 +238,37 @@ pub enum MotionAction {
     __Unknown(u32),
 }
 
+/// Identifies buttons that are associated with motion events.
+///
+/// See [the NDK
+/// docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-47)
+///
+/// # Android Extensible Enum
+///
+/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// should be handled similar to a `#[non_exhaustive]` enum to maintain
+/// forwards compatibility.
+///
+/// This implements `Into<u32>` and `From<u32>` for converting to/from Android
+/// SDK integer values.
+///
+#[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
+#[repr(u32)]
+pub enum Button {
+    Back = ndk_sys::AMOTION_EVENT_BUTTON_BACK,
+    Forward = ndk_sys::AMOTION_EVENT_BUTTON_FORWARD,
+    Primary = ndk_sys::AMOTION_EVENT_BUTTON_PRIMARY,
+    Secondary = ndk_sys::AMOTION_EVENT_BUTTON_SECONDARY,
+    StylusPrimary = ndk_sys::AMOTION_EVENT_BUTTON_STYLUS_PRIMARY,
+    StylusSecondary = ndk_sys::AMOTION_EVENT_BUTTON_STYLUS_SECONDARY,
+    Tertiary = ndk_sys::AMOTION_EVENT_BUTTON_TERTIARY,
+
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
+}
+
 /// An axis of a motion event.
 ///
 /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#anonymous-enum-32)
