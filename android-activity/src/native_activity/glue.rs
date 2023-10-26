@@ -845,21 +845,24 @@ extern "C" fn ANativeActivity_onCreate(
             File::from_raw_fd(logpipe[0])
         };
 
-        std::thread::spawn(move || {
-            let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-            let mut reader = BufReader::new(file);
-            let mut buffer = String::new();
-            loop {
-                buffer.clear();
-                if let Ok(len) = reader.read_line(&mut buffer) {
-                    if len == 0 {
-                        break;
-                    } else if let Ok(msg) = CString::new(buffer.clone()) {
-                        android_log(Level::Info, tag, &msg);
+        std::thread::Builder::new()
+            .name("android-stdio".to_string())
+            .spawn(move || {
+                let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
+                let mut reader = BufReader::new(file);
+                let mut buffer = String::new();
+                loop {
+                    buffer.clear();
+                    if let Ok(len) = reader.read_line(&mut buffer) {
+                        if len == 0 {
+                            break;
+                        } else if let Ok(msg) = CString::new(buffer.clone()) {
+                            android_log(Level::Info, tag, &msg);
+                        }
                     }
                 }
-            }
-        });
+            })
+            .unwrap();
 
         log::trace!(
             "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
@@ -899,6 +902,11 @@ extern "C" fn ANativeActivity_onCreate(
             rust_glue.notify_main_thread_running();
 
             unsafe {
+                // Name thread - this needs to happen here after attaching to a JVM thread,
+                // since that changes the thread name to something like "Thread-2".
+                let thread_name = CStr::from_bytes_with_nul(b"android-main\0").unwrap();
+                libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
+
                 // We want to specifically catch any panic from the application's android_main
                 // so we can finish + destroy the Activity gracefully via the JVM
                 catch_unwind(|| {
