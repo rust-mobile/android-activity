@@ -36,8 +36,8 @@ Cargo.toml
 ```toml
 [dependencies]
 log = "0.4"
-android_logger = "0.11"
-android-activity = { version = "0.4", features = [ "native-activity" ] }
+android_logger = "0.13"
+android-activity = { version = "0.5", features = [ "native-activity" ] }
 
 [lib]
 crate_type = ["cdylib"]
@@ -126,8 +126,8 @@ Middleware libraries can instead look at using the [ndk-context](https://crates.
 The steps to switch a simple standalone application over from `ndk-glue` to `android-activity` (still based on `NativeActivity`) should be:
 
 1. Remove `ndk-glue` from your Cargo.toml
-2. Add a dependency on `android-activity`, like `android-activity = { version="0.4", features = [ "native-activity" ] }`
-3. Optionally add a dependency on `android_logger = "0.11.0"`
+2. Add a dependency on `android-activity`, like `android-activity = { version="0.5", features = [ "native-activity" ] }`
+3. Optionally add a dependency on `android_logger = "0.13.0"`
 4. Update the `main` entry point to look like this:
 
 ```rust
