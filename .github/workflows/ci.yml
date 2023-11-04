@@ -17,13 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         # See top README for MSRV policy
-        rust_version: [1.68.0, stable]
+        rust-version: [1.68.0, stable]
     steps:
       - uses: actions/checkout@v4
 
       - uses: hecrj/setup-rust-action@v2
         with:
-          rust-version: ${{ matrix.rust_version }}
+          rust-version: ${{ matrix.rust-version }}
 
       - name: Install Rust targets
         run: >
@@ -57,7 +57,7 @@ jobs:
           build --features native-activity
 
       - name: Build agdk-mainloop example
-        if: matrix.rust_version == 'stable'
+        if: matrix.rust-version == 'stable'
         working-directory: examples/agdk-mainloop
         run: >
           cargo ndk
@@ -68,7 +68,7 @@ jobs:
           -o app/src/main/jniLibs/ -- build
 
       - name: Build na-mainloop example
-        if: matrix.rust_version == 'stable'
+        if: matrix.rust-version == 'stable'
         working-directory: examples/na-mainloop
         run: >
           cargo ndk

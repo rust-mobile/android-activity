@@ -3,7 +3,7 @@
 [![ci](https://github.com/rust-mobile/android-activity/actions/workflows/ci.yml/badge.svg)](https://github.com/rust-mobile/android-activity/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/android-activity.svg)](https://crates.io/crates/android-activity)
 [![Docs](https://docs.rs/android-activity/badge.svg)](https://docs.rs/android-activity)
-[![MSRV](https://img.shields.io/badge/rustc-1.64.0+-ab6000.svg)](https://blog.rust-lang.org/2022/09/22/Rust-1.64.0.html)
+[![MSRV](https://img.shields.io/badge/rustc-1.68.0+-ab6000.svg)](https://blog.rust-lang.org/2023/03/09/Rust-1.68.0.html)
 
 ## Overview
 
@@ -157,8 +157,8 @@ Prior to working on android-activity, the existing glue crates available for bui
 ## MSRV
 
 We aim to (at least) support stable releases of Rust from the last three months. Rust has a 6 week release cycle which means we will support the last three stable releases.
-For example, when Rust 1.69 is released we would limit our `rust_version` to 1.67.
+For example, when Rust 1.69 is released we would limit our `rust-version` to 1.67.
 
-We will only bump the `rust_version` at the point where we either depend on a new features or a dependency has increased its MSRV, and we won't be greedy. In other words we will only set the MSRV to the lowest version that's _needed_.
+We will only bump the `rust-version` at the point where we either depend on a new features or a dependency has increased its MSRV, and we won't be greedy. In other words we will only set the MSRV to the lowest version that's _needed_.
 
-MSRV updates are not considered to be inherently semver breaking (unless a new feature is exposed in the public API) and so a `rust_version` change may happen in patch releases.
+MSRV updates are not considered to be inherently semver breaking (unless a new feature is exposed in the public API) and so a `rust-version` change may happen in patch releases.
