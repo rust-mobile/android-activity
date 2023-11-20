@@ -112,6 +112,8 @@
 //! [`GameActivity`]: https://developer.android.com/games/agdk/integrate-game-activity
 //! [Looper]: https://developer.android.com/reference/android/os/Looper
 
+#![deny(clippy::manual_let_else)]
+
 use std::hash::Hash;
 use std::sync::Arc;
 use std::sync::RwLock;

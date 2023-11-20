@@ -485,11 +485,7 @@ impl<'a> InputIteratorInner<'a> {
     where
         F: FnOnce(&input::InputEvent) -> InputStatus,
     {
-        // XXX: would use `let Some(queue) = &self.receiver.queue else { return
-        // false; }` but we're stuck supporting Rust 1.64 for Winit currently
-        let queue = if let Some(queue) = &self.receiver.queue {
-            queue
-        } else {
+        let Some(queue) = &self.receiver.queue else {
             log::trace!("no queue available for events");
             return false;
         };

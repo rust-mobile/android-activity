@@ -764,18 +764,16 @@ impl<'a> From<Arc<InputReceiver>> for InputIteratorInner<'a> {
         let buffered = unsafe {
             let app_ptr = receiver.native_app.as_ptr();
             let input_buffer = ffi::android_app_swap_input_buffers(app_ptr);
-            if input_buffer.is_null() {
-                None
-            } else {
-                let buffer = InputBuffer::from_ptr(NonNull::new_unchecked(input_buffer));
+            NonNull::new(input_buffer).map(|input_buffer| {
+                let buffer = InputBuffer::from_ptr(input_buffer);
                 let keys_iter = KeyEventsLendingIterator::new(&buffer);
                 let motion_iter = MotionEventsLendingIterator::new(&buffer);
-                Some(BufferedEvents::<'a> {
+                BufferedEvents::<'a> {
                     buffer,
                     keys_iter,
                     motion_iter,
-                })
-            }
+                }
+            })
         };
 
         let native_app = receiver.native_app.clone();
