@@ -870,7 +870,7 @@ extern "C" fn ANativeActivity_onCreate(
             unsafe {
                 // Name thread - this needs to happen here after attaching to a JVM thread,
                 // since that changes the thread name to something like "Thread-2".
-                let thread_name = CStr::from_bytes_with_nul(b"android_main\0").unwrap();
+                let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
                 libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
 
                 // We want to specifically catch any panic from the application's android_main
