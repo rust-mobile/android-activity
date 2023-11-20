@@ -1,7 +1,12 @@
-use log::Level;
+use log::{error, Level};
 use std::{
     ffi::{CStr, CString},
-    os::raw::c_char,
+    fs::File,
+    io::{BufRead as _, BufReader, Result},
+    os::{
+        fd::{FromRawFd as _, RawFd},
+        raw::c_char,
+    },
 };
 
 pub fn try_get_path_from_ptr(path: *const c_char) -> Option<std::path::PathBuf> {
@@ -29,6 +34,44 @@ pub(crate) fn android_log(level: Level, tag: &CStr, msg: &CStr) {
     unsafe {
         ndk_sys::__android_log_write(prio.0 as libc::c_int, tag.as_ptr(), msg.as_ptr());
     }
+}
+
+pub(crate) fn forward_stdio_to_logcat() -> std::thread::JoinHandle<Result<()>> {
+    // XXX: make this stdout/stderr redirection an optional / opt-in feature?...
+
+    let file = unsafe {
+        let mut logpipe: [RawFd; 2] = Default::default();
+        libc::pipe2(logpipe.as_mut_ptr(), libc::O_CLOEXEC);
+        libc::dup2(logpipe[1], libc::STDOUT_FILENO);
+        libc::dup2(logpipe[1], libc::STDERR_FILENO);
+        libc::close(logpipe[1]);
+
+        File::from_raw_fd(logpipe[0])
+    };
+
+    std::thread::Builder::new()
+        .name("stdio-to-logcat".to_string())
+        .spawn(move || -> Result<()> {
+            let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
+            let mut reader = BufReader::new(file);
+            let mut buffer = String::new();
+            loop {
+                buffer.clear();
+                let len = match reader.read_line(&mut buffer) {
+                    Ok(len) => len,
+                    Err(e) => {
+                        error!("Logcat forwarder failed to read stdin/stderr: {e:?}");
+                        break Err(e);
+                    }
+                };
+                if len == 0 {
+                    break Ok(());
+                } else if let Ok(msg) = CString::new(buffer.clone()) {
+                    android_log(Level::Info, tag, &msg);
+                }
+            }
+        })
+        .expect("Failed to start stdout/stderr to logcat forwarder thread")
 }
 
 pub(crate) fn log_panic(panic: Box<dyn std::any::Any + Send>) {
