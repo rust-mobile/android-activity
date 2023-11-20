@@ -925,6 +925,11 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
         };
 
         unsafe {
+            // Name thread - this needs to happen here after attaching to a JVM thread,
+            // since that changes the thread name to something like "Thread-2".
+            let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
+            libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
+
             let app = AndroidApp::from_ptr(NonNull::new(native_app).unwrap(), jvm.clone());
 
             // We want to specifically catch any panic from the application's android_main
