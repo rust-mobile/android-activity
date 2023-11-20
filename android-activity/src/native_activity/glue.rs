@@ -3,23 +3,17 @@
 //! synchronization between the two threads.
 
 use std::{
-    ffi::{CStr, CString},
-    fs::File,
-    io::{BufRead, BufReader},
     ops::Deref,
-    os::unix::prelude::{FromRawFd, RawFd},
     panic::catch_unwind,
     ptr::{self, NonNull},
     sync::{Arc, Condvar, Mutex, Weak},
 };
 
-use log::Level;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
 use crate::{
     jni_utils::CloneJavaVM,
-    util::android_log,
-    util::{abort_on_panic, log_panic},
+    util::{abort_on_panic, forward_stdio_to_logcat, log_panic},
     ConfigurationRef,
 };
 
@@ -834,35 +828,7 @@ extern "C" fn ANativeActivity_onCreate(
     saved_state_size: libc::size_t,
 ) {
     abort_on_panic(|| {
-        // Maybe make this stdout/stderr redirection an optional / opt-in feature?...
-        let file = unsafe {
-            let mut logpipe: [RawFd; 2] = Default::default();
-            libc::pipe2(logpipe.as_mut_ptr(), libc::O_CLOEXEC);
-            libc::dup2(logpipe[1], libc::STDOUT_FILENO);
-            libc::dup2(logpipe[1], libc::STDERR_FILENO);
-            libc::close(logpipe[1]);
-
-            File::from_raw_fd(logpipe[0])
-        };
-
-        std::thread::Builder::new()
-            .name("stdio-to-logcat".to_string())
-            .spawn(move || {
-                let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
-                let mut reader = BufReader::new(file);
-                let mut buffer = String::new();
-                loop {
-                    buffer.clear();
-                    if let Ok(len) = reader.read_line(&mut buffer) {
-                        if len == 0 {
-                            break;
-                        } else if let Ok(msg) = CString::new(buffer.clone()) {
-                            android_log(Level::Info, tag, &msg);
-                        }
-                    }
-                }
-            })
-            .unwrap();
+        let _join_log_forwarder = forward_stdio_to_logcat();
 
         log::trace!(
             "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
