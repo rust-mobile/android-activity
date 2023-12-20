@@ -54,6 +54,3 @@ targets = [
 ]
 
 rustdoc-args = ["--cfg", "docsrs"]
-
-[dev-dependencies]
-ndk = "0.8.0"
