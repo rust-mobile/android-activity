@@ -1,6 +1,6 @@
 [package]
 name = "android-activity"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 keywords = ["android", "ndk"]
 readme = "../README.md"
@@ -54,6 +54,3 @@ targets = [
 ]
 
 rustdoc-args = ["--cfg", "docsrs"]
-
-[dev-dependencies]
-ndk = "0.8.0"
