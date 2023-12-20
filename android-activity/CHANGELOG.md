@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2023-12-20
+
+### Changed
+- Avoids depending on default features for `ndk` crate to avoid pulling in any `raw-window-handle` dependencies ([#142](https://github.com/rust-mobile/android-activity/pull/142))
+
+    **Note:** Technically, this could be observed as a breaking change in case you
+    were depending on the `rwh_06` feature that was enabled by default in the
+    `ndk` crate. This could be observed via the `NativeWindow` type (exposed via
+    `AndroidApp::native_window()`) no longer implementing `rwh_06::HasWindowHandle`.
+
+    In the unlikely case that you were depending on the `ndk`'s `rwh_06` API
+    being enabled by default via `android-activity`'s `ndk` dependency, your crate
+    should explicitly enable the `rwh_06` feature for the `ndk` crate.
+
+    As far as could be seen though, it's not expected that anything was
+    depending on this (e.g. anything based on Winit enables the `ndk` feature
+    based on an equivalent `winit` feature).
+
+    The benefit of the change is that it can help avoid a redundant
+    `raw-window-handle 0.6` dependency in projects that still need to use older
+    (non-default) `raw-window-handle` versions. (Though note that this may be
+    awkward to achieve in practice since other crates that depend on the `ndk`
+    are still likely to use default features and also pull in
+    `raw-window-handles 0.6`)
+
+- The IO thread now gets named `stdio-to-logcat` and main thread is named `android_main` ([#145](https://github.com/rust-mobile/android-activity/pull/145))
+- Improved IO error handling in `stdio-to-logcat` IO loop. ([#133](https://github.com/rust-mobile/android-activity/pull/133))
+
 ## [0.5.0] - 2023-10-16
 ### Added
 - Added `MotionEvent::action_button()` exposing the button associated with button press/release actions ()
