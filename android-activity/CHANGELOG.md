@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.5.2] - 2024-01-30
+
+### Fixed
+- NativeActivity: OR with `EVENT_ACTION_MASK` when extracting action from `MotionEvent` - fixing multi-touch input ([#146](https://github.com/rust-mobile/android-activity/issues/146), [#147](https://github.com/rust-mobile/android-activity/pull/147))
+
 ## [0.5.1] - 2023-12-20
 
 ### Changed
