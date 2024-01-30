@@ -55,7 +55,8 @@ impl<'a> MotionEvent<'a> {
         // `MotionAction` enum that we share between backends, which may also
         // capture unknown variants added in new versions of Android.
         let action =
-            unsafe { ndk_sys::AMotionEvent_getAction(self.ndk_event.ptr().as_ptr()) as u32 };
+            unsafe { ndk_sys::AMotionEvent_getAction(self.ndk_event.ptr().as_ptr()) as u32 }
+                & ndk_sys::AMOTION_EVENT_ACTION_MASK;
         action.into()
     }
 
