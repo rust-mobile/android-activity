@@ -34,7 +34,8 @@ jobs:
           i686-linux-android
 
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+        # Use older version 3.3.0 to avoid bumping MSRV for now.
+        run: cargo install cargo-ndk --version 3.3.0
 
       - name: Build game-activity
         working-directory: android-activity
