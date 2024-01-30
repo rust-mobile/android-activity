@@ -34,7 +34,7 @@ jobs:
           i686-linux-android
 
       - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+        run: cargo +stable install cargo-ndk
 
       - name: Build game-activity
         working-directory: android-activity
