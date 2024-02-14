@@ -337,8 +337,12 @@ impl WaitableNativeActivityState {
             }
         }
 
-        let saved_state =
-            unsafe { std::slice::from_raw_parts(saved_state_in as *const u8, saved_state_size) };
+        let saved_state = if saved_state_in.is_null() {
+            Vec::new()
+        } else {
+            unsafe { std::slice::from_raw_parts(saved_state_in as *const u8, saved_state_size) }
+                .to_vec()
+        };
 
         let config = unsafe {
             let config = ndk_sys::AConfiguration_new();
@@ -357,7 +361,7 @@ impl WaitableNativeActivityState {
                 msg_read: msgpipe[0],
                 msg_write: msgpipe[1],
                 config,
-                saved_state: saved_state.into(),
+                saved_state,
                 input_queue: ptr::null_mut(),
                 window: None,
                 content_rect: Rect::empty().into(),
