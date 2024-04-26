@@ -10,12 +10,12 @@ documentation = "https://docs.rs/android-activity"
 description = "Glue for building Rust applications on Android with NativeActivity or GameActivity"
 license = "MIT OR Apache-2.0"
 
-# 1.68 was when Rust last updated the Android NDK version used to build the
+# 1.69 was when Rust last updated the Android NDK version used to build the
 # standard library which avoids needing the -lunwind workaround in build tools.
 #
 # We depend on cargo-ndk for building which has dropped support for the above
 # linker workaround.
-rust-version = "1.68.0"
+rust-version = "1.69.0"
 
 [features]
 # Note: we don't enable any backend by default since features
