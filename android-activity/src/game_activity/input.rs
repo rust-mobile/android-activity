@@ -47,7 +47,7 @@ impl<'a> MotionEvent<'a> {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        let source = self.ga_event.source as u32;
+        let source = self.ga_event.source;
         source.into()
     }
 
@@ -278,7 +278,7 @@ impl PointerImpl<'_> {
     #[inline]
     pub fn axis_value(&self, axis: Axis) -> f32 {
         let pointer = &self.event.ga_event.pointers[self.index];
-        let axis: u32 = axis.into();
+        let axis: i32 = axis.into();
         pointer.axisValues[axis as usize]
     }
 
@@ -297,7 +297,7 @@ impl PointerImpl<'_> {
     #[inline]
     pub fn tool_type(&self) -> ToolType {
         let pointer = &self.event.ga_event.pointers[self.index];
-        let tool_type = pointer.toolType as u32;
+        let tool_type = pointer.toolType as i32;
         tool_type.into()
     }
 }
@@ -665,7 +665,7 @@ impl<'a> KeyEvent<'a> {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        let source = self.ga_event.source as u32;
+        let source = self.ga_event.source;
         source.into()
     }
 

@@ -12,17 +12,19 @@ pub use sdk::*;
 ///
 /// # Android Extensible Enum
 ///
-/// This is a runtime [extensible enum](`crate#android-extensible-enums`) and
+/// This is a runtime [extensible enum](crate#android-extensible-enums) and
 /// should be handled similar to a `#[non_exhaustive]` enum to maintain
 /// forwards compatibility.
 ///
-/// This implements `Into<u32>` and `From<u32>` for converting to/from Android
+/// This implements [`Into<i32>`] and [`From<i32>`] for converting to/from Android
 /// SDK integer values.
 ///
 #[derive(Debug, Clone, Copy, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[non_exhaustive]
-#[repr(u32)]
+#[repr(i32)]
 pub enum Source {
+    Unknown = 0,
+
     BluetoothStylus = 0x0000c002,
     Dpad = 0x00000201,
     /// Either a gamepad or a joystick
@@ -55,14 +57,14 @@ pub enum Source {
     // We can't just use `#[non_exhaustive]` because that only really helps
     // when adding new variants in sync with android-activity releases.
     //
-    // On the other hand we also can't rely on a catch-all `Unknown(u32)` that
+    // On the other hand we also can't rely on a catch-all `Unknown(i32)` that
     // only really helps with unknown variants seen at runtime.
     //
     // What we aim for instead is to have a hidden catch-all variant that
     // is considered (practically) unmatchable so code is forced to have
     // a `unknown => {}` catch-all pattern match that will cover unknown variants
     // either in the form of Rust variants added in future versions or
-    // in the form of an `__Unknown(u32)` integer that represents an unknown
+    // in the form of an `__Unknown(i32)` integer that represents an unknown
     // variant seen at runtime.
     //
     // Any `unknown => {}` pattern match can rely on `IntoPrimitive` to convert
@@ -71,14 +73,15 @@ pub enum Source {
     // semantic meaning at compile time.
     #[doc(hidden)]
     #[num_enum(catch_all)]
-    __Unknown(u32),
+    __Unknown(i32),
 }
 
 // ndk_sys doesn't currently have the `TRACKBALL` flag so we define our
 // own internal class constants for now
+// TODO: It does, aliased to NAVIGATION
 bitflags! {
     #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-    struct SourceFlags: u32 {
+    struct SourceFlags: i32 {
         const CLASS_MASK = 0x000000ff;
 
         const BUTTON = 0x00000001;
@@ -279,62 +282,62 @@ pub enum Button {
 /// should be handled similar to a `#[non_exhaustive]` enum to maintain
 /// forwards compatibility.
 ///
-/// This implements `Into<u32>` and `From<u32>` for converting to/from Android
+/// This implements [`Into<i32>]` and [`From<i32>`] for converting to/from Android
 /// SDK integer values.
 ///
 #[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[non_exhaustive]
-#[repr(u32)]
+#[repr(i32)]
 pub enum Axis {
-    X = ndk_sys::AMOTION_EVENT_AXIS_X,
-    Y = ndk_sys::AMOTION_EVENT_AXIS_Y,
-    Pressure = ndk_sys::AMOTION_EVENT_AXIS_PRESSURE,
-    Size = ndk_sys::AMOTION_EVENT_AXIS_SIZE,
-    TouchMajor = ndk_sys::AMOTION_EVENT_AXIS_TOUCH_MAJOR,
-    TouchMinor = ndk_sys::AMOTION_EVENT_AXIS_TOUCH_MINOR,
-    ToolMajor = ndk_sys::AMOTION_EVENT_AXIS_TOOL_MAJOR,
-    ToolMinor = ndk_sys::AMOTION_EVENT_AXIS_TOOL_MINOR,
-    Orientation = ndk_sys::AMOTION_EVENT_AXIS_ORIENTATION,
-    Vscroll = ndk_sys::AMOTION_EVENT_AXIS_VSCROLL,
-    Hscroll = ndk_sys::AMOTION_EVENT_AXIS_HSCROLL,
-    Z = ndk_sys::AMOTION_EVENT_AXIS_Z,
-    Rx = ndk_sys::AMOTION_EVENT_AXIS_RX,
-    Ry = ndk_sys::AMOTION_EVENT_AXIS_RY,
-    Rz = ndk_sys::AMOTION_EVENT_AXIS_RZ,
-    HatX = ndk_sys::AMOTION_EVENT_AXIS_HAT_X,
-    HatY = ndk_sys::AMOTION_EVENT_AXIS_HAT_Y,
-    Ltrigger = ndk_sys::AMOTION_EVENT_AXIS_LTRIGGER,
-    Rtrigger = ndk_sys::AMOTION_EVENT_AXIS_RTRIGGER,
-    Throttle = ndk_sys::AMOTION_EVENT_AXIS_THROTTLE,
-    Rudder = ndk_sys::AMOTION_EVENT_AXIS_RUDDER,
-    Wheel = ndk_sys::AMOTION_EVENT_AXIS_WHEEL,
-    Gas = ndk_sys::AMOTION_EVENT_AXIS_GAS,
-    Brake = ndk_sys::AMOTION_EVENT_AXIS_BRAKE,
-    Distance = ndk_sys::AMOTION_EVENT_AXIS_DISTANCE,
-    Tilt = ndk_sys::AMOTION_EVENT_AXIS_TILT,
-    Scroll = ndk_sys::AMOTION_EVENT_AXIS_SCROLL,
-    RelativeX = ndk_sys::AMOTION_EVENT_AXIS_RELATIVE_X,
-    RelativeY = ndk_sys::AMOTION_EVENT_AXIS_RELATIVE_Y,
-    Generic1 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_1,
-    Generic2 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_2,
-    Generic3 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_3,
-    Generic4 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_4,
-    Generic5 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_5,
-    Generic6 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_6,
-    Generic7 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_7,
-    Generic8 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_8,
-    Generic9 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_9,
-    Generic10 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_10,
-    Generic11 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_11,
-    Generic12 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_12,
-    Generic13 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_13,
-    Generic14 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_14,
-    Generic15 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_15,
-    Generic16 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_16,
+    X = ndk_sys::AMOTION_EVENT_AXIS_X as i32,
+    Y = ndk_sys::AMOTION_EVENT_AXIS_Y as i32,
+    Pressure = ndk_sys::AMOTION_EVENT_AXIS_PRESSURE as i32,
+    Size = ndk_sys::AMOTION_EVENT_AXIS_SIZE as i32,
+    TouchMajor = ndk_sys::AMOTION_EVENT_AXIS_TOUCH_MAJOR as i32,
+    TouchMinor = ndk_sys::AMOTION_EVENT_AXIS_TOUCH_MINOR as i32,
+    ToolMajor = ndk_sys::AMOTION_EVENT_AXIS_TOOL_MAJOR as i32,
+    ToolMinor = ndk_sys::AMOTION_EVENT_AXIS_TOOL_MINOR as i32,
+    Orientation = ndk_sys::AMOTION_EVENT_AXIS_ORIENTATION as i32,
+    Vscroll = ndk_sys::AMOTION_EVENT_AXIS_VSCROLL as i32,
+    Hscroll = ndk_sys::AMOTION_EVENT_AXIS_HSCROLL as i32,
+    Z = ndk_sys::AMOTION_EVENT_AXIS_Z as i32,
+    Rx = ndk_sys::AMOTION_EVENT_AXIS_RX as i32,
+    Ry = ndk_sys::AMOTION_EVENT_AXIS_RY as i32,
+    Rz = ndk_sys::AMOTION_EVENT_AXIS_RZ as i32,
+    HatX = ndk_sys::AMOTION_EVENT_AXIS_HAT_X as i32,
+    HatY = ndk_sys::AMOTION_EVENT_AXIS_HAT_Y as i32,
+    Ltrigger = ndk_sys::AMOTION_EVENT_AXIS_LTRIGGER as i32,
+    Rtrigger = ndk_sys::AMOTION_EVENT_AXIS_RTRIGGER as i32,
+    Throttle = ndk_sys::AMOTION_EVENT_AXIS_THROTTLE as i32,
+    Rudder = ndk_sys::AMOTION_EVENT_AXIS_RUDDER as i32,
+    Wheel = ndk_sys::AMOTION_EVENT_AXIS_WHEEL as i32,
+    Gas = ndk_sys::AMOTION_EVENT_AXIS_GAS as i32,
+    Brake = ndk_sys::AMOTION_EVENT_AXIS_BRAKE as i32,
+    Distance = ndk_sys::AMOTION_EVENT_AXIS_DISTANCE as i32,
+    Tilt = ndk_sys::AMOTION_EVENT_AXIS_TILT as i32,
+    Scroll = ndk_sys::AMOTION_EVENT_AXIS_SCROLL as i32,
+    RelativeX = ndk_sys::AMOTION_EVENT_AXIS_RELATIVE_X as i32,
+    RelativeY = ndk_sys::AMOTION_EVENT_AXIS_RELATIVE_Y as i32,
+    Generic1 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_1 as i32,
+    Generic2 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_2 as i32,
+    Generic3 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_3 as i32,
+    Generic4 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_4 as i32,
+    Generic5 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_5 as i32,
+    Generic6 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_6 as i32,
+    Generic7 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_7 as i32,
+    Generic8 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_8 as i32,
+    Generic9 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_9 as i32,
+    Generic10 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_10 as i32,
+    Generic11 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_11 as i32,
+    Generic12 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_12 as i32,
+    Generic13 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_13 as i32,
+    Generic14 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_14 as i32,
+    Generic15 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_15 as i32,
+    Generic16 = ndk_sys::AMOTION_EVENT_AXIS_GENERIC_16 as i32,
 
     #[doc(hidden)]
     #[num_enum(catch_all)]
-    __Unknown(u32),
+    __Unknown(i32),
 }
 
 /// The tool type of a pointer.
@@ -347,36 +350,36 @@ pub enum Axis {
 /// should be handled similar to a `#[non_exhaustive]` enum to maintain
 /// forwards compatibility.
 ///
-/// Implements `Into<u32>` and `From<u32>` for converting to/from Android SDK
+/// Implements [`Into<i32>`] and [`From<i32>`] for converting to/from Android SDK
 /// integer values.
 ///
 #[derive(Copy, Clone, Debug, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[non_exhaustive]
-#[repr(u32)]
+#[repr(i32)]
 pub enum ToolType {
     /// Unknown tool type.
     ///
     /// This constant is used when the tool type is not known or is not relevant, such as for a trackball or other non-pointing device.
-    Unknown = ndk_sys::AMOTION_EVENT_TOOL_TYPE_UNKNOWN,
+    Unknown = ndk_sys::AMOTION_EVENT_TOOL_TYPE_UNKNOWN as i32,
 
     /// The tool is a finger.
-    Finger = ndk_sys::AMOTION_EVENT_TOOL_TYPE_FINGER,
+    Finger = ndk_sys::AMOTION_EVENT_TOOL_TYPE_FINGER as i32,
 
     /// The tool is a stylus.
-    Stylus = ndk_sys::AMOTION_EVENT_TOOL_TYPE_STYLUS,
+    Stylus = ndk_sys::AMOTION_EVENT_TOOL_TYPE_STYLUS as i32,
 
     ///  The tool is a mouse.
-    Mouse = ndk_sys::AMOTION_EVENT_TOOL_TYPE_MOUSE,
+    Mouse = ndk_sys::AMOTION_EVENT_TOOL_TYPE_MOUSE as i32,
 
     /// The tool is an eraser or a stylus being used in an inverted posture.
-    Eraser = ndk_sys::AMOTION_EVENT_TOOL_TYPE_ERASER,
+    Eraser = ndk_sys::AMOTION_EVENT_TOOL_TYPE_ERASER as i32,
 
     /// The tool is a palm and should be rejected
-    Palm = ndk_sys::AMOTION_EVENT_TOOL_TYPE_PALM,
+    Palm = ndk_sys::AMOTION_EVENT_TOOL_TYPE_PALM as i32,
 
     #[doc(hidden)]
     #[num_enum(catch_all)]
-    __Unknown(u32),
+    __Unknown(i32),
 }
 
 /// A bitfield representing the state of buttons during a motion event.

@@ -34,8 +34,7 @@ impl MotionEvent<'_> {
         // ndk_event.source()) since we have our own `Source` enum that we
         // share between backends, which may also capture unknown variants
         // added in new versions of Android.
-        let source =
-            unsafe { ndk_sys::AInputEvent_getSource(self.ndk_event.ptr().as_ptr()) as u32 };
+        let source = unsafe { ndk_sys::AInputEvent_getSource(self.ndk_event.ptr().as_ptr()) };
         source.into()
     }
 
@@ -261,8 +260,7 @@ impl PointerImpl<'_> {
 
     #[inline]
     pub fn axis_value(&self, axis: Axis) -> f32 {
-        let value: u32 = axis.into();
-        let value = value as i32;
+        let value: i32 = axis.into();
         self.ndk_pointer.axis_value(value.into())
     }
 
@@ -279,7 +277,6 @@ impl PointerImpl<'_> {
     #[inline]
     pub fn tool_type(&self) -> ToolType {
         let value: i32 = self.ndk_pointer.tool_type().into();
-        let value = value as u32;
         value.into()
     }
 }
@@ -338,8 +335,7 @@ impl KeyEvent<'_> {
         // ndk_event.source()) since we have our own `Source` enum that we
         // share between backends, which may also capture unknown variants
         // added in new versions of Android.
-        let source =
-            unsafe { ndk_sys::AInputEvent_getSource(self.ndk_event.ptr().as_ptr()) as u32 };
+        let source = unsafe { ndk_sys::AInputEvent_getSource(self.ndk_event.ptr().as_ptr()) };
         source.into()
     }
 
