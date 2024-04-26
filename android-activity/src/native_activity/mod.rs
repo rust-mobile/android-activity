@@ -507,6 +507,7 @@ impl<'a> InputIteratorInner<'a> {
                     ndk::event::InputEvent::KeyEvent(e) => {
                         input::InputEvent::KeyEvent(input::KeyEvent::new(e))
                     }
+                    _ => todo!("NDK added a new type"),
                 };
 
                 // `finish_event` needs to be called for each event otherwise

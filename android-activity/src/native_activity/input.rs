@@ -262,13 +262,8 @@ impl<'a> PointerImpl<'a> {
     #[inline]
     pub fn axis_value(&self, axis: Axis) -> f32 {
         let value: u32 = axis.into();
-        if let Ok(ndk_axis) = value.try_into() {
-            self.ndk_pointer.axis_value(ndk_axis)
-        } else {
-            // FIXME: We should also be able to query `Axis::__Unknown(u32)` values
-            // that can't currently be queried via the `ndk` `Pointer` API
-            0.0f32
-        }
+        let value = value as i32;
+        self.ndk_pointer.axis_value(value.into())
     }
 
     #[inline]
@@ -283,7 +278,8 @@ impl<'a> PointerImpl<'a> {
 
     #[inline]
     pub fn tool_type(&self) -> ToolType {
-        let value: u32 = self.ndk_pointer.tool_type().into();
+        let value: i32 = self.ndk_pointer.tool_type().into();
+        let value = value as u32;
         value.into()
     }
 }
