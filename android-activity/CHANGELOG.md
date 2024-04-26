@@ -5,8 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- rust-version bumped to 1.69.0 ([#156](https://github.com/rust-mobile/android-activity/pull/156))
 
+## [0.6.0] - 2024-04-26
+
+### Changed
+- rust-version bumped to 1.69.0 ([#156](https://github.com/rust-mobile/android-activity/pull/156))
+- Upgrade to `ndk-sys 0.6.0` and `ndk 0.9.0` ([#155](https://github.com/rust-mobile/android-activity/pull/155))
+
+### Fixed
+- Check for null `saved_state_in` pointer from `NativeActivity`
 
 ## [0.5.2] - 2024-01-30
 
@@ -177,21 +184,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Most of the examples were moved to <https://github.com/rust-mobile/rust-android-examples> ([#50](https://github.com/rust-mobile/android-activity/pull/50))
 
-## [0.4] - 2022-11-10
+## [0.4.0] - 2022-11-10
 ### Changed
 - *Breaking*: `input_events` callback now return whether an event was handled or not to allow for fallback handling ([#31](https://github.com/rust-mobile/android-activity/issues/31))
 - The native-activity backend is now implemented in Rust only, without building on `android_native_app_glue.c` ([#35](https://github.com/rust-mobile/android-activity/pull/35))
 ### Added
 - Added `Pointer::tool_type()` API to `GameActivity` backend for compatibility with `ndk` events API ([#38](https://github.com/rust-mobile/android-activity/pull/38))
 
-## [0.3] - 2022-09-15
+## [0.3.0] - 2022-09-15
 ### Added
 - `show/hide_sot_input` API for being able to show/hide a soft keyboard (other IME still pending)
 - `set_window_flags()` API for setting WindowManager params
 ### Changed
 - *Breaking*: Created extensible, `#[non_exhaustive]` `InputEvent` wrapper enum instead of exposing `ndk` type directly
 
-## [0.2] - 2022-08-25
+## [0.2.0] - 2022-08-25
 ### Added
 - Emit an `InputAvailable` event for new input with `NativeActivity` and `GameActivity`
   enabling gui apps that don't render continuously
@@ -208,6 +215,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Documentation fixes
 
-## [0.1] - 2022-07-04
+## [0.1.0] - 2022-07-04
 ### Added
 - Initial release
+
+[unreleased]: https://github.com/rust-mobile/android-activity/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/rust-mobile/android-activity/compare/v0.5.2...v0.6.0
+[0.5.2]: https://github.com/rust-mobile/android-activity/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/rust-mobile/android-activity/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/rust-mobile/android-activity/compare/v0.4.3...v0.5.0
+[0.4.3]: https://github.com/rust-mobile/android-activity/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/rust-mobile/android-activity/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/rust-mobile/android-activity/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/rust-mobile/android-activity/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/rust-mobile/android-activity/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/rust-mobile/android-activity/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/rust-mobile/android-activity/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/rust-mobile/android-activity/releases/tag/v0.1.0
