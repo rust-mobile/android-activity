@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- rust-version bumped to 1.69.0 ([#156](https://github.com/rust-mobile/android-activity/pull/156))
 
 
 ## [0.5.2] - 2024-01-30
