@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- input: Replaced custom types with their `ndk` crate equivalent.
+  > [!NOTE]
+  > These types existed because the `ndk` crate didn't provide them in an extensible way.  Now that they have the `#[non_exhaustive]` flag and contain a `__Unknown(T)` variant to provide lossless conversions, and not to mention use an ABI type that matches how it is being used by most functions (when the original constants were defined in a "typeless" way), the `ndk` types are used and reexported once again.
+
+  > [!IMPORTANT]
+  > **Relevant breaking changes**:
+  > - `repr()` types for some `enum`s have changed to match the ABI type that is used by most functions that are returning or consuming this wrapper type.
+  > - `Source::is_xxx_class()` functions are replaced by querying `Source::class()` and comparing against variants from the returned `SourceClass` `bitflags` enum.
+  > - `SourceFlags::TRACKBALL` (from `Source::is_trackball_class()`) is named `SourceClass::NAVIGATION` in the `ndk`.
+
 ## [0.6.0] - 2024-04-26
 
 ### Changed
@@ -25,32 +35,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Avoids depending on default features for `ndk` crate to avoid pulling in any `raw-window-handle` dependencies ([#142](https://github.com/rust-mobile/android-activity/pull/142))
 
-    **Note:** Technically, this could be observed as a breaking change in case you
-    were depending on the `rwh_06` feature that was enabled by default in the
-    `ndk` crate. This could be observed via the `NativeWindow` type (exposed via
-    `AndroidApp::native_window()`) no longer implementing `rwh_06::HasWindowHandle`.
+  **Note:** Technically, this could be observed as a breaking change in case you
+  were depending on the `rwh_06` feature that was enabled by default in the
+  `ndk` crate. This could be observed via the `NativeWindow` type (exposed via
+  `AndroidApp::native_window()`) no longer implementing `rwh_06::HasWindowHandle`.
 
-    In the unlikely case that you were depending on the `ndk`'s `rwh_06` API
-    being enabled by default via `android-activity`'s `ndk` dependency, your crate
-    should explicitly enable the `rwh_06` feature for the `ndk` crate.
+  In the unlikely case that you were depending on the `ndk`'s `rwh_06` API
+  being enabled by default via `android-activity`'s `ndk` dependency, your crate
+  should explicitly enable the `rwh_06` feature for the `ndk` crate.
 
-    As far as could be seen though, it's not expected that anything was
-    depending on this (e.g. anything based on Winit enables the `ndk` feature
-    based on an equivalent `winit` feature).
+  As far as could be seen though, it's not expected that anything was
+  depending on this (e.g. anything based on Winit enables the `ndk` feature
+  based on an equivalent `winit` feature).
 
-    The benefit of the change is that it can help avoid a redundant
-    `raw-window-handle 0.6` dependency in projects that still need to use older
-    (non-default) `raw-window-handle` versions. (Though note that this may be
-    awkward to achieve in practice since other crates that depend on the `ndk`
-    are still likely to use default features and also pull in
-    `raw-window-handles 0.6`)
+  The benefit of the change is that it can help avoid a redundant
+  `raw-window-handle 0.6` dependency in projects that still need to use older
+  (non-default) `raw-window-handle` versions. (Though note that this may be
+  awkward to achieve in practice since other crates that depend on the `ndk`
+  are still likely to use default features and also pull in
+  `raw-window-handles 0.6`)
 
 - The IO thread now gets named `stdio-to-logcat` and main thread is named `android_main` ([#145](https://github.com/rust-mobile/android-activity/pull/145))
 - Improved IO error handling in `stdio-to-logcat` IO loop. ([#133](https://github.com/rust-mobile/android-activity/pull/133))
 
 ## [0.5.0] - 2023-10-16
 ### Added
-- Added `MotionEvent::action_button()` exposing the button associated with button press/release actions ()
+- Added `MotionEvent::action_button()` exposing the button associated with button press/release actions ([#138](https://github.com/rust-mobile/android-activity/pull/138))
 
 ### Changed
 - rust-version bumped to 0.68 ([#123](https://github.com/rust-mobile/android-activity/pull/123))
