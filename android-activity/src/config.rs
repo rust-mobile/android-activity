@@ -6,13 +6,14 @@ use ndk::configuration::{
     ScreenSize, Touchscreen, UiModeNight, UiModeType,
 };
 
-/// A (cheaply clonable) reference to this application's [`ndk::configuration::Configuration`]
+/// A runtime-replacable reference to [`ndk::configuration::Configuration`].
 ///
-/// This provides a thread-safe way to access the latest configuration state for
-/// an application without deeply copying the large [`ndk::configuration::Configuration`] struct.
+/// # Warning
 ///
-/// If the application is notified of configuration changes then those changes
-/// will become visible via pre-existing configuration references.
+/// The value held by this reference **will change** with every [`super::MainEvent::ConfigChanged`]
+/// event that is raised.  You should **not** [`Clone`] this type to compare it against a
+/// "new" [`super::AndroidApp::config()`] when that event is raised, since both point to the same
+/// internal [`ndk::configuration::Configuration`] and will be identical.
 #[derive(Clone)]
 pub struct ConfigurationRef {
     config: Arc<RwLock<Configuration>>,

@@ -81,12 +81,14 @@ pub struct WaitableNativeActivityState {
     pub cond: Condvar,
 }
 
+// SAFETY: ndk::NativeActivity is also SendSync.
+unsafe impl Send for WaitableNativeActivityState {}
+unsafe impl Sync for WaitableNativeActivityState {}
+
 #[derive(Debug, Clone)]
 pub struct NativeActivityGlue {
     pub inner: Arc<WaitableNativeActivityState>,
 }
-unsafe impl Send for NativeActivityGlue {}
-unsafe impl Sync for NativeActivityGlue {}
 
 impl Deref for NativeActivityGlue {
     type Target = WaitableNativeActivityState;
@@ -223,7 +225,6 @@ pub struct NativeActivityState {
     /// Set as soon as the Java main thread notifies us of an
     /// `onDestroyed` callback.
     pub destroyed: bool,
-    pub redraw_needed: bool,
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
     pub pending_window: Option<NativeWindow>,
 }
@@ -370,7 +371,6 @@ impl WaitableNativeActivityState {
                 thread_state: NativeThreadState::Init,
                 app_has_saved_state: false,
                 destroyed: false,
-                redraw_needed: false,
                 pending_input_queue: ptr::null_mut(),
                 pending_window: None,
             }),

@@ -268,9 +268,9 @@ pub enum MainEvent<'a> {
     /// input focus.
     LostFocus,
 
-    /// Command from main thread: the current device configuration has changed.
-    /// You can get a copy of the latest [`ndk::configuration::Configuration`] by calling
-    /// [`AndroidApp::config()`]
+    /// Command from main thread: the current device configuration has changed.  Any
+    /// reference gotten via [`AndroidApp::config()`] will automatically contain the latest
+    /// [`ndk::configuration::Configuration`].
     #[non_exhaustive]
     ConfigChanged {},
 
@@ -617,7 +617,14 @@ impl AndroidApp {
         self.inner.read().unwrap().create_waker()
     }
 
-    /// Returns a (cheaply clonable) reference to this application's [`ndk::configuration::Configuration`]
+    /// Returns a **reference** to this application's [`ndk::configuration::Configuration`].
+    ///
+    /// # Warning
+    ///
+    /// The value held by this reference **will change** with every [`MainEvent::ConfigChanged`]
+    /// event that is raised.  You should **not** [`Clone`] this type to compare it against a
+    /// "new" [`AndroidApp::config()`] when that event is raised, since both point to the same
+    /// internal [`ndk::configuration::Configuration`] and will be identical.
     pub fn config(&self) -> ConfigurationRef {
         self.inner.read().unwrap().config()
     }
