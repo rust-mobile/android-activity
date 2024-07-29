@@ -16,10 +16,7 @@ use jni_sys::*;
 use libc::{pthread_cond_t, pthread_mutex_t, pthread_t};
 use ndk_sys::{AAssetManager, AConfiguration, ALooper, ALooper_callbackFunc, ANativeWindow, ARect};
 
-#[cfg(all(
-    any(target_os = "android", feature = "test"),
-    any(target_arch = "arm", target_arch = "armv7")
-))]
+#[cfg(all(any(target_os = "android", feature = "test"), target_arch = "arm"))]
 include!("ffi_arm.rs");
 
 #[cfg(all(any(target_os = "android", feature = "test"), target_arch = "aarch64"))]
