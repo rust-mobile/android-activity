@@ -16,14 +16,14 @@ use jni_sys::*;
 use libc::{pthread_cond_t, pthread_mutex_t, pthread_t};
 use ndk_sys::{AAssetManager, AConfiguration, ALooper, ALooper_callbackFunc, ANativeWindow, ARect};
 
-#[cfg(all(any(target_os = "android", feature = "test"), target_arch = "arm"))]
+#[cfg(all(any(target_os = "android"), target_arch = "arm"))]
 include!("ffi_arm.rs");
 
-#[cfg(all(any(target_os = "android", feature = "test"), target_arch = "aarch64"))]
+#[cfg(all(any(target_os = "android"), target_arch = "aarch64"))]
 include!("ffi_aarch64.rs");
 
-#[cfg(all(any(target_os = "android", feature = "test"), target_arch = "x86"))]
+#[cfg(all(any(target_os = "android"), target_arch = "x86"))]
 include!("ffi_i686.rs");
 
-#[cfg(all(any(target_os = "android", feature = "test"), target_arch = "x86_64"))]
+#[cfg(all(any(target_os = "android"), target_arch = "x86_64"))]
 include!("ffi_x86_64.rs");

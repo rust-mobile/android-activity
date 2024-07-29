@@ -27,6 +27,7 @@ rust-version = "1.69.0"
 default = []
 game-activity = []
 native-activity = []
+api-level-30 = ["ndk/api-level-30"]
 
 [dependencies]
 log = "0.4"

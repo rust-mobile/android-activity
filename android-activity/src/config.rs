@@ -28,8 +28,6 @@ impl PartialEq for ConfigurationRef {
     }
 }
 impl Eq for ConfigurationRef {}
-unsafe impl Send for ConfigurationRef {}
-unsafe impl Sync for ConfigurationRef {}
 
 impl fmt::Debug for ConfigurationRef {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
