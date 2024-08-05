@@ -9,6 +9,12 @@ repository = "https://github.com/rust-mobile/android-activity"
 documentation = "https://docs.rs/android-activity"
 description = "Glue for building Rust applications on Android with NativeActivity or GameActivity"
 license = "MIT OR Apache-2.0"
+include = [
+    "/build.rs",
+    "/android-games-sdk",
+    "/LICENSE*",
+    "/src",
+]
 
 # Even though we could technically still build with 1.69, 1.73 has a fix for the
 # definition of the `stat` struct on Android, and so it seems worthwhile drawing
