@@ -395,8 +395,13 @@ impl ButtonState {
         self.0 & ndk_sys::AMOTION_EVENT_BUTTON_SECONDARY != 0
     }
     #[inline]
-    pub fn teriary(self) -> bool {
+    pub fn tertiary(self) -> bool {
         self.0 & ndk_sys::AMOTION_EVENT_BUTTON_TERTIARY != 0
+    }
+    #[inline]
+    #[deprecated = "misspelled; use `tertiary()` instead; will be removed in a future version"]
+    pub fn teriary(self) -> bool {
+        self.tertiary()
     }
     #[inline]
     pub fn back(self) -> bool {
