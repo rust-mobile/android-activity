@@ -1,4 +1,5 @@
 use std::ptr::NonNull;
+use std::task::{RawWaker, RawWakerVTable, Waker};
 
 #[cfg(doc)]
 use crate::AndroidApp;
@@ -53,5 +54,38 @@ impl AndroidAppWaker {
         unsafe {
             ndk_sys::ALooper_wake(self.looper.as_ptr());
         }
+    }
+
+    /// Creates a [`Waker`] that wakes up the [`AndroidApp`].
+    ///
+    /// This is useful for using this crate in `async` environments.
+    ///
+    /// [`Waker`]: std::task::Waker
+    pub fn into_waker(self) -> Waker {
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake, drop);
+
+        unsafe fn clone(data: *const ()) -> RawWaker {
+            ndk_sys::ALooper_acquire(data as *const _ as *mut _);
+            RawWaker::new(data, &VTABLE)
+        }
+
+        unsafe fn wake(data: *const ()) {
+            ndk_sys::ALooper_wake(data as *const _ as *mut _)
+        }
+
+        unsafe fn drop(data: *const ()) {
+            ndk_sys::ALooper_release(data as *const _ as *mut _);
+        }
+
+        // Take the existing reference to the looper and use it for the Waker
+        let looper_ptr = self.looper.as_ptr() as *const ();
+        std::mem::forget(self);
+        unsafe { Waker::from_raw(RawWaker::new(looper_ptr, &VTABLE)) }
+    }
+}
+
+impl From<AndroidAppWaker> for Waker {
+    fn from(waker: AndroidAppWaker) -> Self {
+        waker.into_waker()
     }
 }
