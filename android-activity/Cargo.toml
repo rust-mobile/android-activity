@@ -40,7 +40,7 @@ android-properties = "0.2"
 num_enum = "0.7"
 bitflags = "2.0"
 libc = "0.2"
-thiserror = "1"
+thiserror = "2"
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
