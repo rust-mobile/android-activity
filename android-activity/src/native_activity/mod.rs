@@ -14,6 +14,7 @@ use ndk::{asset::AssetManager, native_window::NativeWindow};
 
 use crate::error::InternalResult;
 use crate::main_callbacks::MainCallbacks;
+use crate::sdk::{Activity, Context, InputMethodManager};
 use crate::{
     util, AndroidApp, AndroidAppWaker, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect,
     WindowManagerFlags,
@@ -72,7 +73,7 @@ impl AndroidApp {
         jni_activity: &JObject,
     ) -> Self {
         jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
-            if let Err(err) = crate::input::jni_init(env) {
+            if let Err(err) = crate::sdk::jni_init(env) {
                 panic!("Failed to init JNI bindings: {err:?}");
             };
 
@@ -368,13 +369,29 @@ impl AndroidAppInner {
             log::error!("Can't show soft input after NativeActivity has been destroyed");
             return;
         }
-        unsafe {
-            let flags = if show_implicit {
-                ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
-            } else {
-                0
-            };
-            ndk_sys::ANativeActivity_showSoftInput(na as *mut _, flags);
+
+        // Note: `.attach_current_thread()` will also handle catching any Java exceptions that
+        // might be thrown by the JNI calls we make.
+        let res = self
+            .jvm
+            .attach_current_thread(|env| -> jni::errors::Result<()> {
+                let activity = env.as_cast::<Activity>(self.activity.as_ref())?;
+
+                let ims = Context::INPUT_METHOD_SERVICE(env)?;
+                let im_manager = activity.as_context().get_system_service(env, ims)?;
+                let im_manager = InputMethodManager::cast_local(env, im_manager)?;
+                let jni_window = activity.get_window(env)?;
+                let view = jni_window.get_decor_view(env)?;
+                let flags = if show_implicit {
+                    ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT as i32
+                } else {
+                    0
+                };
+                im_manager.show_soft_input(env, view, flags)?;
+                Ok(())
+            });
+        if let Err(err) = res {
+            log::warn!("Failed to show soft input: {err:?}");
         }
     }
 
@@ -386,13 +403,31 @@ impl AndroidAppInner {
             log::error!("Can't hide soft input after NativeActivity has been destroyed");
             return;
         }
-        unsafe {
-            let flags = if hide_implicit_only {
-                ndk_sys::ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY
-            } else {
-                0
-            };
-            ndk_sys::ANativeActivity_hideSoftInput(na as *mut _, flags);
+
+        // Note: `.attach_current_thread()` will also handle catching any Java exceptions that
+        // might be thrown by the JNI calls we make.
+        let res = self
+            .jvm
+            .attach_current_thread(|env| -> jni::errors::Result<()> {
+                let activity = env.as_cast::<Activity>(self.activity.as_ref())?;
+
+                let ims = Context::INPUT_METHOD_SERVICE(env)?;
+                let imm_obj = activity.as_context().get_system_service(env, ims)?;
+                let imm = InputMethodManager::cast_local(env, imm_obj)?;
+
+                let window = activity.get_window(env)?;
+                let decor = window.get_decor_view(env)?;
+                let token = decor.get_window_token(env)?;
+
+                // HIDE_IMPLICIT_ONLY == 1, HIDE_NOT_ALWAYS == 2
+                let flags = if hide_implicit_only { 1 } else { 0 };
+
+                let _hidden = imm.hide_soft_input_from_window(env, token, flags)?;
+                Ok(())
+            });
+
+        if let Err(err) = res {
+            error!("Failed to hide soft input: {err:?}");
         }
     }
 
