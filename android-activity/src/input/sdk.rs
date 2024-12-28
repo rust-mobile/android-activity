@@ -107,8 +107,7 @@ impl AKeyCharacterMap<'_> {
 }
 
 jni::bind_java_type! {
-    rust_type = AInputDevice,
-    java_type = "android.view.InputDevice",
+    pub(crate) AInputDevice => "android.view.InputDevice",
     type_map {
         AKeyCharacterMap => "android.view.KeyCharacterMap",
     },
@@ -116,14 +115,6 @@ jni::bind_java_type! {
         static fn get_device(id: jint) -> AInputDevice,
         fn get_key_character_map() -> AKeyCharacterMap,
     }
-}
-
-// Explicitly initialize the JNI bindings so we can get and early, upfront,
-// error if something is wrong.
-pub fn jni_init(env: &jni::Env) -> jni::errors::Result<()> {
-    let _ = AKeyCharacterMapAPI::get(env, &Default::default())?;
-    let _ = AInputDeviceAPI::get(env, &Default::default())?;
-    Ok(())
 }
 
 /// Describes the keys provided by a keyboard device and their associated labels.

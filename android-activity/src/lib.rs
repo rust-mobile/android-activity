@@ -395,6 +395,8 @@ mod util;
 
 mod jni_utils;
 
+mod sdk;
+
 mod waker;
 pub use waker::AndroidAppWaker;
 

@@ -128,7 +128,7 @@ impl AndroidApp {
     ) -> Self {
         // We attach to the thread before creating the AndroidApp
         jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
-            if let Err(err) = crate::input::jni_init(env) {
+            if let Err(err) = crate::sdk::jni_init(env) {
                 panic!("Failed to init JNI bindings: {err:?}");
             };
 

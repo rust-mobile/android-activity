@@ -61,6 +61,7 @@ fn android_on_create(state: &OnCreateState) {
 - *Safety* The `native-activity` backend clears its `ANativeActivity` ptr after `onDestroy` and `AndroidApp` remains safe to access after `android_main()` returns ([#234](https://github.com/rust-mobile/android-activity/pull/234))
 - *Safety* `AndroidApp::activity_as_ptr()` returns a pointer to a global reference that remains valid until `AndroidApp` is dropped, instead of the `ANativeActivity`'s `clazz` pointer which is only guaranteed to be valid until `onDestroy` returns (`native-activity` backend) ([#234](https://github.com/rust-mobile/android-activity/pull/234))
 - *Safety* The `game-activity` backend clears its `android_app` ptr after `onDestroy` and `AndroidApp` remains safe to access after `android_main()` returns ([#236](https://github.com/rust-mobile/android-activity/pull/236))
+- Support for `AndroidApp::show/hide_soft_input()` APIs in the `native-activity` backend ([#178](https://github.com/rust-mobile/android-activity/pull/178))
 
 ## [0.6.0] - 2024-04-26
 
