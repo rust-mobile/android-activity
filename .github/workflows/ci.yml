@@ -21,6 +21,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Downgrade all dependencies to their minimum version, both to ensure our
+      # minimum version bounds are correct and buildable, as well as to satisfy
+      # our MSRV check when arbitrary dependencies bump their MSRV beyond our
+      # MSRV in a patch-release.
+      # This implies that downstream consumers can only rely on our MSRV when
+      # downgrading various (transitive) dependencies.
+      - uses: hecrj/setup-rust-action@v2
+        with:
+          rust-version: nightly
+        if: ${{ matrix.rust-version != 'stable' }}
+      - name: Downgrade dependencies
+        run: cargo +nightly generate-lockfile -Zminimal-versions
+        if: ${{ matrix.rust-version != 'stable' }}
+
       - uses: hecrj/setup-rust-action@v2
         with:
           rust-version: ${{ matrix.rust-version }}
@@ -86,13 +100,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt
 
       - name: Format
         run: cargo fmt --all -- --check

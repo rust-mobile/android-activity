@@ -912,7 +912,7 @@ pub struct InputIterator<'a> {
     pub(crate) inner: crate::activity_impl::InputIteratorInner<'a>,
 }
 
-impl<'a> InputIterator<'a> {
+impl InputIterator<'_> {
     /// Reads and handles the next input event by passing it to the given `callback`
     ///
     /// `callback` should return [`InputStatus::Unhandled`] for any input events that aren't directly
@@ -932,7 +932,7 @@ pub struct Pointer<'a> {
     pub(crate) inner: PointerImpl<'a>,
 }
 
-impl<'a> Pointer<'a> {
+impl Pointer<'_> {
     #[inline]
     pub fn pointer_index(&self) -> usize {
         self.inner.pointer_index()
@@ -1026,7 +1026,7 @@ impl<'a> Iterator for PointersIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for PointersIter<'a> {
+impl ExactSizeIterator for PointersIter<'_> {
     fn len(&self) -> usize {
         self.inner.len()
     }
