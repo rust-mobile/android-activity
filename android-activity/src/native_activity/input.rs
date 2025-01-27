@@ -1,8 +1,10 @@
 use std::marker::PhantomData;
 
+use ndk::event::ButtonState;
+
 use crate::input::{
-    Axis, Button, ButtonState, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction,
-    MotionEventFlags, Pointer, PointersIter, Source, ToolType,
+    Axis, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction, MotionEventFlags, Pointer,
+    PointersIter, Source, ToolType,
 };
 
 /// A motion event
@@ -30,13 +32,7 @@ impl MotionEvent<'_> {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        // XXX: we use `AInputEvent_getSource` directly (instead of calling
-        // ndk_event.source()) since we have our own `Source` enum that we
-        // share between backends, which may also capture unknown variants
-        // added in new versions of Android.
-        let source =
-            unsafe { ndk_sys::AInputEvent_getSource(self.ndk_event.ptr().as_ptr()) as u32 };
-        source.into()
+        self.ndk_event.source()
     }
 
     /// Get the device id associated with the event.
@@ -51,13 +47,7 @@ impl MotionEvent<'_> {
     /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getActionMasked())
     #[inline]
     pub fn action(&self) -> MotionAction {
-        // XXX: we use `AMotionEvent_getAction` directly since we have our own
-        // `MotionAction` enum that we share between backends, which may also
-        // capture unknown variants added in new versions of Android.
-        let action =
-            unsafe { ndk_sys::AMotionEvent_getAction(self.ndk_event.ptr().as_ptr()) as u32 }
-                & ndk_sys::AMOTION_EVENT_ACTION_MASK;
-        action.into()
+        self.ndk_event.action()
     }
 
     /// Returns which button has been modified during a press or release action.
@@ -67,10 +57,11 @@ impl MotionEvent<'_> {
     ///
     /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getActionButton())
     #[inline]
-    pub fn action_button(&self) -> Button {
-        let action_button =
-            unsafe { ndk_sys::AMotionEvent_getActionButton(self.ndk_event.ptr().as_ptr()) as u32 };
-        action_button.into()
+    #[cfg(feature = "api-level-33")]
+    #[doc(alias = "AMotionEvent_getActionButton")]
+    // TODO: Button enum to signify only one bitflag can be set?
+    pub fn action_button(&self) -> ButtonState {
+        self.ndk_event.action_button()
     }
 
     /// Returns the pointer index of an `Up` or `Down` event.
@@ -154,7 +145,7 @@ impl MotionEvent<'_> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getmetastate)
     #[inline]
     pub fn meta_state(&self) -> MetaState {
-        self.ndk_event.meta_state().into()
+        self.ndk_event.meta_state()
     }
 
     /// Returns the button state during this event, as a bitfield.
@@ -163,7 +154,7 @@ impl MotionEvent<'_> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getbuttonstate)
     #[inline]
     pub fn button_state(&self) -> ButtonState {
-        self.ndk_event.button_state().into()
+        self.ndk_event.button_state()
     }
 
     /// Returns the time of the start of this gesture, in the `java.lang.System.nanoTime()` time
@@ -182,7 +173,7 @@ impl MotionEvent<'_> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getedgeflags)
     #[inline]
     pub fn edge_flags(&self) -> EdgeFlags {
-        self.ndk_event.edge_flags().into()
+        self.ndk_event.edge_flags()
     }
 
     /// Returns the time of this event, in the `java.lang.System.nanoTime()` time base
@@ -200,7 +191,7 @@ impl MotionEvent<'_> {
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getflags)
     #[inline]
     pub fn flags(&self) -> MotionEventFlags {
-        self.ndk_event.flags().into()
+        self.ndk_event.flags()
     }
 
     /* Missing from GameActivity currently...
@@ -261,8 +252,7 @@ impl PointerImpl<'_> {
 
     #[inline]
     pub fn axis_value(&self, axis: Axis) -> f32 {
-        let value: u32 = axis.into();
-        let value = value as i32;
+        let value: i32 = axis.into();
         self.ndk_pointer.axis_value(value.into())
     }
 
@@ -279,7 +269,6 @@ impl PointerImpl<'_> {
     #[inline]
     pub fn tool_type(&self) -> ToolType {
         let value: i32 = self.ndk_pointer.tool_type().into();
-        let value = value as u32;
         value.into()
     }
 }
@@ -331,16 +320,9 @@ impl KeyEvent<'_> {
     }
 
     /// Get the source of the event.
-    ///
     #[inline]
     pub fn source(&self) -> Source {
-        // XXX: we use `AInputEvent_getSource` directly (instead of calling
-        // ndk_event.source()) since we have our own `Source` enum that we
-        // share between backends, which may also capture unknown variants
-        // added in new versions of Android.
-        let source =
-            unsafe { ndk_sys::AInputEvent_getSource(self.ndk_event.ptr().as_ptr()) as u32 };
-        source.into()
+        self.ndk_event.source()
     }
 
     /// Get the device id associated with the event.
@@ -355,11 +337,7 @@ impl KeyEvent<'_> {
     /// See [the KeyEvent docs](https://developer.android.com/reference/android/view/KeyEvent#getAction())
     #[inline]
     pub fn action(&self) -> KeyAction {
-        // XXX: we use `AInputEvent_getAction` directly since we have our own
-        // `KeyAction` enum that we share between backends, which may also
-        // capture unknown variants added in new versions of Android.
-        let action = unsafe { ndk_sys::AKeyEvent_getAction(self.ndk_event.ptr().as_ptr()) as u32 };
-        action.into()
+        self.ndk_event.action()
     }
 
     /// Returns the last time the key was pressed.  This is on the scale of
@@ -388,12 +366,7 @@ impl KeyEvent<'_> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getkeycode)
     #[inline]
     pub fn key_code(&self) -> Keycode {
-        // XXX: we use `AInputEvent_getKeyCode` directly since we have our own
-        // `Keycode` enum that we share between backends, which may also
-        // capture unknown variants added in new versions of Android.
-        let keycode =
-            unsafe { ndk_sys::AKeyEvent_getKeyCode(self.ndk_event.ptr().as_ptr()) as u32 };
-        keycode.into()
+        self.ndk_event.key_code()
     }
 
     /// Returns the number of repeats of a key.
@@ -420,13 +393,12 @@ impl KeyEvent<'_> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getmetastate)
     #[inline]
     pub fn meta_state(&self) -> MetaState {
-        self.ndk_event.meta_state().into()
+        self.ndk_event.meta_state()
     }
 }
 
 // We use our own wrapper type for input events to have better consistency
-// with GameActivity and ensure the enum can be extended without needing a
-// semver bump
+// with GameActivity
 /// Enum of possible input events
 #[derive(Debug)]
 #[non_exhaustive]
