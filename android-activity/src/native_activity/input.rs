@@ -15,7 +15,7 @@ pub struct MotionEvent<'a> {
     ndk_event: ndk::event::MotionEvent,
     _lifetime: PhantomData<&'a ndk::event::MotionEvent>,
 }
-impl<'a> MotionEvent<'a> {
+impl MotionEvent<'_> {
     pub(crate) fn new(ndk_event: ndk::event::MotionEvent) -> Self {
         Self {
             ndk_event,
@@ -248,7 +248,7 @@ pub(crate) struct PointerImpl<'a> {
     ndk_pointer: ndk::event::Pointer<'a>,
 }
 
-impl<'a> PointerImpl<'a> {
+impl PointerImpl<'_> {
     #[inline]
     pub fn pointer_index(&self) -> usize {
         self.ndk_pointer.pointer_index()
@@ -303,7 +303,7 @@ impl<'a> Iterator for PointersIterImpl<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for PointersIterImpl<'a> {
+impl ExactSizeIterator for PointersIterImpl<'_> {
     fn len(&self) -> usize {
         self.ndk_pointers_iter.len()
     }
@@ -319,7 +319,7 @@ pub struct KeyEvent<'a> {
     ndk_event: ndk::event::KeyEvent,
     _lifetime: PhantomData<&'a ndk::event::KeyEvent>,
 }
-impl<'a> KeyEvent<'a> {
+impl KeyEvent<'_> {
     pub(crate) fn new(ndk_event: ndk::event::KeyEvent) -> Self {
         Self {
             ndk_event,

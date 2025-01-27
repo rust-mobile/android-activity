@@ -263,7 +263,7 @@ pub(crate) struct PointerImpl<'a> {
     index: usize,
 }
 
-impl<'a> PointerImpl<'a> {
+impl PointerImpl<'_> {
     #[inline]
     pub fn pointer_index(&self) -> usize {
         self.index
@@ -333,7 +333,7 @@ impl<'a> Iterator for PointersIterImpl<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for PointersIterImpl<'a> {
+impl ExactSizeIterator for PointersIterImpl<'_> {
     fn len(&self) -> usize {
         self.count - self.next_index
     }
@@ -740,7 +740,7 @@ impl<'a> KeyEvent<'a> {
     }
 }
 
-impl<'a> KeyEvent<'a> {
+impl KeyEvent<'_> {
     /// Flags associated with this [`KeyEvent`].
     ///
     /// See [the NDK docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getflags)

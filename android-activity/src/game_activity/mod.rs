@@ -84,7 +84,7 @@ impl<'a> StateSaver<'a> {
 pub struct StateLoader<'a> {
     app: &'a AndroidAppInner,
 }
-impl<'a> StateLoader<'a> {
+impl StateLoader<'_> {
     pub fn load(&self) -> Option<Vec<u8>> {
         unsafe {
             let app_ptr = self.app.native_app.as_ptr();
@@ -722,7 +722,7 @@ impl<'a> InputBuffer<'a> {
     }
 }
 
-impl<'a> Drop for InputBuffer<'a> {
+impl Drop for InputBuffer<'_> {
     fn drop(&mut self) {
         unsafe {
             ffi::android_app_clear_motion_events(self.ptr.as_ptr());
@@ -801,7 +801,7 @@ pub(crate) struct InputIteratorInner<'a> {
     text_event_checked: bool,
 }
 
-impl<'a> InputIteratorInner<'a> {
+impl InputIteratorInner<'_> {
     pub(crate) fn next<F>(&mut self, callback: F) -> bool
     where
         F: FnOnce(&input::InputEvent) -> InputStatus,
@@ -943,7 +943,7 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
                 // code to look up non-standard Java classes.
                 android_main(app);
             })
-            .unwrap_or_else(|panic| log_panic(panic));
+            .unwrap_or_else(log_panic);
 
             // Let JVM know that our Activity can be destroyed before detaching from the JVM
             //
