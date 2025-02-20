@@ -53,7 +53,7 @@ impl<'a> StateSaver<'a> {
 pub struct StateLoader<'a> {
     app: &'a AndroidAppInner,
 }
-impl<'a> StateLoader<'a> {
+impl StateLoader<'_> {
     /// Returns whatever state was saved during the last [MainEvent::SaveState] event or `None`
     pub fn load(&self) -> Option<Vec<u8>> {
         self.app.native_activity.saved_state()
@@ -465,7 +465,7 @@ pub(crate) struct InputReceiver {
     queue: Option<InputQueue>,
 }
 
-impl<'a> From<Arc<InputReceiver>> for InputIteratorInner<'a> {
+impl From<Arc<InputReceiver>> for InputIteratorInner<'_> {
     fn from(receiver: Arc<InputReceiver>) -> Self {
         Self {
             receiver,
@@ -480,7 +480,7 @@ pub(crate) struct InputIteratorInner<'a> {
     _lifetime: PhantomData<&'a ()>,
 }
 
-impl<'a> InputIteratorInner<'a> {
+impl InputIteratorInner<'_> {
     pub(crate) fn next<F>(&self, callback: F) -> bool
     where
         F: FnOnce(&input::InputEvent) -> InputStatus,
