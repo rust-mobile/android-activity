@@ -13,15 +13,15 @@
 //!    a wider range of devices.
 //!
 //! Standalone applications based on this crate need to be built as `cdylib` libraries, like:
-//! ```
+//! ```toml
 //! [lib]
 //! crate_type=["cdylib"]
 //! ```
 //!
 //! and implement a `#[no_mangle]` `android_main` entry point like this:
-//! ```rust
+//! ```
 //! #[no_mangle]
-//! fn android_main(app: AndroidApp) {
+//! fn android_main(app: android_activity::AndroidApp) {
 //!
 //! }
 //! ```
@@ -64,6 +64,7 @@
 //! These are undone after `android_main()` returns
 //!
 //! # Android Extensible Enums
+// TODO: Move this to the NDK crate, which now implements this for most of the code?
 //!
 //! There are numerous enums in the `android-activity` API which are effectively
 //! bindings to enums declared in the Android SDK which need to be considered
@@ -95,7 +96,7 @@
 //! For example, here is how you could ensure forwards compatibility with both
 //! compile-time and runtime extensions of a `SomeEnum` enum:
 //!
-//! ```rust
+//! ```ignore
 //! match some_enum {
 //!     SomeEnum::Foo => {},
 //!     SomeEnum::Bar => {},
@@ -131,7 +132,7 @@ use ndk::native_window::NativeWindow;
 pub use ndk;
 pub use ndk_sys;
 
-#[cfg(not(target_os = "android"))]
+#[cfg(all(not(target_os = "android"), not(feature = "test")))]
 compile_error!("android-activity only supports compiling for Android");
 
 #[cfg(all(feature = "game-activity", feature = "native-activity"))]
@@ -556,10 +557,10 @@ impl AndroidApp {
     /// between native Rust code and Java/Kotlin code running within the JVM.
     ///
     /// If you use the [`jni`] crate you can wrap this as a [`JavaVM`] via:
-    /// ```ignore
+    /// ```no_run
     /// # use jni::JavaVM;
-    /// # let app: AndroidApp = todo!();
-    /// let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr()) };
+    /// # let app: android_activity::AndroidApp = todo!();
+    /// let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr().ast()) };
     /// ```
     ///
     /// [`jni`]: https://crates.io/crates/jni
@@ -571,10 +572,10 @@ impl AndroidApp {
     /// Returns a JNI object reference for this application's JVM `Activity` as a pointer
     ///
     /// If you use the [`jni`] crate you can wrap this as an object reference via:
-    /// ```ignore
+    /// ```no_run
     /// # use jni::objects::JObject;
-    /// # let app: AndroidApp = todo!();
-    /// let activity = unsafe { JObject::from_raw(app.activity_as_ptr()) };
+    /// # let app: android_activity::AndroidApp = todo!();
+    /// let activity = unsafe { JObject::from_raw(app.activity_as_ptr().cast()) };
     /// ```
     ///
     /// # JNI Safety
@@ -731,7 +732,7 @@ impl AndroidApp {
     /// # Example
     /// Code to iterate all pending input events would look something like this:
     ///
-    /// ```rust
+    /// ```
     /// match app.input_events_iter() {
     ///     Ok(mut iter) => {
     ///         loop {
@@ -786,7 +787,7 @@ impl AndroidApp {
     ///
     /// Code to handle unicode character mapping as well as combining dead keys could look some thing like:
     ///
-    /// ```rust
+    /// ```
     /// let mut combining_accent = None;
     /// // Snip
     ///

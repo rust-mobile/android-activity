@@ -96,6 +96,11 @@ jobs:
         run: >
           cargo ndk -t arm64-v8a doc --no-deps
 
+      - name: Tests (host build-testing)
+        run: |
+          cargo test -F native-activity -F test
+          cargo test -F game-activity -F test
+
   format:
     runs-on: ubuntu-latest
     steps:
