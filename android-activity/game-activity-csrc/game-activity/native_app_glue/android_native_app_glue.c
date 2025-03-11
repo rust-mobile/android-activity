@@ -264,7 +264,7 @@ static bool default_key_filter(const GameActivityKeyEvent* event) {
 
 static bool default_motion_filter(const GameActivityMotionEvent* event) {
     // Ignore any non-touch events.
-    return event->source == SOURCE_TOUCHSCREEN;
+    return event->source & SOURCE_TOUCHSCREEN;
 }
 
 // --------------------------------------------------------------------
