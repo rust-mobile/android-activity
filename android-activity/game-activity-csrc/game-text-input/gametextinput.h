@@ -36,10 +36,10 @@ extern "C" {
 #define GAMETEXTINPUT_MAJOR_VERSION 2
 #define GAMETEXTINPUT_MINOR_VERSION 0
 #define GAMETEXTINPUT_BUGFIX_VERSION 0
-#define GAMETEXTINPUT_PACKED_VERSION                            \
-    ANDROID_GAMESDK_PACKED_VERSION(GAMETEXTINPUT_MAJOR_VERSION, \
-                                   GAMETEXTINPUT_MINOR_VERSION, \
-                                   GAMETEXTINPUT_BUGFIX_VERSION)
+#define GAMETEXTINPUT_PACKED_VERSION                          \
+  ANDROID_GAMESDK_PACKED_VERSION(GAMETEXTINPUT_MAJOR_VERSION, \
+                                 GAMETEXTINPUT_MINOR_VERSION, \
+                                 GAMETEXTINPUT_BUGFIX_VERSION)
 
 /**
  * This struct holds a span within a region of text from start (inclusive) to
@@ -47,10 +47,10 @@ extern "C" {
  * start==end. An undefined span is specified with start = end = SPAN_UNDEFINED.
  */
 typedef struct GameTextInputSpan {
-    /** The start of the region (inclusive). */
-    int32_t start;
-    /** The end of the region (exclusive). */
-    int32_t end;
+  /** The start of the region (inclusive). */
+  int32_t start;
+  /** The end of the region (exclusive). */
+  int32_t end;
 } GameTextInputSpan;
 
 /**
@@ -66,23 +66,23 @@ enum GameTextInputSpanFlag { SPAN_UNDEFINED = -1 };
  * GameTextInput_setState to read and modify the state that an IME is editing.
  */
 typedef struct GameTextInputState {
-    /**
-     * Text owned by the state, as a modified UTF-8 string. Null-terminated.
-     * https://en.wikipedia.org/wiki/UTF-8#Modified_UTF-8
-     */
-    const char *text_UTF8;
-    /**
-     * Length in bytes of text_UTF8, *not* including the null at end.
-     */
-    int32_t text_length;
-    /**
-     * A selection defined on the text.
-     */
-    GameTextInputSpan selection;
-    /**
-     * A composing region defined on the text.
-     */
-    GameTextInputSpan composingRegion;
+  /**
+   * Text owned by the state, as a modified UTF-8 string. Null-terminated.
+   * https://en.wikipedia.org/wiki/UTF-8#Modified_UTF-8
+   */
+  const char *text_UTF8;
+  /**
+   * Length in bytes of text_UTF8, *not* including the null at end.
+   */
+  int32_t text_length;
+  /**
+   * A selection defined on the text.
+   */
+  GameTextInputSpan selection;
+  /**
+   * A composing region defined on the text.
+   */
+  GameTextInputSpan composingRegion;
 } GameTextInputState;
 
 /**
@@ -144,13 +144,13 @@ void GameTextInput_destroy(GameTextInput *input);
  * Flags to be passed to GameTextInput_showIme.
  */
 enum ShowImeFlags {
-    SHOW_IME_UNDEFINED = 0,  // Default value.
-    SHOW_IMPLICIT =
-        1,  // Indicates that the user has forced the input method open so it
-            // should not be closed until they explicitly do so.
-    SHOW_FORCED = 2  // Indicates that this is an implicit request to show the
-                     // input window, not as the result of a direct request by
-                     // the user. The window may not be shown in this case.
+  SHOW_IME_UNDEFINED = 0,  // Default value.
+  SHOW_IMPLICIT =
+      1,  // Indicates that the user has forced the input method open so it
+          // should not be closed until they explicitly do so.
+  SHOW_FORCED = 2  // Indicates that this is an implicit request to show the
+                   // input window, not as the result of a direct request by
+                   // the user. The window may not be shown in this case.
 };
 
 /**
@@ -165,13 +165,13 @@ void GameTextInput_showIme(GameTextInput *input, uint32_t flags);
  * Flags to be passed to GameTextInput_hideIme.
  */
 enum HideImeFlags {
-    HIDE_IME_UNDEFINED = 0,  // Default value.
-    HIDE_IMPLICIT_ONLY =
-        1,  // Indicates that the soft input window should only be hidden if it
-            // was not explicitly shown by the user.
-    HIDE_NOT_ALWAYS =
-        2,  // Indicates that the soft input window should normally be hidden,
-            // unless it was originally shown with SHOW_FORCED.
+  HIDE_IME_UNDEFINED = 0,  // Default value.
+  HIDE_IMPLICIT_ONLY =
+      1,  // Indicates that the soft input window should only be hidden if it
+          // was not explicitly shown by the user.
+  HIDE_NOT_ALWAYS =
+      2,  // Indicates that the soft input window should normally be hidden,
+          // unless it was originally shown with SHOW_FORCED.
 };
 
 /**
