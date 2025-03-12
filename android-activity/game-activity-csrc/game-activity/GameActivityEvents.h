@@ -278,18 +278,6 @@ inline float GameActivityMotionEvent_getHistoricalOrientation(
 void GameActivityMotionEvent_destroy(GameActivityMotionEvent* c_event);
 
 /**
- * \brief Convert a Java `MotionEvent` to a `GameActivityMotionEvent`.
- *
- * This is done automatically by the GameActivity: see `onTouchEvent` to set
- * a callback to consume the received events.
- * This function can be used if you re-implement events handling in your own
- * activity.
- * Ownership of out_event is maintained by the caller.
- */
-void GameActivityMotionEvent_fromJava(JNIEnv* env, jobject motionEvent,
-                                      GameActivityMotionEvent* out_event);
-
-/**
  * \brief Describe a key event that happened on the GameActivity SurfaceView.
  *
  * This is 1:1 mapping to the information contained in a Java `KeyEvent`
@@ -314,18 +302,6 @@ typedef struct GameActivityKeyEvent {
   int32_t scanCode;
   int32_t unicodeChar;
 } GameActivityKeyEvent;
-
-/**
- * \brief Convert a Java `KeyEvent` to a `GameActivityKeyEvent`.
- *
- * This is done automatically by the GameActivity: see `onKeyUp` and `onKeyDown`
- * to set a callback to consume the received events.
- * This function can be used if you re-implement events handling in your own
- * activity.
- * Ownership of out_event is maintained by the caller.
- */
-void GameActivityKeyEvent_fromJava(JNIEnv* env, jobject motionEvent,
-                                   GameActivityKeyEvent* out_event);
 
 #ifdef __cplusplus
 }
