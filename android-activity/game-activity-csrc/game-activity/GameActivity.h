@@ -296,7 +296,7 @@ typedef void GameActivity_createFunc(GameActivity* activity, void* savedState,
  * "android.app.func_name" string meta-data in your manifest to use a different
  * function.
  */
-extern GameActivity_createFunc GameActivity_onCreate_C;
+extern GameActivity_createFunc GameActivity_onCreate;
 
 /**
  * Finish the given activity.  Its finish() method will be called, causing it
