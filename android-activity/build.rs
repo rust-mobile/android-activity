@@ -1,50 +1,86 @@
 #![allow(dead_code)]
 
 fn build_glue_for_game_activity() {
-    let activity_basepath = "android-games-sdk/game-activity/prefab-src/modules/game-activity/include";
-    let textinput_basepath = "android-games-sdk/game-text-input/prefab-src/modules/game-text-input/include";
+    let activity_path = |src_inc, name| {
+        format!("android-games-sdk/game-activity/prefab-src/modules/game-activity/{src_inc}/game-activity/{name}")
+    };
+    let textinput_path = |src_inc, name| {
+        format!("android-games-sdk/game-text-input/prefab-src/modules/game-text-input/{src_inc}/game-text-input/{name}")
+    };
+
+    for f in ["GameActivity.cpp", "GameActivityEvents.cpp"] {
+        println!("cargo:rerun-if-changed={}", activity_path("src", f));
+    }
 
     for f in [
         "GameActivity.h",
-        "GameActivity.cpp",
         "GameActivityEvents.h",
-        "GameActivityEvents.cpp",
         "GameActivityLog.h",
+        "GameActivityEvents_internal.h",
     ] {
-        println!("cargo:rerun-if-changed={activity_basepath}/game-activity/{f}");
+        println!("cargo:rerun-if-changed={}", activity_path("include", f));
     }
+
     cc::Build::new()
         .cpp(true)
+        .include("android-games-sdk/src/common")
+        .file("android-games-sdk/src/common/system_utils.cpp")
+        .extra_warnings(false)
+        .cpp_link_stdlib("c++_static")
+        .compile("libgame_common.a");
+
+    println!("cargo:rerun-if-changed=android-games-sdk/src/common/system_utils.cpp");
+    println!("cargo:rerun-if-changed=android-games-sdk/src/common/system_utils.h");
+
+    cc::Build::new()
+        .cpp(true)
+        .include("android-games-sdk/src/common")
         .include("android-games-sdk/include")
-        .include(activity_basepath)
-        .include(textinput_basepath)
-        .file(format!("{activity_basepath}/game-activity/GameActivity.cpp"))
-        .file(format!("{activity_basepath}/game-activity/GameActivityEvents.cpp"))
+        .include("android-games-sdk/game-activity/prefab-src/modules/game-activity/include")
+        .include("android-games-sdk/game-text-input/prefab-src/modules/game-text-input/include")
+        .file(activity_path("src", "GameActivity.cpp"))
+        .file(activity_path("src", "GameActivityEvents.cpp"))
         .extra_warnings(false)
         .cpp_link_stdlib("c++_static")
         .compile("libgame_activity.a");
 
-    for f in ["gamecommon.h", "gametextinput.h", "gametextinput.cpp"] {
-        println!("cargo:rerun-if-changed={textinput_basepath}/game-text-input/{f}");
-    }
+    println!(
+        "cargo:rerun-if-changed={}",
+        textinput_path("include", "gametextinput.h")
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
+        textinput_path("src", "gametextinput.cpp")
+    );
+
     cc::Build::new()
         .cpp(true)
+        .include("android-games-sdk/src/common")
         .include("android-games-sdk/include")
-        .include(textinput_basepath)
-        .file(format!("{textinput_basepath}/game-text-input/gametextinput.cpp"))
+        .include("android-games-sdk/game-text-input/prefab-src/modules/game-text-input/include")
+        .file(textinput_path("src", "gametextinput.cpp"))
         .cpp_link_stdlib("c++_static")
         .compile("libgame_text_input.a");
 
-    for f in ["android_native_app_glue.h", "android_native_app_glue.c"] {
-        println!("cargo:rerun-if-changed={activity_basepath}/game-activity/native_app_glue/{f}");
-    }
-    
+    println!(
+        "cargo:rerun-if-changed={}",
+        activity_path("src", "native_app_glue/android_native_app_glue.c")
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
+        activity_path("include", "native_app_glue/android_native_app_glue.h")
+    );
+
     cc::Build::new()
+        .include("android-games-sdk/src/common")
         .include("android-games-sdk/include")
-        .include(activity_basepath)
-        .include(textinput_basepath)
-        .include(format!("{activity_basepath}/game-activity/native_app_glue"))
-        .file(format!("{activity_basepath}/game-activity/native_app_glue/android_native_app_glue.c"))
+        .include("android-games-sdk/game-activity/prefab-src/modules/game-activity/include")
+        .include("android-games-sdk/game-text-input/prefab-src/modules/game-text-input/include")
+        .include(activity_path("include", ""))
+        .file(activity_path(
+            "src",
+            "native_app_glue/android_native_app_glue.c",
+        ))
         .extra_warnings(false)
         .cpp_link_stdlib("c++_static")
         .compile("libnative_app_glue.a");

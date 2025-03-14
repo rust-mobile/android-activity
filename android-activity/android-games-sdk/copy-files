@@ -35,23 +35,27 @@ mkdir -p "$DEST_DIR"
 while IFS= read -r file || [ -n "$file" ]; do
     # Skip empty lines and comments
     if [ -z "$file" ] || [[ "$file" =~ ^# ]]; then
-	continue
+        continue
     fi
 
+    fpath="$(find "$SOURCE_DIR" -name "$file" -type f)"
+
     # Find matching files
-    find "$SOURCE_DIR" -name "$file" -type f | while read -r file; do
-	# Get the relative path
-	rel_path="${file#$SOURCE_DIR/}"
-	dest_file="$DEST_DIR/$rel_path"
-	dest_dir=$(dirname "$dest_file")
+    if [ -f "$fpath" ]; then
+        # Get the relative path
+        rel_path="${fpath#$SOURCE_DIR/}"
+        dest_file="$DEST_DIR/$rel_path"
+        dest_dir=$(dirname "$dest_file")
 
-	# Create destination directory structure
-	mkdir -p "$dest_dir"
+        # Create destination directory structure
+        mkdir -p "$dest_dir"
 
-	# Copy the file
-	cp "$file" "$dest_file"
-	echo "Copied: $rel_path"
-    done
+        # Copy the file
+        cp "$fpath" "$dest_file"
+        echo "Copied: $rel_path"
+    else
+        echo "ERROR: '$file' not found"
+    fi
 done < "$FILE_LIST"
 
 echo "Copy operation completed."

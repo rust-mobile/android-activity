@@ -27,6 +27,7 @@
 #include <poll.h>
 #include <pthread.h>
 #include <sched.h>
+#include <stdint.h>
 
 #include "game-activity/GameActivity.h"
 
@@ -86,55 +87,54 @@ struct android_app;
  * when that source has data ready.
  */
 struct android_poll_source {
-    /**
-     * The identifier of this source.  May be LOOPER_ID_MAIN or
-     * LOOPER_ID_INPUT.
-     */
-    int32_t id;
+  /**
+   * The identifier of this source.  May be LOOPER_ID_MAIN or
+   * LOOPER_ID_INPUT.
+   */
+  int32_t id;
 
-    /** The android_app this ident is associated with. */
-    struct android_app* app;
+  /** The android_app this ident is associated with. */
+  struct android_app* app;
 
-    /**
-     * Function to call to perform the standard processing of data from
-     * this source.
-     */
-    void (*process)(struct android_app* app,
-                    struct android_poll_source* source);
+  /**
+   * Function to call to perform the standard processing of data from
+   * this source.
+   */
+  void (*process)(struct android_app* app, struct android_poll_source* source);
 };
 
 struct android_input_buffer {
-    /**
-     * Pointer to a read-only array of GameActivityMotionEvent.
-     * Only the first motionEventsCount events are valid.
-     */
-    GameActivityMotionEvent *motionEvents;
+  /**
+   * Pointer to a read-only array of GameActivityMotionEvent.
+   * Only the first motionEventsCount events are valid.
+   */
+  GameActivityMotionEvent* motionEvents;
 
-    /**
-     * The number of valid motion events in `motionEvents`.
-     */
-    uint64_t motionEventsCount;
+  /**
+   * The number of valid motion events in `motionEvents`.
+   */
+  uint64_t motionEventsCount;
 
-    /**
-     * The size of the `motionEvents` buffer.
-     */
-    uint64_t motionEventsBufferSize;
+  /**
+   * The size of the `motionEvents` buffer.
+   */
+  uint64_t motionEventsBufferSize;
 
-    /**
-     * Pointer to a read-only array of GameActivityKeyEvent.
-     * Only the first keyEventsCount events are valid.
-     */
-    GameActivityKeyEvent *keyEvents;
+  /**
+   * Pointer to a read-only array of GameActivityKeyEvent.
+   * Only the first keyEventsCount events are valid.
+   */
+  GameActivityKeyEvent* keyEvents;
 
-    /**
-     * The number of valid "Key" events in `keyEvents`.
-     */
-    uint64_t keyEventsCount;
+  /**
+   * The number of valid "Key" events in `keyEvents`.
+   */
+  uint64_t keyEventsCount;
 
-    /**
-     * The size of the `keyEvents` buffer.
-     */
-    uint64_t keyEventsBufferSize;
+  /**
+   * The size of the `keyEvents` buffer.
+   */
+  uint64_t keyEventsBufferSize;
 };
 
 /**
@@ -164,261 +164,294 @@ typedef bool (*android_motion_event_filter)(const GameActivityMotionEvent*);
  * Java objects.
  */
 struct android_app {
-    /**
-     * An optional pointer to application-defined state.
-     */
-    void* userData;
+  /**
+   * An optional pointer to application-defined state.
+   */
+  void* userData;
 
-    /**
-     * A required callback for processing main app commands (`APP_CMD_*`).
-     * This is called each frame if there are app commands that need processing.
-     */
-    void (*onAppCmd)(struct android_app* app, int32_t cmd);
+  /**
+   * A required callback for processing main app commands (`APP_CMD_*`).
+   * This is called each frame if there are app commands that need processing.
+   */
+  void (*onAppCmd)(struct android_app* app, int32_t cmd);
 
-    /** The GameActivity object instance that this app is running in. */
-    GameActivity* activity;
+  /** The GameActivity object instance that this app is running in. */
+  GameActivity* activity;
 
-    /** The current configuration the app is running in. */
-    AConfiguration* config;
+  /** The current configuration the app is running in. */
+  AConfiguration* config;
 
-    /**
-     * The last activity saved state, as provided at creation time.
-     * It is NULL if there was no state.  You can use this as you need; the
-     * memory will remain around until you call android_app_exec_cmd() for
-     * APP_CMD_RESUME, at which point it will be freed and savedState set to
-     * NULL. These variables should only be changed when processing a
-     * APP_CMD_SAVE_STATE, at which point they will be initialized to NULL and
-     * you can malloc your state and place the information here.  In that case
-     * the memory will be freed for you later.
-     */
-    void* savedState;
+  /**
+   * The last activity saved state, as provided at creation time.
+   * It is NULL if there was no state.  You can use this as you need; the
+   * memory will remain around until you call android_app_exec_cmd() for
+   * APP_CMD_RESUME, at which point it will be freed and savedState set to
+   * NULL. These variables should only be changed when processing a
+   * APP_CMD_SAVE_STATE, at which point they will be initialized to NULL and
+   * you can malloc your state and place the information here.  In that case
+   * the memory will be freed for you later.
+   */
+  void* savedState;
 
-    /**
-     * The size of the activity saved state. It is 0 if `savedState` is NULL.
-     */
-    size_t savedStateSize;
+  /**
+   * The size of the activity saved state. It is 0 if `savedState` is NULL.
+   */
+  size_t savedStateSize;
 
-    /** The ALooper associated with the app's thread. */
-    ALooper* looper;
+  /** The ALooper associated with the app's thread. */
+  ALooper* looper;
 
-    /** When non-NULL, this is the window surface that the app can draw in. */
-    ANativeWindow* window;
+  /** When non-NULL, this is the window surface that the app can draw in. */
+  ANativeWindow* window;
 
-    /**
-     * Current content rectangle of the window; this is the area where the
-     * window's content should be placed to be seen by the user.
-     */
-    ARect contentRect;
+  /**
+   * Current content rectangle of the window; this is the area where the
+   * window's content should be placed to be seen by the user.
+   */
+  ARect contentRect;
 
-    /**
-     * Current state of the app's activity.  May be either APP_CMD_START,
-     * APP_CMD_RESUME, APP_CMD_PAUSE, or APP_CMD_STOP.
-     */
-    int activityState;
+  /**
+   * Whether the software keyboard is visible or not.
+   */
+  bool softwareKeyboardVisible;
 
-    /**
-     * This is non-zero when the application's GameActivity is being
-     * destroyed and waiting for the app thread to complete.
-     */
-    int destroyRequested;
+  /**
+   * Last editor action. Valid within APP_CMD_SOFTWARE_KB_VIS_CHANGED handler.
+   */
+  int editorAction;
+
+  /**
+   * Current state of the app's activity.  May be either APP_CMD_START,
+   * APP_CMD_RESUME, APP_CMD_PAUSE, or APP_CMD_STOP.
+   */
+  int activityState;
+
+  /**
+   * This is non-zero when the application's GameActivity is being
+   * destroyed and waiting for the app thread to complete.
+   */
+  int destroyRequested;
 
 #define NATIVE_APP_GLUE_MAX_INPUT_BUFFERS 2
 
-    /**
-     * This is used for buffering input from GameActivity. Once ready, the
-     * application thread switches the buffers and processes what was
-     * accumulated.
-     */
-    struct android_input_buffer inputBuffers[NATIVE_APP_GLUE_MAX_INPUT_BUFFERS];
+  /**
+   * This is used for buffering input from GameActivity. Once ready, the
+   * application thread switches the buffers and processes what was
+   * accumulated.
+   */
+  struct android_input_buffer inputBuffers[NATIVE_APP_GLUE_MAX_INPUT_BUFFERS];
 
-    int currentInputBuffer;
+  int currentInputBuffer;
 
-    /**
-     * 0 if no text input event is outstanding, 1 if it is.
-     * Use `GameActivity_getTextInputState` to get information
-     * about the text entered by the user.
-     */
-    int textInputState;
+  /**
+   * 0 if no text input event is outstanding, 1 if it is.
+   * Use `GameActivity_getTextInputState` to get information
+   * about the text entered by the user.
+   */
+  int textInputState;
 
-    // Below are "private" implementation of the glue code.
-    /** @cond INTERNAL */
+  // Below are "private" implementation of the glue code.
+  /** @cond INTERNAL */
 
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
 
-    int msgread;
-    int msgwrite;
+  int msgread;
+  int msgwrite;
 
-    pthread_t thread;
+  pthread_t thread;
 
-    struct android_poll_source cmdPollSource;
+  struct android_poll_source cmdPollSource;
 
-    int running;
-    int stateSaved;
-    int destroyed;
-    int redrawNeeded;
-    ANativeWindow* pendingWindow;
-    ARect pendingContentRect;
+  int running;
+  int stateSaved;
+  int destroyed;
+  int redrawNeeded;
+  ANativeWindow* pendingWindow;
+  ARect pendingContentRect;
 
-    android_key_event_filter keyEventFilter;
-    android_motion_event_filter motionEventFilter;
+  android_key_event_filter keyEventFilter;
+  android_motion_event_filter motionEventFilter;
 
-    // When new input is received we set both of these flags and use the looper to
-    // wake up the application mainloop.
-    //
-    // To avoid spamming the mainloop with wake ups from lots of input though we
-    // don't sent a wake up if the inputSwapPending flag is already set. (i.e.
-    // we already expect input to be processed in a finite amount of time due to
-    // our previous wake up)
-    //
-    // When a wake up is received then we will check this flag (clearing it
-    // at the same time). If it was set then an InputAvailable event is sent to
-    // the application - which should lead to all input being processed within
-    // a finite amount of time.
-    //
-    // The next time android_app_swap_input_buffers is called, both flags will be
-    // cleared.
-    //
-    // NB: both of these should only be read with the app mutex held
-    bool inputAvailableWakeUp;
-    bool inputSwapPending;
+  // When new input is received we set both of these flags and use the looper to
+  // wake up the application mainloop.
+  //
+  // To avoid spamming the mainloop with wake ups from lots of input though we
+  // don't sent a wake up if the inputSwapPending flag is already set. (i.e.
+  // we already expect input to be processed in a finite amount of time due to
+  // our previous wake up)
+  //
+  // When a wake up is received then we will check this flag (clearing it
+  // at the same time). If it was set then an InputAvailable event is sent to
+  // the application - which should lead to all input being processed within
+  // a finite amount of time.
+  //
+  // The next time android_app_swap_input_buffers is called, both flags will be
+  // cleared.
+  //
+  // NB: both of these should only be read with the app mutex held
+  bool inputAvailableWakeUp;
+  bool inputSwapPending;
 
-    /** @endcond */
+  /** @endcond */
 };
 
 /**
  * Looper ID of commands coming from the app's main thread, an AInputQueue or
  * user-defined sources.
  */
-enum NativeAppGlueLooperId {
-    /**
-     * Looper data ID of commands coming from the app's main thread, which
-     * is returned as an identifier from ALooper_pollOnce().  The data for this
-     * identifier is a pointer to an android_poll_source structure.
-     * These can be retrieved and processed with android_app_read_cmd()
-     * and android_app_exec_cmd().
-     */
-    LOOPER_ID_MAIN = 1,
+enum NativeAppGlueLooperId : int8_t {
+  /**
+   * Looper data ID of commands coming from the app's main thread, which
+   * is returned as an identifier from ALooper_pollOnce().  The data for this
+   * identifier is a pointer to an android_poll_source structure.
+   * These can be retrieved and processed with android_app_read_cmd()
+   * and android_app_exec_cmd().
+   */
+  LOOPER_ID_MAIN = 1,
 
-    /**
-     * Unused. Reserved for future use when usage of AInputQueue will be
-     * supported.
-     */
-    LOOPER_ID_INPUT = 2,
+  /**
+   * Unused. Reserved for future use when usage of AInputQueue will be
+   * supported.
+   */
+  LOOPER_ID_INPUT = 2,
 
-    /**
-     * Start of user-defined ALooper identifiers.
-     */
-    LOOPER_ID_USER = 3,
+  /**
+   * Start of user-defined ALooper identifiers.
+   */
+  LOOPER_ID_USER = 3,
 };
 
 /**
  * Commands passed from the application's main Java thread to the game's thread.
+ *
+ * Values from 0 to 127 are reserved for this library; values from -128 to -1
+ * can be used for custom user's events.
  */
-enum NativeAppGlueAppCmd {
-    /**
-     * Unused. Reserved for future use when usage of AInputQueue will be
-     * supported.
-     */
-    UNUSED_APP_CMD_INPUT_CHANGED,
+enum NativeAppGlueAppCmd : int8_t {
+  /**
+   * Unused. Reserved for future use when usage of AInputQueue will be
+   * supported.
+   */
+  UNUSED_APP_CMD_INPUT_CHANGED,
 
-    /**
-     * Command from main thread: a new ANativeWindow is ready for use.  Upon
-     * receiving this command, android_app->window will contain the new window
-     * surface.
-     */
-    APP_CMD_INIT_WINDOW,
+  /**
+   * Command from main thread: a new ANativeWindow is ready for use.  Upon
+   * receiving this command, android_app->window will contain the new window
+   * surface.
+   */
+  APP_CMD_INIT_WINDOW,
 
-    /**
-     * Command from main thread: the existing ANativeWindow needs to be
-     * terminated.  Upon receiving this command, android_app->window still
-     * contains the existing window; after calling android_app_exec_cmd
-     * it will be set to NULL.
-     */
-    APP_CMD_TERM_WINDOW,
+  /**
+   * Command from main thread: the existing ANativeWindow needs to be
+   * terminated.  Upon receiving this command, android_app->window still
+   * contains the existing window; after calling android_app_exec_cmd
+   * it will be set to NULL.
+   */
+  APP_CMD_TERM_WINDOW,
 
-    /**
-     * Command from main thread: the current ANativeWindow has been resized.
-     * Please redraw with its new size.
-     */
-    APP_CMD_WINDOW_RESIZED,
+  /**
+   * Command from main thread: the current ANativeWindow has been resized.
+   * Please redraw with its new size.
+   */
+  APP_CMD_WINDOW_RESIZED,
 
-    /**
-     * Command from main thread: the system needs that the current ANativeWindow
-     * be redrawn.  You should redraw the window before handing this to
-     * android_app_exec_cmd() in order to avoid transient drawing glitches.
-     */
-    APP_CMD_WINDOW_REDRAW_NEEDED,
+  /**
+   * Command from main thread: the system needs that the current ANativeWindow
+   * be redrawn.  You should redraw the window before handing this to
+   * android_app_exec_cmd() in order to avoid transient drawing glitches.
+   */
+  APP_CMD_WINDOW_REDRAW_NEEDED,
 
-    /**
-     * Command from main thread: the content area of the window has changed,
-     * such as from the soft input window being shown or hidden.  You can
-     * find the new content rect in android_app::contentRect.
-     */
-    APP_CMD_CONTENT_RECT_CHANGED,
+  /**
+   * Command from main thread: the content area of the window has changed,
+   * such as from the soft input window being shown or hidden.  You can
+   * find the new content rect in android_app::contentRect.
+   */
+  APP_CMD_CONTENT_RECT_CHANGED,
 
-    /**
-     * Command from main thread: the app's activity window has gained
-     * input focus.
-     */
-    APP_CMD_GAINED_FOCUS,
+  /**
+   * Command from main thread: the software keyboard was shown or hidden.
+   */
+  APP_CMD_SOFTWARE_KB_VIS_CHANGED,
 
-    /**
-     * Command from main thread: the app's activity window has lost
-     * input focus.
-     */
-    APP_CMD_LOST_FOCUS,
+  /**
+   * Command from main thread: the app's activity window has gained
+   * input focus.
+   */
+  APP_CMD_GAINED_FOCUS,
 
-    /**
-     * Command from main thread: the current device configuration has changed.
-     */
-    APP_CMD_CONFIG_CHANGED,
+  /**
+   * Command from main thread: the app's activity window has lost
+   * input focus.
+   */
+  APP_CMD_LOST_FOCUS,
 
-    /**
-     * Command from main thread: the system is running low on memory.
-     * Try to reduce your memory use.
-     */
-    APP_CMD_LOW_MEMORY,
+  /**
+   * Command from main thread: the current device configuration has changed.
+   */
+  APP_CMD_CONFIG_CHANGED,
 
-    /**
-     * Command from main thread: the app's activity has been started.
-     */
-    APP_CMD_START,
+  /**
+   * Command from main thread: the system is running low on memory.
+   * Try to reduce your memory use.
+   */
+  APP_CMD_LOW_MEMORY,
 
-    /**
-     * Command from main thread: the app's activity has been resumed.
-     */
-    APP_CMD_RESUME,
+  /**
+   * Command from main thread: the app's activity has been started.
+   */
+  APP_CMD_START,
 
-    /**
-     * Command from main thread: the app should generate a new saved state
-     * for itself, to restore from later if needed.  If you have saved state,
-     * allocate it with malloc and place it in android_app.savedState with
-     * the size in android_app.savedStateSize.  The will be freed for you
-     * later.
-     */
-    APP_CMD_SAVE_STATE,
+  /**
+   * Command from main thread: the app's activity has been resumed.
+   */
+  APP_CMD_RESUME,
 
-    /**
-     * Command from main thread: the app's activity has been paused.
-     */
-    APP_CMD_PAUSE,
+  /**
+   * Command from main thread: the app should generate a new saved state
+   * for itself, to restore from later if needed.  If you have saved state,
+   * allocate it with malloc and place it in android_app.savedState with
+   * the size in android_app.savedStateSize.  The will be freed for you
+   * later.
+   */
+  APP_CMD_SAVE_STATE,
 
-    /**
-     * Command from main thread: the app's activity has been stopped.
-     */
-    APP_CMD_STOP,
+  /**
+   * Command from main thread: the app's activity has been paused.
+   */
+  APP_CMD_PAUSE,
 
-    /**
-     * Command from main thread: the app's activity is being destroyed,
-     * and waiting for the app thread to clean up and exit before proceeding.
-     */
-    APP_CMD_DESTROY,
+  /**
+   * Command from main thread: the app's activity has been stopped.
+   */
+  APP_CMD_STOP,
 
-    /**
-     * Command from main thread: the app's insets have changed.
-     */
-    APP_CMD_WINDOW_INSETS_CHANGED,
+  /**
+   * Command from main thread: the app's activity is being destroyed,
+   * and waiting for the app thread to clean up and exit before proceeding.
+   */
+  APP_CMD_DESTROY,
+
+  /**
+   * Command from main thread: the app's insets have changed.
+   */
+  APP_CMD_WINDOW_INSETS_CHANGED,
+
+  /**
+   * Command from main thread: an editor action has been triggered.
+   */
+  APP_CMD_EDITOR_ACTION,
+
+  /**
+   * Command from main thread: a keyboard event has been received.
+   */
+  APP_CMD_KEY_EVENT,
+
+  /**
+   * Command from main thread: a touch event has been received.
+   */
+  APP_CMD_TOUCH_EVENT,
 
 };
 
@@ -494,6 +527,16 @@ void android_app_set_key_event_filter(struct android_app* app,
  */
 void android_app_set_motion_event_filter(struct android_app* app,
                                          android_motion_event_filter filter);
+
+/**
+ * You can send your custom events using the function below.
+ *
+ * Make sure your custom codes do not overlap with this library's ones.
+ *
+ * Values from 0 to 127 are reserved for this library; values from -128 to -1
+ * can be used for custom user's events.
+ */
+void android_app_write_cmd(struct android_app* android_app, int8_t cmd);
 
 /**
  * Determines if a looper wake up was due to new input becoming available

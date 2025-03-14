@@ -10,6 +10,7 @@ This is a basic checklist for things that need to be done before updating to a n
 
 - [ ] Ensure all patches applied to the local repo have been backported (see section below on backporting patches)
 - [ ] Rebase patches on top of a new *release* version of agdk. If you're not sure which version you should be rebasing on, open an issue.
+- [ ] If there have been substantial path changes, remove the existing files first so that its a clean graft
 - [ ] Copy any new files over from the new version using the [copy_files](./copy_files) script (see section below on copying files)
 - [ ] Update [build.rs](../build.rs) with any new includes and src files
 - [ ] Regenerate ffi bindings using [generate_bindings.sh](./generate_bindings.sh)
