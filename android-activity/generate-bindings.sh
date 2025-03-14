@@ -37,7 +37,9 @@ while read ARCH && read TARGET ; do
         --blocklist-function 'GameActivity_onCreate_C' \
         --newtype-enum '\w+_(result|status)_t' \
         -- \
-        -Igame-activity-csrc \
+        -Iandroid-games-sdk/game-activity/prefab-src/modules/game-activity/include \
+        -Iandroid-games-sdk/game-text-input/prefab-src/modules/game-text-input/include \
+        -Iandroid-games-sdk/include \
         --sysroot="$SYSROOT" --target=$TARGET
 
 done << EOF
