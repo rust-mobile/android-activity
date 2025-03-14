@@ -1,0 +1,11 @@
+GameActivity.h
+GameActivity.cpp
+GameActivityEvents.h
+GameActivityEvents.cpp
+GameActivityLog.h
+gametextinput.cpp
+gametextinput.h
+gamecommon.h
+gamesdk_common.h
+android_native_app_glue.h
+android_native_app_glue.c
