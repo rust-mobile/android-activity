@@ -10,12 +10,10 @@ documentation = "https://docs.rs/android-activity"
 description = "Glue for building Rust applications on Android with NativeActivity or GameActivity"
 license = "MIT OR Apache-2.0"
 
-# 1.69 was when Rust last updated the Android NDK version used to build the
-# standard library which avoids needing the -lunwind workaround in build tools.
-#
-# We depend on cargo-ndk for building which has dropped support for the above
-# linker workaround.
-rust-version = "1.69.0"
+# Even though we could technically still build with 1.69, 1.73 has a fix for the
+# definition of the `stat` struct on Android, and so it seems worthwhile drawing
+# a line under that to ensure android-activity applications have that fix.
+rust-version = "1.73.0"
 
 [features]
 # Note: we don't enable any backend by default since features
