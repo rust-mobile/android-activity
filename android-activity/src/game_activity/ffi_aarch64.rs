@@ -4702,6 +4702,8 @@ pub struct android_app {
     pub softwareKeyboardVisible: bool,
     #[doc = " Last editor action. Valid within APP_CMD_SOFTWARE_KB_VIS_CHANGED handler.\n\n Note: the upstream comment above isn't accurate.\n - `APP_CMD_SOFTWARE_KB_VIS_CHANGED` is associated with `softwareKeyboardVisible`\n   changes, not `editorAction`.\n - `APP_CMD_EDITOR_ACTION` is associated with this state but unlike for\n   `window` state there's no synchonization that blocks the Java main\n   thread, so we can't say that this is only valid within the `APP_CMD_` handler."]
     pub editorAction: ::std::os::raw::c_int,
+    #[doc = " true when editorAction has been set"]
+    pub pendingEditorAction: bool,
     #[doc = " Current state of the app's activity.  May be either APP_CMD_START,\n APP_CMD_RESUME, APP_CMD_PAUSE, or APP_CMD_STOP."]
     pub activityState: ::std::os::raw::c_int,
     #[doc = " This is non-zero when the application's GameActivity is being\n destroyed and waiting for the app thread to complete."]
@@ -4731,7 +4733,7 @@ pub struct android_app {
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of android_app"][::std::mem::size_of::<android_app>() - 392usize];
+    ["Size of android_app"][::std::mem::size_of::<android_app>() - 400usize];
     ["Alignment of android_app"][::std::mem::align_of::<android_app>() - 8usize];
     ["Offset of field: android_app::userData"]
         [::std::mem::offset_of!(android_app, userData) - 0usize];
@@ -4752,46 +4754,48 @@ const _: () = {
         [::std::mem::offset_of!(android_app, softwareKeyboardVisible) - 80usize];
     ["Offset of field: android_app::editorAction"]
         [::std::mem::offset_of!(android_app, editorAction) - 84usize];
+    ["Offset of field: android_app::pendingEditorAction"]
+        [::std::mem::offset_of!(android_app, pendingEditorAction) - 88usize];
     ["Offset of field: android_app::activityState"]
-        [::std::mem::offset_of!(android_app, activityState) - 88usize];
+        [::std::mem::offset_of!(android_app, activityState) - 92usize];
     ["Offset of field: android_app::destroyRequested"]
-        [::std::mem::offset_of!(android_app, destroyRequested) - 92usize];
+        [::std::mem::offset_of!(android_app, destroyRequested) - 96usize];
     ["Offset of field: android_app::inputBuffers"]
-        [::std::mem::offset_of!(android_app, inputBuffers) - 96usize];
+        [::std::mem::offset_of!(android_app, inputBuffers) - 104usize];
     ["Offset of field: android_app::currentInputBuffer"]
-        [::std::mem::offset_of!(android_app, currentInputBuffer) - 192usize];
+        [::std::mem::offset_of!(android_app, currentInputBuffer) - 200usize];
     ["Offset of field: android_app::textInputState"]
-        [::std::mem::offset_of!(android_app, textInputState) - 196usize];
-    ["Offset of field: android_app::mutex"][::std::mem::offset_of!(android_app, mutex) - 200usize];
-    ["Offset of field: android_app::cond"][::std::mem::offset_of!(android_app, cond) - 240usize];
+        [::std::mem::offset_of!(android_app, textInputState) - 204usize];
+    ["Offset of field: android_app::mutex"][::std::mem::offset_of!(android_app, mutex) - 208usize];
+    ["Offset of field: android_app::cond"][::std::mem::offset_of!(android_app, cond) - 248usize];
     ["Offset of field: android_app::msgread"]
-        [::std::mem::offset_of!(android_app, msgread) - 288usize];
+        [::std::mem::offset_of!(android_app, msgread) - 296usize];
     ["Offset of field: android_app::msgwrite"]
-        [::std::mem::offset_of!(android_app, msgwrite) - 292usize];
+        [::std::mem::offset_of!(android_app, msgwrite) - 300usize];
     ["Offset of field: android_app::thread"]
-        [::std::mem::offset_of!(android_app, thread) - 296usize];
+        [::std::mem::offset_of!(android_app, thread) - 304usize];
     ["Offset of field: android_app::cmdPollSource"]
-        [::std::mem::offset_of!(android_app, cmdPollSource) - 304usize];
+        [::std::mem::offset_of!(android_app, cmdPollSource) - 312usize];
     ["Offset of field: android_app::running"]
-        [::std::mem::offset_of!(android_app, running) - 328usize];
+        [::std::mem::offset_of!(android_app, running) - 336usize];
     ["Offset of field: android_app::stateSaved"]
-        [::std::mem::offset_of!(android_app, stateSaved) - 332usize];
+        [::std::mem::offset_of!(android_app, stateSaved) - 340usize];
     ["Offset of field: android_app::destroyed"]
-        [::std::mem::offset_of!(android_app, destroyed) - 336usize];
+        [::std::mem::offset_of!(android_app, destroyed) - 344usize];
     ["Offset of field: android_app::redrawNeeded"]
-        [::std::mem::offset_of!(android_app, redrawNeeded) - 340usize];
+        [::std::mem::offset_of!(android_app, redrawNeeded) - 348usize];
     ["Offset of field: android_app::pendingWindow"]
-        [::std::mem::offset_of!(android_app, pendingWindow) - 344usize];
+        [::std::mem::offset_of!(android_app, pendingWindow) - 352usize];
     ["Offset of field: android_app::pendingContentRect"]
-        [::std::mem::offset_of!(android_app, pendingContentRect) - 352usize];
+        [::std::mem::offset_of!(android_app, pendingContentRect) - 360usize];
     ["Offset of field: android_app::keyEventFilter"]
-        [::std::mem::offset_of!(android_app, keyEventFilter) - 368usize];
+        [::std::mem::offset_of!(android_app, keyEventFilter) - 376usize];
     ["Offset of field: android_app::motionEventFilter"]
-        [::std::mem::offset_of!(android_app, motionEventFilter) - 376usize];
+        [::std::mem::offset_of!(android_app, motionEventFilter) - 384usize];
     ["Offset of field: android_app::inputAvailableWakeUp"]
-        [::std::mem::offset_of!(android_app, inputAvailableWakeUp) - 384usize];
+        [::std::mem::offset_of!(android_app, inputAvailableWakeUp) - 392usize];
     ["Offset of field: android_app::inputSwapPending"]
-        [::std::mem::offset_of!(android_app, inputSwapPending) - 385usize];
+        [::std::mem::offset_of!(android_app, inputSwapPending) - 393usize];
 };
 #[doc = " Looper data ID of commands coming from the app's main thread, which\n is returned as an identifier from ALooper_pollOnce().  The data for this\n identifier is a pointer to an android_poll_source structure.\n These can be retrieved and processed with android_app_read_cmd()\n and android_app_exec_cmd()."]
 pub const NativeAppGlueLooperId_LOOPER_ID_MAIN: NativeAppGlueLooperId = 1;
