@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   > - `Source::is_xxx_class()` functions are replaced by querying `Source::class()` and comparing against variants from the returned `SourceClass` `bitflags` enum.
   > - `SourceFlags::TRACKBALL` (from `Source::is_trackball_class()`) is named `SourceClass::NAVIGATION` in the `ndk`.
 
+- rust-version bumped to 1.73.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193))
+
 ## [0.6.0] - 2024-04-26
 
 ### Changed
