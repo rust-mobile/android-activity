@@ -7442,6 +7442,8 @@ pub struct android_app {
     pub softwareKeyboardVisible: bool,
     #[doc = " Last editor action. Valid within APP_CMD_SOFTWARE_KB_VIS_CHANGED handler.\n\n Note: the upstream comment above isn't accurate.\n - `APP_CMD_SOFTWARE_KB_VIS_CHANGED` is associated with `softwareKeyboardVisible`\n   changes, not `editorAction`.\n - `APP_CMD_EDITOR_ACTION` is associated with this state but unlike for\n   `window` state there's no synchonization that blocks the Java main\n   thread, so we can't say that this is only valid within the `APP_CMD_` handler."]
     pub editorAction: ::std::os::raw::c_int,
+    #[doc = " true when editorAction has been set"]
+    pub pendingEditorAction: bool,
     #[doc = " Current state of the app's activity.  May be either APP_CMD_START,\n APP_CMD_RESUME, APP_CMD_PAUSE, or APP_CMD_STOP."]
     pub activityState: ::std::os::raw::c_int,
     #[doc = " This is non-zero when the application's GameActivity is being\n destroyed and waiting for the app thread to complete."]
@@ -7475,7 +7477,7 @@ fn bindgen_test_layout_android_app() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::std::mem::size_of::<android_app>(),
-        232usize,
+        236usize,
         "Size of android_app"
     );
     assert_eq!(
@@ -7539,108 +7541,113 @@ fn bindgen_test_layout_android_app() {
         "Offset of field: android_app::editorAction"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).activityState) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).pendingEditorAction) as usize - ptr as usize },
         56usize,
+        "Offset of field: android_app::pendingEditorAction"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).activityState) as usize - ptr as usize },
+        60usize,
         "Offset of field: android_app::activityState"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).destroyRequested) as usize - ptr as usize },
-        60usize,
+        64usize,
         "Offset of field: android_app::destroyRequested"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).inputBuffers) as usize - ptr as usize },
-        64usize,
+        68usize,
         "Offset of field: android_app::inputBuffers"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).currentInputBuffer) as usize - ptr as usize },
-        144usize,
+        148usize,
         "Offset of field: android_app::currentInputBuffer"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).textInputState) as usize - ptr as usize },
-        148usize,
+        152usize,
         "Offset of field: android_app::textInputState"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).mutex) as usize - ptr as usize },
-        152usize,
+        156usize,
         "Offset of field: android_app::mutex"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).cond) as usize - ptr as usize },
-        156usize,
+        160usize,
         "Offset of field: android_app::cond"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).msgread) as usize - ptr as usize },
-        160usize,
+        164usize,
         "Offset of field: android_app::msgread"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).msgwrite) as usize - ptr as usize },
-        164usize,
+        168usize,
         "Offset of field: android_app::msgwrite"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).thread) as usize - ptr as usize },
-        168usize,
+        172usize,
         "Offset of field: android_app::thread"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).cmdPollSource) as usize - ptr as usize },
-        172usize,
+        176usize,
         "Offset of field: android_app::cmdPollSource"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).running) as usize - ptr as usize },
-        184usize,
+        188usize,
         "Offset of field: android_app::running"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).stateSaved) as usize - ptr as usize },
-        188usize,
+        192usize,
         "Offset of field: android_app::stateSaved"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).destroyed) as usize - ptr as usize },
-        192usize,
+        196usize,
         "Offset of field: android_app::destroyed"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).redrawNeeded) as usize - ptr as usize },
-        196usize,
+        200usize,
         "Offset of field: android_app::redrawNeeded"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).pendingWindow) as usize - ptr as usize },
-        200usize,
+        204usize,
         "Offset of field: android_app::pendingWindow"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).pendingContentRect) as usize - ptr as usize },
-        204usize,
+        208usize,
         "Offset of field: android_app::pendingContentRect"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).keyEventFilter) as usize - ptr as usize },
-        220usize,
+        224usize,
         "Offset of field: android_app::keyEventFilter"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).motionEventFilter) as usize - ptr as usize },
-        224usize,
+        228usize,
         "Offset of field: android_app::motionEventFilter"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).inputAvailableWakeUp) as usize - ptr as usize },
-        228usize,
+        232usize,
         "Offset of field: android_app::inputAvailableWakeUp"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).inputSwapPending) as usize - ptr as usize },
-        229usize,
+        233usize,
         "Offset of field: android_app::inputSwapPending"
     );
 }
