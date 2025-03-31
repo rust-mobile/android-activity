@@ -579,7 +579,7 @@ static bool onTouchEvent(GameActivity* activity,
   ++inputBuffer->motionEventsCount;
   notifyInput(android_app);
 
-  android_app_write_cmd(android_app, APP_CMD_TOUCH_EVENT);
+  //android_app_write_cmd(android_app, APP_CMD_TOUCH_EVENT);
   pthread_mutex_unlock(&android_app->mutex);
   return true;
 }
@@ -665,7 +665,7 @@ static bool onKey(GameActivity* activity, const GameActivityKeyEvent* event) {
   ++inputBuffer->keyEventsCount;
   notifyInput(android_app);
 
-  android_app_write_cmd(android_app, APP_CMD_KEY_EVENT);
+  //android_app_write_cmd(android_app, APP_CMD_KEY_EVENT);
   pthread_mutex_unlock(&android_app->mutex);
   return true;
 }
@@ -722,9 +722,15 @@ static bool onEditorAction(GameActivity* activity, int action) {
   struct android_app* android_app = ToApp(activity);
 
   pthread_mutex_lock(&android_app->mutex);
-  android_app->editorAction = action;
 
-  android_app_write_cmd(android_app, APP_CMD_EDITOR_ACTION);
+  // XXX: this is a racy design that could lose InputConnection actions if the
+  // application doesn't manage to look at app->editorAction before another
+  // action is delivered.
+  android_app->editorAction = action;
+  // TODO: buffer these actions like other input events
+  //notifyInput(android_app);
+
+  //android_app_write_cmd(android_app, APP_CMD_EDITOR_ACTION);
   pthread_mutex_unlock(&android_app->mutex);
   return true;
 }

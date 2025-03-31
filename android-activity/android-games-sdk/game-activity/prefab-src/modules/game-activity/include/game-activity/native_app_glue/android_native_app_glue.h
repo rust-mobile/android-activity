@@ -217,6 +217,13 @@ struct android_app {
 
   /**
    * Last editor action. Valid within APP_CMD_SOFTWARE_KB_VIS_CHANGED handler.
+   *
+   * Note: the upstream comment above isn't accurate.
+   * - `APP_CMD_SOFTWARE_KB_VIS_CHANGED` is associated with `softwareKeyboardVisible`
+   *   changes, not `editorAction`.
+   * - `APP_CMD_EDITOR_ACTION` is associated with this state but unlike for
+   *   `window` state there's no synchonization that blocks the Java main
+   *   thread, so we can't say that this is only valid within the `APP_CMD_` handler.
    */
   int editorAction;
 
@@ -441,17 +448,17 @@ enum NativeAppGlueAppCmd : int8_t {
   /**
    * Command from main thread: an editor action has been triggered.
    */
-  APP_CMD_EDITOR_ACTION,
+  //APP_CMD_EDITOR_ACTION,
 
   /**
    * Command from main thread: a keyboard event has been received.
    */
-  APP_CMD_KEY_EVENT,
+  //APP_CMD_KEY_EVENT,
 
   /**
    * Command from main thread: a touch event has been received.
    */
-  APP_CMD_TOUCH_EVENT,
+  //APP_CMD_TOUCH_EVENT,
 
 };
 
