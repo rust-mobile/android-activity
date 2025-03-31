@@ -726,9 +726,15 @@ static bool onEditorAction(GameActivity* activity, int action) {
   // XXX: this is a racy design that could lose InputConnection actions if the
   // application doesn't manage to look at app->editorAction before another
   // action is delivered.
+  if (android_app->pendingEditorAction) {
+    LOGW("Dropping editor action %d because previous action %d not yet "
+         "handled",
+         action, android_app->editorAction);
+  }
   android_app->editorAction = action;
-  // TODO: buffer these actions like other input events
-  //notifyInput(android_app);
+  android_app->pendingEditorAction = true;
+  notifyInput(android_app);
+  // TODO: buffer IME text events and editor actions like other input events
 
   //android_app_write_cmd(android_app, APP_CMD_EDITOR_ACTION);
   pthread_mutex_unlock(&android_app->mutex);

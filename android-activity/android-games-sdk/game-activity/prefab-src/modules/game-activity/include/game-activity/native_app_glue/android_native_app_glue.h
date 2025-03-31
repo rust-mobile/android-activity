@@ -226,6 +226,10 @@ struct android_app {
    *   thread, so we can't say that this is only valid within the `APP_CMD_` handler.
    */
   int editorAction;
+  /**
+   * true when editorAction has been set
+   */
+  bool pendingEditorAction;
 
   /**
    * Current state of the app's activity.  May be either APP_CMD_START,
