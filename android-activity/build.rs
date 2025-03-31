@@ -1,11 +1,14 @@
 #![allow(dead_code)]
 
 fn build_glue_for_game_activity() {
+    let android_games_sdk =
+        std::env::var("ANDROID_GAMES_SDK").unwrap_or_else(|_err| "android-games-sdk".to_string());
+
     let activity_path = |src_inc, name| {
-        format!("android-games-sdk/game-activity/prefab-src/modules/game-activity/{src_inc}/game-activity/{name}")
+        format!("{android_games_sdk}/game-activity/prefab-src/modules/game-activity/{src_inc}/game-activity/{name}")
     };
     let textinput_path = |src_inc, name| {
-        format!("android-games-sdk/game-text-input/prefab-src/modules/game-text-input/{src_inc}/game-text-input/{name}")
+        format!("{android_games_sdk}/game-text-input/prefab-src/modules/game-text-input/{src_inc}/game-text-input/{name}")
     };
 
     for f in ["GameActivity.cpp", "GameActivityEvents.cpp"] {
