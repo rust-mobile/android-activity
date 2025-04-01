@@ -119,12 +119,17 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
-use input::KeyCharacterMap;
+use bitflags::bitflags;
 use libc::c_void;
+
 use ndk::asset::AssetManager;
 use ndk::native_window::NativeWindow;
 
-use bitflags::bitflags;
+// Since we expose `ndk` types in our public API it's convenient if crates can
+// defer to these re-exported APIs and avoid having to bump explicit
+// dependencies when they pull in new releases of android-activity.
+pub use ndk;
+pub use ndk_sys;
 
 #[cfg(not(target_os = "android"))]
 compile_error!("android-activity only supports compiling for Android");
@@ -162,6 +167,7 @@ pub mod error;
 use error::Result;
 
 pub mod input;
+use input::KeyCharacterMap;
 
 mod config;
 pub use config::ConfigurationRef;
