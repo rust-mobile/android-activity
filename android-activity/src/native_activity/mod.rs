@@ -6,6 +6,7 @@ use std::panic::AssertUnwindSafe;
 use std::ptr;
 use std::ptr::NonNull;
 use std::sync::{Arc, Mutex, RwLock, Weak};
+use std::task::{RawWaker, RawWakerVTable, Waker};
 use std::time::Duration;
 
 use libc::c_void;
@@ -82,6 +83,27 @@ impl AndroidAppWaker {
         unsafe {
             ndk_sys::ALooper_wake(self.looper.as_ptr());
         }
+    }
+
+    /// Creates a [`Waker`] that wakes up the [`AndroidApp`].
+    ///
+    /// This is useful for using this crate in `async` environments.
+    ///
+    /// [`Waker`]: std::task::Waker
+    pub fn waker(self) -> Waker {
+        const VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake, drop);
+
+        unsafe fn clone(data: *const ()) -> RawWaker {
+            RawWaker::new(data, &VTABLE)
+        }
+
+        unsafe fn wake(data: *const ()) {
+            ndk_sys::ALooper_wake(data as *const _ as *mut _)
+        }
+
+        unsafe fn drop(_: *const ()) {}
+
+        unsafe { Waker::from_raw(RawWaker::new(self.looper.as_ptr() as *const (), &VTABLE)) }
     }
 }
 
