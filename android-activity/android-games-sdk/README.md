@@ -1,41 +1,43 @@
-# android-games-sdk-rs
+# android-games-sdk
 
-This is a grafted version of [android-games-sdk-rs][agdk].
+This is an imported copy of the native "prefab" source for `GameActivity` and
+`GameTextInput`, from our fork of Google's
+[android-games-sdk](https://github.com/rust-mobile/android-games-sdk).
 
-The purpose of android-games-sdk-rs is to track our patches on top of the Android Game Development Kit (AGDK) so that it is easier to update to new upstream versions.
+We use an external fork to track our integration patches on top of the Android
+Game Development Kit (AGDK) in a way that it is easier to update to new upstream
+versions. It also makes it easier to try and upstream changes when we fix bugs.
 
 ## Updating to new agdk version checklist
 
-This is a basic checklist for things that need to be done before updating to a new agdk version:
+This is a basic checklist for things that need to be done when updating to a new
+agdk version:
 
-- [ ] Ensure all patches applied to the local repo have been backported (see section below on backporting patches)
-- [ ] Rebase patches on top of a new *release* version of agdk. If you're not sure which version you should be rebasing on, open an issue.
-- [ ] If there have been substantial path changes, remove the existing files first so that its a clean graft
-- [ ] Copy any new files over from the new version using the [copy_files](./copy_files) script (see section below on copying files)
+- [ ] Create a new integration branch based on our last integrated branch and
+  rebase that on the latest *release* branch from Google:
+
+    ```bash
+    git clone git@github.com:rust-mobile/android-games-sdk.git
+    cd android-games-sdk
+    git remote add google https://android.googlesource.com/platform/frameworks/opt/gamesdk
+    git fetch google
+    git checkout -b android-activity-5.0.0 origin/android-activity-4.0.0
+    git rebase --onto google/android-games-sdk-game-activity-release <base>
+    # (where <base> is the upstream commit ID below our stack of integration patches)
+    ```
+
+- [ ] Set the `ANDROID_GAMES_SDK` environment variable so you can build
+  android-activity against your external games-sdk branch while updating.
+- [ ] Re-generate the `GameActivity` FFI bindings with `./generate-bindings.sh`
+  (this can be done with `ANDROID_GAMES_SDK` set in your environment and also
+  repeated after importing)
 - [ ] Update [build.rs](../build.rs) with any new includes and src files
-- [ ] Regenerate ffi bindings using [generate_bindings.sh](./generate_bindings.sh)
-
-## Backporting patches
-
-Changes made to these files must be backported to [android-games-sdk-rs][agdk], otherwise they will be lost when updating to newer upstream versions. This can be done like so (running from the project root):
-
-```bash
-git format-patch -o ~/agdk-patches last-import.. -- android-activity/android-games-sdk
-```
-
-When applying on the [android-games-sdk-rs][agdk] side:
-
-```bash
-git checkout android-activity-4.0.0
-git am -p3 ~/agdk-patches/*.patch
-```
-
-Once these are applied on top of the current imported agdk version (in this example 4.0.0). Then they can be rebased onto future agdk versions easily.
-
-## Copying files from agdk
-
-When updating to a new version of upstream agdk properly, you can use the [copy_files](./copy_files) script.
-
-This script takes in a list of files from [file_list.txt](./file_list.txt), and grafts those files into the local directory. This ensures that pathes are aligned so that patching is easier.
-
-[agdk]: https://github.com/rust-mobile/android-games-sdk-rs
+- [ ] Update the `src/game-activity` backend as needed
+- [ ] Push a new `android-games-sdk` branch like `android-activity-5.0.0` that
+  can be referenced when importing a copy into `android-activity`
+- [ ] Review and run `./import-games-sdk.sh` when ready to copy external AGDK
+  code into this repo
+- [ ] Clearly reference the branch name and commit hash from the
+  `android-games-sdk` repo in the `android-activity` commit that imports new
+  games-sdk source.
+- [ ] Update CHANGELOG.md as required
