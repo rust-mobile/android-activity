@@ -338,14 +338,14 @@ impl AndroidAppInner {
                     panic!("ALooper_pollAll returned POLL_ERROR");
                 }
                 id if id >= 0 => {
-                    match id as u32 {
+                    match id as ffi::NativeAppGlueLooperId {
                         ffi::NativeAppGlueLooperId_LOOPER_ID_MAIN => {
                             trace!("ALooper_pollAll returned ID_MAIN");
                             let source: *mut ffi::android_poll_source = source.cast();
                             if !source.is_null() {
                                 let cmd_i = ffi::android_app_read_cmd(native_app.as_ptr());
 
-                                let cmd = match cmd_i as u32 {
+                                let cmd = match cmd_i as ffi::NativeAppGlueAppCmd {
                                     //NativeAppGlueAppCmd_UNUSED_APP_CMD_INPUT_CHANGED => AndroidAppMainEvent::InputChanged,
                                     ffi::NativeAppGlueAppCmd_APP_CMD_INIT_WINDOW => {
                                         MainEvent::InitWindow {}
