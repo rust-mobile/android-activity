@@ -107,7 +107,11 @@ impl StateLoader<'_> {
 }
 
 impl AndroidApp {
-    pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>, jvm: jni::JavaVM) -> Self {
+    pub(crate) fn new(
+        ptr: NonNull<ffi::android_app>,
+        jvm: jni::JavaVM,
+        main_looper: ndk::looper::ForeignLooper,
+    ) -> Self {
         // We attach to the thread before creating the AndroidApp
         jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
             if let Err(err) = crate::input::jni_init(env) {
@@ -117,8 +121,9 @@ impl AndroidApp {
             // Note: we don't use from_ptr since we don't own the android_app.config
             // and need to keep in mind that the Drop handler is going to call
             // AConfiguration_delete()
-            let config =
-                Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
+            let config = unsafe {
+                Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config))
+            };
 
             Ok(Self {
                 inner: Arc::new(RwLock::new(AndroidAppInner {
@@ -126,6 +131,7 @@ impl AndroidApp {
                     native_app: NativeAppGlue { ptr },
                     config: ConfigurationRef::new(config),
                     native_window: Default::default(),
+                    main_looper,
                     key_maps: Mutex::new(HashMap::new()),
                     input_receiver: Mutex::new(None),
                 })),
@@ -279,6 +285,10 @@ pub struct AndroidAppInner {
     config: ConfigurationRef,
     native_window: RwLock<Option<NativeWindow>>,
 
+    /// Looper associated with the activity's Java main thread, sometimes called
+    /// the UI thread.
+    main_looper: ndk::looper::ForeignLooper,
+
     /// A table of `KeyCharacterMap`s per `InputDevice` ID
     /// these are used to be able to map key presses to unicode
     /// characters
@@ -303,6 +313,10 @@ impl AndroidAppInner {
 
     pub fn native_window(&self) -> Option<NativeWindow> {
         self.native_window.read().unwrap().clone()
+    }
+
+    pub fn java_main_looper(&self) -> ndk::looper::ForeignLooper {
+        self.main_looper.clone()
     }
 
     pub fn poll_events<F>(&self, timeout: Option<Duration>, mut callback: F)
@@ -981,6 +995,12 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
         };
         // Note: At this point we can assume jni::JavaVM::singleton is initialized
 
+        let main_looper = unsafe {
+            ndk::looper::ForeignLooper::from_ptr(
+                std::ptr::NonNull::new((*native_app).mainLooper).unwrap(),
+            )
+        };
+
         // Note: the GameActivity implementation will have already attached the main thread to the
         // JVM before calling _rust_glue_entry so we don't to set the thread name via
         // attach_current_thread_with_config since that won't actually create a new attachment.
@@ -996,7 +1016,8 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
             }
 
             unsafe {
-                let app = AndroidApp::from_ptr(NonNull::new(native_app).unwrap(), jvm.clone());
+                let app =
+                    AndroidApp::new(NonNull::new(native_app).unwrap(), jvm.clone(), main_looper);
                 // We want to specifically catch any panic from the application's android_main
                 // so we can finish + destroy the Activity gracefully via the JVM
                 catch_unwind(|| {

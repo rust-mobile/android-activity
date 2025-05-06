@@ -562,6 +562,22 @@ impl AndroidApp {
         self.inner.read().unwrap().native_window()
     }
 
+    /// Returns a [`ndk::looper::ForeignLooper`] associated with the Java
+    /// main / UI thread.
+    ///
+    /// This can be used to register file descriptors that may wake up the
+    /// Java main / UI thread and optionally run callbacks on that thread.
+    ///
+    /// ```ignore
+    /// # use ndk;
+    /// # let app: AndroidApp = todo!();
+    /// let looper = app.java_main_looper();
+    /// looper.add_fd_with_callback(todo!(), ndk::looper::FdEvent::INPUT, todo!()).unwrap();
+    /// ```
+    pub fn java_main_looper(&self) -> ndk::looper::ForeignLooper {
+        self.inner.read().unwrap().java_main_looper().clone()
+    }
+
     /// Returns a pointer to the Java Virtual Machine, for making JNI calls
     ///
     /// This returns a pointer to the Java Virtual Machine which can be used

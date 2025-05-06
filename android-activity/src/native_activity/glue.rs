@@ -845,6 +845,9 @@ extern "C" fn ANativeActivity_onCreate(
             activity, saved_state, saved_state_size
         );
 
+        let main_looper =
+            ndk::looper::ForeignLooper::for_thread().expect("Failed to get Java main looper");
+
         // Conceptually we associate a glue reference with the JVM main thread, and another
         // reference with the Rust main thread
         let jvm_glue = NativeActivityGlue::new(activity, saved_state, saved_state_size);
@@ -856,7 +859,7 @@ extern "C" fn ANativeActivity_onCreate(
         // Note: we drop the thread handle which will detach the thread
         std::thread::spawn(move || {
             let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
-            rust_glue_entry(rust_glue, activity);
+            rust_glue_entry(rust_glue, activity, main_looper);
         });
 
         // Wait for thread to start.
@@ -870,7 +873,11 @@ extern "C" fn ANativeActivity_onCreate(
     })
 }
 
-fn rust_glue_entry(rust_glue: NativeActivityGlue, activity: *mut ndk_sys::ANativeActivity) {
+fn rust_glue_entry(
+    rust_glue: NativeActivityGlue,
+    activity: *mut ndk_sys::ANativeActivity,
+    main_looper: ndk::looper::ForeignLooper,
+) {
     abort_on_panic(|| {
         let (jvm, jni_activity) = unsafe {
             let jvm: *mut jni::sys::JavaVM = (*activity).vm.cast();
@@ -897,7 +904,7 @@ fn rust_glue_entry(rust_glue: NativeActivityGlue, activity: *mut ndk_sys::ANativ
                     );
                 }
 
-                let app = AndroidApp::new(rust_glue.clone(), jvm.clone());
+                let app = AndroidApp::new(rust_glue.clone(), jvm.clone(), main_looper);
 
                 rust_glue.notify_main_thread_running();
 
