@@ -86,7 +86,11 @@ impl AndroidAppWaker {
 }
 
 impl AndroidApp {
-    pub(crate) fn new(native_activity: NativeActivityGlue, jvm: CloneJavaVM) -> Self {
+    pub(crate) fn new(
+        native_activity: NativeActivityGlue,
+        jvm: CloneJavaVM,
+        main_looper_ptr: *mut ndk_sys::ALooper
+    ) -> Self {
         let mut env = jvm.get_env().unwrap(); // We attach to the thread before creating the AndroidApp
 
         let key_map_binding = match KeyCharacterMapBinding::new(&mut env) {
@@ -102,6 +106,9 @@ impl AndroidApp {
                 native_activity,
                 looper: Looper {
                     ptr: ptr::null_mut(),
+                },
+                main_looper: Looper {
+                    ptr: main_looper_ptr,
                 },
                 key_map_binding: Arc::new(key_map_binding),
                 key_maps: Mutex::new(HashMap::new()),
@@ -147,6 +154,9 @@ pub(crate) struct AndroidAppInner {
     pub(crate) native_activity: NativeActivityGlue,
     looper: Looper,
 
+    /// Looper associated with the activy's main thread, sometimes called the UI thread.
+    main_looper: Looper,
+
     /// Shared JNI bindings for the `KeyCharacterMap` class
     key_map_binding: Arc<KeyCharacterMapBinding>,
 
@@ -177,6 +187,10 @@ impl AndroidAppInner {
 
     pub(crate) fn looper(&self) -> *mut ndk_sys::ALooper {
         self.looper.ptr
+    }
+
+    pub fn main_looper(&self) -> *mut ndk_sys::ALooper {
+        self.main_looper.ptr
     }
 
     pub fn native_window(&self) -> Option<NativeWindow> {
