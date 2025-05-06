@@ -62,34 +62,40 @@ impl StateLoader<'_> {
 }
 
 impl AndroidApp {
-    pub(crate) fn new(native_activity: NativeActivityGlue, jvm: JavaVM) -> Self {
+    pub(crate) fn new(
+        native_activity: NativeActivityGlue,
+        jvm: JavaVM,
+        main_looper: ndk::looper::ForeignLooper,
+    ) -> Self {
         jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
             if let Err(err) = crate::input::jni_init(env) {
                 panic!("Failed to init JNI bindings: {err:?}");
             };
 
+            let looper = unsafe {
+                let ptr = ndk_sys::ALooper_prepare(
+                    ndk_sys::ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as libc::c_int,
+                );
+                ndk::looper::ForeignLooper::from_ptr(ptr::NonNull::new(ptr).unwrap())
+            };
             let app = Self {
                 inner: Arc::new(RwLock::new(AndroidAppInner {
                     jvm: jvm.clone(),
                     native_activity,
-                    looper: Looper {
-                        ptr: ptr::null_mut(),
-                    },
+                    looper,
+                    main_looper,
                     key_maps: Mutex::new(HashMap::new()),
                     input_receiver: Mutex::new(None),
                 })),
             };
 
             {
-                let mut guard = app.inner.write().unwrap();
+                let guard = app.inner.write().unwrap();
 
                 let main_fd = guard.native_activity.cmd_read_fd();
                 unsafe {
-                    guard.looper.ptr = ndk_sys::ALooper_prepare(
-                        ndk_sys::ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as libc::c_int,
-                    );
                     ndk_sys::ALooper_addFd(
-                        guard.looper.ptr,
+                        guard.looper.ptr().as_ptr(),
                         main_fd,
                         LOOPER_ID_MAIN,
                         ndk_sys::ALOOPER_EVENT_INPUT as libc::c_int,
@@ -107,18 +113,17 @@ impl AndroidApp {
 }
 
 #[derive(Debug)]
-struct Looper {
-    pub ptr: *mut ndk_sys::ALooper,
-}
-unsafe impl Send for Looper {}
-unsafe impl Sync for Looper {}
-
-#[derive(Debug)]
 pub(crate) struct AndroidAppInner {
     pub(crate) jvm: JavaVM,
 
     pub(crate) native_activity: NativeActivityGlue,
-    looper: Looper,
+
+    /// Looper associated with the Rust `android_main` thread
+    looper: ndk::looper::ForeignLooper,
+
+    /// Looper associated with the activity's Java main thread, sometimes called
+    /// the UI thread.
+    main_looper: ndk::looper::ForeignLooper,
 
     /// A table of `KeyCharacterMap`s per `InputDevice` ID
     /// these are used to be able to map key presses to unicode
@@ -145,8 +150,12 @@ impl AndroidAppInner {
         self.native_activity.activity
     }
 
-    pub(crate) fn looper(&self) -> *mut ndk_sys::ALooper {
-        self.looper.ptr
+    pub(crate) fn looper_as_ptr(&self) -> *mut ndk_sys::ALooper {
+        self.looper.ptr().as_ptr()
+    }
+
+    pub fn java_main_looper(&self) -> ndk::looper::ForeignLooper {
+        self.main_looper.clone()
     }
 
     pub fn native_window(&self) -> Option<NativeWindow> {
@@ -173,7 +182,7 @@ impl AndroidAppInner {
             trace!("Calling ALooper_pollOnce, timeout = {timeout_milliseconds}");
             assert_eq!(
                 ndk_sys::ALooper_forThread(),
-                self.looper.ptr,
+                self.looper_as_ptr(),
                 "Application tried to poll events from non-main thread"
             );
             let id = ndk_sys::ALooper_pollOnce(
@@ -245,7 +254,7 @@ impl AndroidAppInner {
                                 trace!("Calling pre_exec_cmd({ipc_cmd:#?})");
                                 self.native_activity.pre_exec_cmd(
                                     ipc_cmd,
-                                    self.looper(),
+                                    self.looper_as_ptr(),
                                     LOOPER_ID_INPUT,
                                 );
 
@@ -282,7 +291,7 @@ impl AndroidAppInner {
 
     pub fn create_waker(&self) -> AndroidAppWaker {
         // Safety: we know that the looper is a valid, non-null pointer
-        unsafe { AndroidAppWaker::new(self.looper.ptr) }
+        unsafe { AndroidAppWaker::new(self.looper_as_ptr()) }
     }
 
     pub fn config(&self) -> ConfigurationRef {
@@ -405,7 +414,7 @@ impl AndroidAppInner {
         // trigger a wake up)
         let queue = self
             .native_activity
-            .looper_attached_input_queue(self.looper(), LOOPER_ID_INPUT);
+            .looper_attached_input_queue(self.looper_as_ptr(), LOOPER_ID_INPUT);
 
         // Note: we don't treat it as an error if there is no queue, so if applications
         // iterate input before a queue has been created (e.g. before onStart) then
