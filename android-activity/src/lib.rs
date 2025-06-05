@@ -141,7 +141,7 @@ compile_error!(
 );
 #[cfg(all(
     not(any(feature = "game-activity", feature = "native-activity")),
-    not(doc)
+    not(any(doc, used_on_docsrs)),
 ))]
 compile_error!(
     r#"Either "game-activity" or "native-activity" must be enabled as features
@@ -160,8 +160,18 @@ You may need to add a `[patch]` into your Cargo.toml to ensure a specific versio
 android-activity is used across all of your application's crates."#
 );
 
-#[cfg_attr(any(feature = "native-activity", doc), path = "native_activity/mod.rs")]
-#[cfg_attr(any(feature = "game-activity", doc), path = "game_activity/mod.rs")]
+#[cfg_attr(feature = "native-activity", path = "native_activity/mod.rs")]
+#[cfg_attr(feature = "game-activity", path = "game_activity/mod.rs")]
+#[cfg_attr(
+    all(
+        // No activities enabled.
+        not(any(feature = "native-activity", feature = "game-activity")),
+        // And building docs.
+        any(doc, used_on_docsrs),
+    ),
+    // Fall back to documenting native activity.
+    path = "native_activity/mod.rs"
+)]
 pub(crate) mod activity_impl;
 
 pub mod error;

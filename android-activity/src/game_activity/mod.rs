@@ -1,5 +1,3 @@
-#![cfg(feature = "game-activity")]
-
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::ops::Deref;
