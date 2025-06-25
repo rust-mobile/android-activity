@@ -163,7 +163,8 @@ impl KeyCharacterMap {
     /// a [`AppError::JavaError`] in case there is a spurious JNI error or an exception
     /// is caught.
     pub fn get(&self, key_code: Keycode, meta_state: MetaState) -> Result<KeyMapChar, AppError> {
-        let key_code = key_code.into();
+        let key_code: u32 = key_code.into();
+        let key_code = key_code as i32;
         let meta_state = meta_state.0 as i32;
 
         let vm = self.jvm.clone();

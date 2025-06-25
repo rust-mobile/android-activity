@@ -580,11 +580,13 @@ impl AndroidAppInner {
     }
 
     pub fn enable_motion_axis(&mut self, axis: Axis) {
-        unsafe { ffi::GameActivityPointerAxes_enableAxis(axis.into()) }
+        let axis: u32 = axis.into();
+        unsafe { ffi::GameActivityPointerAxes_enableAxis(axis as i32) }
     }
 
     pub fn disable_motion_axis(&mut self, axis: Axis) {
-        unsafe { ffi::GameActivityPointerAxes_disableAxis(axis.into()) }
+        let axis: u32 = axis.into();
+        unsafe { ffi::GameActivityPointerAxes_disableAxis(axis as i32) }
     }
 
     pub fn create_waker(&self) -> AndroidAppWaker {

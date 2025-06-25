@@ -13,12 +13,10 @@
 // The `Class` was also bound differently to `android-ndk-rs` considering how the class is defined
 // by masking bits from the `Source`.
 
-use ndk::event::ButtonState;
-
 use crate::activity_impl::ffi::{GameActivityKeyEvent, GameActivityMotionEvent};
 use crate::input::{
-    Axis, Button, EdgeFlags, KeyAction, KeyEventFlags, Keycode, MetaState, MotionAction,
-    MotionEventFlags, Pointer, PointersIter, Source, ToolType,
+    Axis, Button, ButtonState, EdgeFlags, KeyAction, KeyEventFlags, Keycode, MetaState,
+    MotionAction, MotionEventFlags, Pointer, PointersIter, Source, ToolType,
 };
 
 // Note: try to keep this wrapper API compatible with the AInputEvent API if possible
@@ -50,7 +48,7 @@ impl<'a> MotionEvent<'a> {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        let source = self.ga_event.source;
+        let source = self.ga_event.source as u32;
         source.into()
     }
 
@@ -66,7 +64,7 @@ impl<'a> MotionEvent<'a> {
     /// See [the MotionEvent docs](https://developer.android.com/reference/android/view/MotionEvent#getActionMasked())
     #[inline]
     pub fn action(&self) -> MotionAction {
-        let action = self.ga_event.action & ndk_sys::AMOTION_EVENT_ACTION_MASK as i32;
+        let action = self.ga_event.action as u32 & ndk_sys::AMOTION_EVENT_ACTION_MASK;
         action.into()
     }
 
@@ -179,7 +177,6 @@ impl<'a> MotionEvent<'a> {
     /// See [the NDK
     /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_getbuttonstate)
     #[inline]
-    // TODO: Button enum to signify only one bitflag can be set?
     pub fn button_state(&self) -> ButtonState {
         ButtonState(self.ga_event.buttonState as u32)
     }
@@ -282,7 +279,7 @@ impl PointerImpl<'_> {
     #[inline]
     pub fn axis_value(&self, axis: Axis) -> f32 {
         let pointer = &self.event.ga_event.pointers[self.index];
-        let axis: i32 = axis.into();
+        let axis: u32 = axis.into();
         pointer.axisValues[axis as usize]
     }
 
@@ -301,7 +298,8 @@ impl PointerImpl<'_> {
     #[inline]
     pub fn tool_type(&self) -> ToolType {
         let pointer = &self.event.ga_event.pointers[self.index];
-        pointer.toolType.into()
+        let tool_type = pointer.toolType as u32;
+        tool_type.into()
     }
 }
 
@@ -668,7 +666,7 @@ impl<'a> KeyEvent<'a> {
     ///
     #[inline]
     pub fn source(&self) -> Source {
-        let source = self.ga_event.source;
+        let source = self.ga_event.source as u32;
         source.into()
     }
 
@@ -684,13 +682,13 @@ impl<'a> KeyEvent<'a> {
     /// See [the KeyEvent docs](https://developer.android.com/reference/android/view/KeyEvent#getAction())
     #[inline]
     pub fn action(&self) -> KeyAction {
-        let action = self.ga_event.action;
+        let action = self.ga_event.action as u32;
         action.into()
     }
 
     #[inline]
     pub fn action_button(&self) -> KeyAction {
-        let action = self.ga_event.action;
+        let action = self.ga_event.action as u32;
         action.into()
     }
 
@@ -720,7 +718,7 @@ impl<'a> KeyEvent<'a> {
     /// docs](https://developer.android.com/ndk/reference/group/input#akeyevent_getkeycode)
     #[inline]
     pub fn key_code(&self) -> Keycode {
-        let keycode = self.ga_event.keyCode;
+        let keycode = self.ga_event.keyCode as u32;
         keycode.into()
     }
 

@@ -8,22 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
 - input: TextInputAction enum representing action button types on soft keyboards.
 - input: InputEvent::TextAction event for handling action button presses from soft keyboards.
 
 ### Changed
-- input: Replaced custom types with their `ndk` crate equivalent.
-  > [!NOTE]
-  > These types existed because the `ndk` crate didn't provide them in an extensible way.  Now that they have the `#[non_exhaustive]` flag and contain a `__Unknown(T)` variant to provide lossless conversions, and not to mention use an ABI type that matches how it is being used by most functions (when the original constants were defined in a "typeless" way), the `ndk` types are used and reexported once again.
-
-  > [!IMPORTANT]
-  > **Relevant breaking changes**:
-  > - `repr()` types for some `enum`s have changed to match the ABI type that is used by most functions that are returning or consuming this wrapper type.
-  > - `Source::is_xxx_class()` functions are replaced by querying `Source::class()` and comparing against variants from the returned `SourceClass` `bitflags` enum.
-  > - `SourceFlags::TRACKBALL` (from `Source::is_trackball_class()`) is named `SourceClass::NAVIGATION` in the `ndk`.
 
 - rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), TODO: link)
-- The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
 - GameActivity updated to 4.0.0 (requires the corresponding 4.0.0 `.aar` release from Google) ([#191](https://github.com/rust-mobile/android-activity/pull/191))
 
 ## [0.6.0] - 2024-04-26
