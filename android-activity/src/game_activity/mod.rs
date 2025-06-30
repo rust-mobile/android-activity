@@ -29,7 +29,8 @@ use crate::util::{
     try_get_path_from_ptr,
 };
 use crate::{
-    AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
+    AndroidApp, ConfigurationRef, ImeOptions, InputStatus, InputType, MainEvent, PollEvent, Rect,
+    WindowManagerFlags,
 };
 
 mod ffi;
@@ -210,6 +211,22 @@ impl NativeAppGlue {
             (*app_ptr).textInputState = 0;
         }
         self.text_input_state()
+    }
+
+    pub fn set_ime_editor_info(&self, input_type: InputType, options: ImeOptions) {
+        unsafe {
+            let activity = (*self.as_ptr()).activity;
+            let action_id = 0; // IME_ACTION_UNSPECIFIED
+                               // (https://developer.android.com/reference/android/view/inputmethod/EditorInfo#IME_ACTION_DONE)
+                               // TODO: expose this later?
+
+            ffi::GameActivity_setImeEditorInfo(
+                activity,
+                input_type.bits(),
+                action_id,
+                options.bits(),
+            );
+        }
     }
 
     // TODO: move into a trait
@@ -559,6 +576,10 @@ impl AndroidAppInner {
     // TODO: move into a trait
     pub fn set_text_input_state(&self, state: TextInputState) {
         self.native_app.set_text_input_state(state);
+    }
+
+    pub fn set_ime_editor_info(&self, input_type: InputType, options: ImeOptions) {
+        self.native_app.set_ime_editor_info(input_type, options);
     }
 
     pub(crate) fn device_key_character_map(
