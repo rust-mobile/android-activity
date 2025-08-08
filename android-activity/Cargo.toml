@@ -28,10 +28,6 @@ native-activity = []
 api-level-30 = ["ndk/api-level-30"]
 api-level-33 = ["api-level-30", "ndk/api-level-33"]
 
-# "Internal" feature to allow build-testing this crate for the host
-# architecture, needed to make doctests actually compile sample code.
-test = ["ndk/test", "ndk-sys/test"]
-
 [dependencies]
 log = "0.4"
 jni-sys = "0.3"

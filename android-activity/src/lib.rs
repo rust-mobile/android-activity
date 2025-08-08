@@ -19,7 +19,7 @@
 //! ```
 //!
 //! and implement a `#[no_mangle]` `android_main` entry point like this:
-//! ```
+//! ```no_run
 //! #[no_mangle]
 //! fn android_main(app: android_activity::AndroidApp) {
 //!
@@ -132,7 +132,7 @@ use ndk::native_window::NativeWindow;
 pub use ndk;
 pub use ndk_sys;
 
-#[cfg(all(not(target_os = "android"), not(feature = "test")))]
+#[cfg(not(target_os = "android"))]
 compile_error!("android-activity only supports compiling for Android");
 
 #[cfg(all(feature = "game-activity", feature = "native-activity"))]
@@ -560,7 +560,7 @@ impl AndroidApp {
     /// ```no_run
     /// # use jni::JavaVM;
     /// # let app: android_activity::AndroidApp = todo!();
-    /// let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr().ast()) };
+    /// let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr().cast()) };
     /// ```
     ///
     /// [`jni`]: https://crates.io/crates/jni
@@ -732,7 +732,9 @@ impl AndroidApp {
     /// # Example
     /// Code to iterate all pending input events would look something like this:
     ///
-    /// ```
+    /// ```no_run
+    /// # use android_activity::{AndroidApp, InputStatus, input::InputEvent};
+    /// # let app: AndroidApp = todo!();
     /// match app.input_events_iter() {
     ///     Ok(mut iter) => {
     ///         loop {
@@ -740,12 +742,13 @@ impl AndroidApp {
     ///                 let handled = match event {
     ///                     InputEvent::KeyEvent(key_event) => {
     ///                         // Snip
+    ///                         InputStatus::Handled
     ///                     }
     ///                     InputEvent::MotionEvent(motion_event) => {
-    ///                         // Snip
+    ///                         InputStatus::Unhandled
     ///                     }
     ///                     event => {
-    ///                         // Snip
+    ///                         InputStatus::Unhandled
     ///                     }
     ///                 };
     ///
@@ -767,7 +770,7 @@ impl AndroidApp {
     ///
     /// This must only be called from your `android_main()` thread and it may panic if called
     /// from another thread.
-    pub fn input_events_iter(&self) -> Result<input::InputIterator> {
+    pub fn input_events_iter(&self) -> Result<input::InputIterator<'_>> {
         let receiver = {
             let guard = self.inner.read().unwrap();
             guard.input_events_receiver()?
@@ -787,44 +790,47 @@ impl AndroidApp {
     ///
     /// Code to handle unicode character mapping as well as combining dead keys could look some thing like:
     ///
-    /// ```
+    /// ```no_run
+    /// # use android_activity::{AndroidApp, input::{InputEvent, KeyEvent, KeyMapChar}};
+    /// # let app: AndroidApp = todo!();
+    /// # let key_event: KeyEvent = todo!();
     /// let mut combining_accent = None;
     /// // Snip
     ///
-    /// let combined_key_char = if let Ok(map) = app.device_key_character_map(device_id) {
+    /// let combined_key_char = if let Ok(map) = app.device_key_character_map(key_event.device_id()) {
     ///     match map.get(key_event.key_code(), key_event.meta_state()) {
     ///         Ok(KeyMapChar::Unicode(unicode)) => {
     ///             let combined_unicode = if let Some(accent) = combining_accent {
     ///                 match map.get_dead_char(accent, unicode) {
     ///                     Ok(Some(key)) => {
-    ///                         info!("KeyEvent: Combined '{unicode}' with accent '{accent}' to give '{key}'");
+    ///                         println!("KeyEvent: Combined '{unicode}' with accent '{accent}' to give '{key}'");
     ///                         Some(key)
     ///                     }
     ///                     Ok(None) => None,
     ///                     Err(err) => {
-    ///                         log::error!("KeyEvent: Failed to combine 'dead key' accent '{accent}' with '{unicode}': {err:?}");
+    ///                         eprintln!("KeyEvent: Failed to combine 'dead key' accent '{accent}' with '{unicode}': {err:?}");
     ///                         None
     ///                     }
     ///                 }
     ///             } else {
-    ///                 info!("KeyEvent: Pressed '{unicode}'");
+    ///                 println!("KeyEvent: Pressed '{unicode}'");
     ///                 Some(unicode)
     ///             };
     ///             combining_accent = None;
     ///             combined_unicode.map(|unicode| KeyMapChar::Unicode(unicode))
     ///         }
     ///         Ok(KeyMapChar::CombiningAccent(accent)) => {
-    ///             info!("KeyEvent: Pressed 'dead key' combining accent '{accent}'");
+    ///             println!("KeyEvent: Pressed 'dead key' combining accent '{accent}'");
     ///             combining_accent = Some(accent);
     ///             Some(KeyMapChar::CombiningAccent(accent))
     ///         }
     ///         Ok(KeyMapChar::None) => {
-    ///             info!("KeyEvent: Pressed non-unicode key");
+    ///             println!("KeyEvent: Pressed non-unicode key");
     ///             combining_accent = None;
     ///             None
     ///         }
     ///         Err(err) => {
-    ///             log::error!("KeyEvent: Failed to get key map character: {err:?}");
+    ///             eprintln!("KeyEvent: Failed to get key map character: {err:?}");
     ///             combining_accent = None;
     ///             None
     ///         }
