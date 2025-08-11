@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
 - input: Replaced custom types with their `ndk` crate equivalent.
   > [!NOTE]
   > These types existed because the `ndk` crate didn't provide them in an extensible way.  Now that they have the `#[non_exhaustive]` flag and contain a `__Unknown(T)` variant to provide lossless conversions, and not to mention use an ABI type that matches how it is being used by most functions (when the original constants were defined in a "typeless" way), the `ndk` types are used and reexported once again.
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - rust-version bumped to 1.73.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193))
 - The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
+- GameActivity updated to 4.0.0 (requires the corresponding 4.0.0 `.aar` release from Google) ([#191](https://github.com/rust-mobile/android-activity/pull/191))
 
 ## [0.6.0] - 2024-04-26
 

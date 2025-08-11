@@ -26,7 +26,7 @@
 #define ALOGV(...)
 #else
 #define ALOGV(...) \
-    __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__);
+  __android_log_print(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__);
 #endif
 
 /* Returns 2nd arg.  Used to substitute default value if caller's vararg list
@@ -40,21 +40,21 @@
 #define __android_rest(first, ...) , ##__VA_ARGS__
 
 #define android_printAssert(cond, tag, fmt...) \
-    __android_log_assert(cond, tag,            \
-                         __android_second(0, ##fmt, NULL) __android_rest(fmt))
+  __android_log_assert(cond, tag,              \
+                       __android_second(0, ##fmt, NULL) __android_rest(fmt))
 
 #define CONDITION(cond) (__builtin_expect((cond) != 0, 0))
 
 #ifndef LOG_ALWAYS_FATAL_IF
-#define LOG_ALWAYS_FATAL_IF(cond, ...)                                \
-    ((CONDITION(cond))                                                \
-         ? ((void)android_printAssert(#cond, LOG_TAG, ##__VA_ARGS__)) \
-         : (void)0)
+#define LOG_ALWAYS_FATAL_IF(cond, ...)                              \
+  ((CONDITION(cond))                                                \
+       ? ((void)android_printAssert(#cond, LOG_TAG, ##__VA_ARGS__)) \
+       : (void)0)
 #endif
 
 #ifndef LOG_ALWAYS_FATAL
 #define LOG_ALWAYS_FATAL(...) \
-    (((void)android_printAssert(NULL, LOG_TAG, ##__VA_ARGS__)))
+  (((void)android_printAssert(NULL, LOG_TAG, ##__VA_ARGS__)))
 #endif
 
 /*
@@ -62,14 +62,14 @@
  */
 #ifndef SLOGW
 #define SLOGW(...) \
-    ((void)__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__))
+  ((void)__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__))
 #endif
 
 #ifndef SLOGW_IF
-#define SLOGW_IF(cond, ...)                                                    \
-    ((__predict_false(cond))                                                   \
-         ? ((void)__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)) \
-         : (void)0)
+#define SLOGW_IF(cond, ...)                                                  \
+  ((__predict_false(cond))                                                   \
+       ? ((void)__android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)) \
+       : (void)0)
 #endif
 
 /*
