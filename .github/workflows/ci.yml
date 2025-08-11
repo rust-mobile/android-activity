@@ -96,6 +96,16 @@ jobs:
         run: >
           cargo ndk -t arm64-v8a doc --no-deps
 
+      - name: Build doctests
+        # All doctests are set to no_run, because they require running in the
+        # context of an Android app.
+        # Only run on stable because cross-compiling doctests is only supported
+        # since Rust 1.89.
+        if: ${{ matrix.rust-version == 'stable' }}
+        run: |
+          cargo test --doc -F native-activity --target aarch64-linux-android
+          cargo ndk -t arm64-v8a -- test --doc -F game-activity
+
   format:
     runs-on: ubuntu-latest
     steps:

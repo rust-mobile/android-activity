@@ -284,13 +284,12 @@ impl KeyCharacterMap {
 
     /// Get the character that is produced by combining the dead key producing accent with the key producing character c.
     ///
-    /// For example, ```get_dead_char('`', 'e')``` returns 'è'. `get_dead_char('^', ' ')` returns '^' and `get_dead_char('^', '^')` returns '^'.
+    /// For example, ``get_dead_char('`', 'e')`` returns `'è'`. `get_dead_char('^', ' ')` returns `'^'` and `get_dead_char('^', '^')` returns `'^'`.
     ///
     /// # Errors
     ///
-    /// Since this API needs to use JNI internally to call into the Android JVM it may return
-    /// a [`AppError::JavaError`] in case there is a spurious JNI error or an exception
-    /// is caught.
+    /// Since this API needs to use JNI internally to call into the Android JVM it may return a
+    /// [`AppError::JavaError`] in case there is a spurious JNI error or an exception is caught.
     pub fn get_dead_char(
         &self,
         accent_char: char,
