@@ -35,7 +35,6 @@ api-level-30 = ["ndk/api-level-30"]
 
 [dependencies]
 log = "0.4"
-jni-sys = "0.3"
 cesu8 = "1"
 jni = "0.21"
 ndk-sys = "0.6.0"

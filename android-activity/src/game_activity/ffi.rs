@@ -12,7 +12,7 @@
 #![allow(deref_nullptr)]
 #![allow(dead_code)]
 
-use jni_sys::*;
+use jni::sys::*;
 use libc::{pthread_cond_t, pthread_mutex_t, pthread_t};
 use ndk_sys::{AAssetManager, AConfiguration, ALooper, ALooper_callbackFunc, ANativeWindow, ARect};
 

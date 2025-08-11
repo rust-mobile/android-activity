@@ -1,16 +1,13 @@
 use std::sync::Arc;
 
+use jni::sys::jint;
 use jni::{
     objects::{GlobalRef, JClass, JMethodID, JObject, JStaticMethodID, JValue},
     signature::{Primitive, ReturnType},
-    JNIEnv,
+    JNIEnv, JNIVersion, JavaVM,
 };
-use jni_sys::jint;
 
-use crate::{
-    input::{Keycode, MetaState},
-    jni_utils::CloneJavaVM,
-};
+use crate::input::{Keycode, MetaState};
 
 use crate::{
     error::{AppError, InternalAppError},
@@ -94,7 +91,7 @@ pub enum KeyMapChar {
 #[derive(Debug)]
 pub(crate) struct KeyCharacterMapBinding {
     //vm: JavaVM,
-    klass: GlobalRef,
+    klass: GlobalRef<JClass<'static>>,
     get_method_id: JMethodID,
     get_dead_char_method_id: JStaticMethodID,
     get_keyboard_type_method_id: JMethodID,
@@ -213,18 +210,31 @@ impl KeyCharacterMapBinding {
 }
 
 /// Describes the keys provided by a keyboard device and their associated labels.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct KeyCharacterMap {
-    jvm: CloneJavaVM,
+    jvm: JavaVM,
     binding: Arc<KeyCharacterMapBinding>,
-    key_map: GlobalRef,
+    key_map: GlobalRef<JObject<'static>>,
+}
+impl Clone for KeyCharacterMap {
+    fn clone(&self) -> Self {
+        let jvm = self.jvm.clone();
+        jvm.attach_current_thread::<_, _, jni::errors::Error>(JNIVersion::V1_4, |env| {
+            Ok(Self {
+                jvm: jvm.clone(),
+                binding: Arc::clone(&self.binding),
+                key_map: env.new_global_ref(&self.key_map)?,
+            })
+        })
+        .expect("Failed to attach thread to JVM and clone key map")
+    }
 }
 
 impl KeyCharacterMap {
     pub(crate) fn new(
-        jvm: CloneJavaVM,
+        jvm: JavaVM,
         binding: Arc<KeyCharacterMapBinding>,
-        key_map: GlobalRef,
+        key_map: GlobalRef<JObject<'static>>,
     ) -> Self {
         Self {
             jvm,
@@ -247,41 +257,39 @@ impl KeyCharacterMap {
     /// is caught.
     pub fn get(&self, key_code: Keycode, meta_state: MetaState) -> Result<KeyMapChar, AppError> {
         let key_code: u32 = key_code.into();
-        let key_code = key_code as jni_sys::jint;
+        let key_code = key_code as jni::sys::jint;
         let meta_state: u32 = meta_state.0;
-        let meta_state = meta_state as jni_sys::jint;
+        let meta_state = meta_state as jni::sys::jint;
 
-        // Since we expect this API to be called from the `main` thread then we expect to already be
-        // attached to the JVM
-        //
-        // Safety: there's no other JNIEnv in scope so this env can't be used to subvert the mutable
-        // borrow rules that ensure we can only add local references to the top JNI frame.
-        let mut env = self.jvm.get_env().map_err(|err| {
+        let vm = self.jvm.clone();
+        vm.attach_current_thread::<_, _, InternalAppError>(JNIVersion::V1_4, |env| {
+            let unicode = self
+                .binding
+                .get(env, self.key_map.as_obj(), key_code, meta_state)?;
+            let unicode = unicode as u32;
+
+            const COMBINING_ACCENT: u32 = 0x80000000;
+            const COMBINING_ACCENT_MASK: u32 = !COMBINING_ACCENT;
+
+            if unicode == 0 {
+                Ok(KeyMapChar::None)
+            } else if unicode & COMBINING_ACCENT == COMBINING_ACCENT {
+                let accent = unicode & COMBINING_ACCENT_MASK;
+                // Safety: assumes Android key maps don't contain invalid unicode characters
+                Ok(KeyMapChar::CombiningAccent(unsafe {
+                    char::from_u32_unchecked(accent)
+                }))
+            } else {
+                // Safety: assumes Android key maps don't contain invalid unicode characters
+                Ok(KeyMapChar::Unicode(unsafe {
+                    char::from_u32_unchecked(unicode)
+                }))
+            }
+        })
+        .map_err(|err| {
             let err: InternalAppError = err.into();
-            err
-        })?;
-        let unicode = self
-            .binding
-            .get(&mut env, self.key_map.as_obj(), key_code, meta_state)?;
-        let unicode = unicode as u32;
-
-        const COMBINING_ACCENT: u32 = 0x80000000;
-        const COMBINING_ACCENT_MASK: u32 = !COMBINING_ACCENT;
-
-        if unicode == 0 {
-            Ok(KeyMapChar::None)
-        } else if unicode & COMBINING_ACCENT == COMBINING_ACCENT {
-            let accent = unicode & COMBINING_ACCENT_MASK;
-            // Safety: assumes Android key maps don't contain invalid unicode characters
-            Ok(KeyMapChar::CombiningAccent(unsafe {
-                char::from_u32_unchecked(accent)
-            }))
-        } else {
-            // Safety: assumes Android key maps don't contain invalid unicode characters
-            Ok(KeyMapChar::Unicode(unsafe {
-                char::from_u32_unchecked(unicode)
-            }))
-        }
+            err.into()
+        })
     }
 
     /// Get the character that is produced by combining the dead key producing accent with the key producing character c.
@@ -297,28 +305,24 @@ impl KeyCharacterMap {
         accent_char: char,
         base_char: char,
     ) -> Result<Option<char>, AppError> {
-        let accent_char = accent_char as jni_sys::jint;
-        let base_char = base_char as jni_sys::jint;
+        let accent_char = accent_char as jni::sys::jint;
+        let base_char = base_char as jni::sys::jint;
 
-        // Since we expect this API to be called from the `main` thread then we expect to already be
-        // attached to the JVM
-        //
-        // Safety: there's no other JNIEnv in scope so this env can't be used to subvert the mutable
-        // borrow rules that ensure we can only add local references to the top JNI frame.
-        let mut env = self.jvm.get_env().map_err(|err| {
+        let vm = self.jvm.clone();
+        vm.attach_current_thread::<_, _, InternalAppError>(JNIVersion::V1_4, |env| {
+            let unicode = self.binding.get_dead_char(env, accent_char, base_char)?;
+            let unicode = unicode as u32;
+
+            // Safety: assumes Android key maps don't contain invalid unicode characters
+            Ok(if unicode == 0 {
+                None
+            } else {
+                Some(unsafe { char::from_u32_unchecked(unicode) })
+            })
+        })
+        .map_err(|err| {
             let err: InternalAppError = err.into();
-            err
-        })?;
-        let unicode = self
-            .binding
-            .get_dead_char(&mut env, accent_char, base_char)?;
-        let unicode = unicode as u32;
-
-        // Safety: assumes Android key maps don't contain invalid unicode characters
-        Ok(if unicode == 0 {
-            None
-        } else {
-            Some(unsafe { char::from_u32_unchecked(unicode) })
+            err.into()
         })
     }
 
@@ -332,19 +336,15 @@ impl KeyCharacterMap {
     /// a [`AppError::JavaError`] in case there is a spurious JNI error or an exception
     /// is caught.
     pub fn get_keyboard_type(&self) -> Result<KeyboardType, AppError> {
-        // Since we expect this API to be called from the `main` thread then we expect to already be
-        // attached to the JVM
-        //
-        // Safety: there's no other JNIEnv in scope so this env can't be used to subvert the mutable
-        // borrow rules that ensure we can only add local references to the top JNI frame.
-        let mut env = self.jvm.get_env().map_err(|err| {
+        let vm = self.jvm.clone();
+        vm.attach_current_thread::<_, _, InternalAppError>(JNIVersion::V1_4, |env| {
+            let keyboard_type = self.binding.get_keyboard_type(env, self.key_map.as_obj())?;
+            let keyboard_type = keyboard_type as u32;
+            Ok(keyboard_type.into())
+        })
+        .map_err(|err| {
             let err: InternalAppError = err.into();
-            err
-        })?;
-        let keyboard_type = self
-            .binding
-            .get_keyboard_type(&mut env, self.key_map.as_obj())?;
-        let keyboard_type = keyboard_type as u32;
-        Ok(keyboard_type.into())
+            err.into()
+        })
     }
 }

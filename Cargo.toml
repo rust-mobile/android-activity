@@ -3,3 +3,6 @@ resolver = "2"
 members = ["android-activity"]
 
 exclude = ["examples"]
+
+[patch.crates-io]
+jni = { path = "/home/rib/src/jni-rs/jni-git-dev0" }
