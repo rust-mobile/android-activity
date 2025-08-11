@@ -766,7 +766,7 @@ impl AndroidApp {
     ///
     /// This must only be called from your `android_main()` thread and it may panic if called
     /// from another thread.
-    pub fn input_events_iter(&self) -> Result<input::InputIterator> {
+    pub fn input_events_iter(&'_ self) -> Result<input::InputIterator<'_>> {
         let receiver = {
             let guard = self.inner.read().unwrap();
             guard.input_events_receiver()?
