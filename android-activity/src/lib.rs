@@ -566,7 +566,7 @@ impl AndroidApp {
     /// with the [`jni`] crate (or similar crates) to make JNI calls that bridge
     /// between native Rust code and Java/Kotlin code running within the JVM.
     ///
-    /// If you use the [`jni`] crate you can wrap this as a [`JavaVM`] via:
+    /// If you use the [`jni`] crate you can could this as a [`JavaVM`] via:
     /// ```no_run
     /// # use jni::JavaVM;
     /// # let app: android_activity::AndroidApp = todo!();
@@ -581,24 +581,28 @@ impl AndroidApp {
 
     /// Returns a JNI object reference for this application's JVM `Activity` as a pointer
     ///
-    /// If you use the [`jni`] crate you can wrap this as an object reference via:
+    /// If you use the [`jni`] crate you can cast this as a `JObject` reference via:
     /// ```no_run
     /// # use jni::objects::JObject;
-    /// # let app: android_activity::AndroidApp = todo!();
-    /// let activity = unsafe { JObject::from_raw(app.activity_as_ptr().cast()) };
+    /// # use jni::refs::Global;
+    /// # fn use_jni(env: &jni::Env, app: &android_activity::AndroidApp) -> jni::errors::Result<()> {
+    /// let raw_activity_global = app.activity_as_ptr() as jni::sys::jobject;
+    /// // SAFETY: The pointer is valid as long as `app` is valid.
+    /// let activity = unsafe { env.as_cast_raw::<Global<JObject>>(&raw_activity_global)? };
+    /// # Ok(()) }
     /// ```
     ///
     /// # JNI Safety
     ///
     /// Note that the object reference will be a JNI global reference, not a
     /// local reference and it should not be deleted. Don't wrap the reference
-    /// in an [`AutoLocal`] which would try to explicitly delete the reference
-    /// when dropped. Similarly, don't wrap the reference as a [`GlobalRef`]
+    /// in an [`Auto`] which would try to explicitly delete the reference
+    /// when dropped. Similarly, don't wrap the reference as a [`Global`]
     /// which would also try to explicitly delete the reference when dropped.
     ///
     /// [`jni`]: https://crates.io/crates/jni
-    /// [`AutoLocal`]: https://docs.rs/jni/latest/jni/objects/struct.AutoLocal.html
-    /// [`GlobalRef`]: https://docs.rs/jni/latest/jni/objects/struct.GlobalRef.html
+    /// [`Auto`]: https://docs.rs/jni/latest/jni/refs/struct.Auto.html
+    /// [`Global`]: https://docs.rs/jni/latest/jni/refs/struct.Global.html
     pub fn activity_as_ptr(&self) -> *mut c_void {
         self.inner.read().unwrap().activity_as_ptr()
     }
@@ -855,6 +859,9 @@ impl AndroidApp {
     /// Since this API needs to use JNI internally to call into the Android JVM it may return
     /// a [`error::AppError::JavaError`] in case there is a spurious JNI error or an exception
     /// is caught.
+    ///
+    /// This API should not be called with a `device_id` of `0`, since that indicates a non-physical
+    /// device and will result in a [`error::AppError::JavaError`].
     pub fn device_key_character_map(&self, device_id: i32) -> Result<KeyCharacterMap> {
         Ok(self
             .inner

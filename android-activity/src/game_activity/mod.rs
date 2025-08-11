@@ -8,10 +8,12 @@ use std::sync::Weak;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
+use jni::objects::JObject;
+use jni::refs::Global;
 use libc::c_void;
 use log::{error, trace};
 
-use jni_sys::*;
+use jni::sys::*;
 
 use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
@@ -21,9 +23,11 @@ use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
 use crate::error::InternalResult;
-use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding, TextInputAction};
-use crate::jni_utils::{self, CloneJavaVM};
-use crate::util::{abort_on_panic, forward_stdio_to_logcat, log_panic, try_get_path_from_ptr};
+use crate::input::{device_key_character_map, Axis, KeyCharacterMap, TextInputAction};
+use crate::util::{
+    abort_on_panic, forward_stdio_to_logcat, init_android_main_thread, log_panic,
+    try_get_path_from_ptr,
+};
 use crate::{
     AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
@@ -119,32 +123,31 @@ impl AndroidAppWaker {
 }
 
 impl AndroidApp {
-    pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>, jvm: CloneJavaVM) -> Self {
-        let mut env = jvm.get_env().unwrap(); // We attach to the thread before creating the AndroidApp
+    pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>, jvm: jni::JavaVM) -> Self {
+        // We attach to the thread before creating the AndroidApp
+        jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
+            if let Err(err) = crate::input::jni_init(env) {
+                panic!("Failed to init JNI bindings: {err:?}");
+            };
 
-        let key_map_binding = match KeyCharacterMapBinding::new(&mut env) {
-            Ok(b) => b,
-            Err(err) => {
-                panic!("Failed to create KeyCharacterMap JNI bindings: {err:?}");
-            }
-        };
+            // Note: we don't use from_ptr since we don't own the android_app.config
+            // and need to keep in mind that the Drop handler is going to call
+            // AConfiguration_delete()
+            let config =
+                Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
 
-        // Note: we don't use from_ptr since we don't own the android_app.config
-        // and need to keep in mind that the Drop handler is going to call
-        // AConfiguration_delete()
-        let config = Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
-
-        Self {
-            inner: Arc::new(RwLock::new(AndroidAppInner {
-                jvm,
-                native_app: NativeAppGlue { ptr },
-                config: ConfigurationRef::new(config),
-                native_window: Default::default(),
-                key_map_binding: Arc::new(key_map_binding),
-                key_maps: Mutex::new(HashMap::new()),
-                input_receiver: Mutex::new(None),
-            })),
-        }
+            Ok(Self {
+                inner: Arc::new(RwLock::new(AndroidAppInner {
+                    jvm: jvm.clone(),
+                    native_app: NativeAppGlue { ptr },
+                    config: ConfigurationRef::new(config),
+                    native_window: Default::default(),
+                    key_maps: Mutex::new(HashMap::new()),
+                    input_receiver: Mutex::new(None),
+                })),
+            })
+        })
+        .expect("Failed to create AndroidApp instance")
     }
 }
 
@@ -268,13 +271,10 @@ impl NativeAppGlue {
 
 #[derive(Debug)]
 pub struct AndroidAppInner {
-    pub(crate) jvm: CloneJavaVM,
+    pub(crate) jvm: jni::JavaVM,
     native_app: NativeAppGlue,
     config: ConfigurationRef,
     native_window: RwLock<Option<NativeWindow>>,
-
-    /// Shared JNI bindings for the `KeyCharacterMap` class
-    key_map_binding: Arc<KeyCharacterMapBinding>,
 
     /// A table of `KeyCharacterMap`s per `InputDevice` ID
     /// these are used to be able to map key presses to unicode
@@ -570,11 +570,7 @@ impl AndroidAppInner {
         let key_map = match guard.entry(device_id) {
             std::collections::hash_map::Entry::Occupied(occupied) => occupied.get().clone(),
             std::collections::hash_map::Entry::Vacant(vacant) => {
-                let character_map = jni_utils::device_key_character_map(
-                    self.jvm.clone(),
-                    self.key_map_binding.clone(),
-                    device_id,
-                )?;
+                let character_map = device_key_character_map(self.jvm.clone(), device_id)?;
                 vacant.insert(character_map.clone());
                 character_map
             }
@@ -928,7 +924,7 @@ pub unsafe extern "C" fn Java_com_google_androidgamesdk_GameActivity_initializeN
     jasset_mgr: jobject,
     saved_state: jbyteArray,
     java_config: jobject,
-) -> jni_sys::jlong {
+) -> jlong {
     Java_com_google_androidgamesdk_GameActivity_initializeNativeCode_C(
         env,
         java_game_activity,
@@ -962,53 +958,56 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
     abort_on_panic(|| {
         let _join_log_forwarder = forward_stdio_to_logcat();
 
-        let jvm = unsafe {
+        let (jvm, jni_activity) = unsafe {
             let jvm = (*(*native_app).activity).vm;
             let activity: jobject = (*(*native_app).activity).javaGameActivity;
             ndk_context::initialize_android_context(jvm.cast(), activity.cast());
-
-            let jvm = CloneJavaVM::from_raw(jvm).unwrap();
-            // Since this is a newly spawned thread then the JVM hasn't been attached
-            // to the thread yet. Attach before calling the applications main function
-            // so they can safely make JNI calls
-            jvm.attach_current_thread_permanently().unwrap();
-            jvm
+            (jni::JavaVM::from_raw(jvm), activity)
         };
+        // Note: At this point we can assume jni::JavaVM::singleton is initialized
 
-        unsafe {
-            // Name thread - this needs to happen here after attaching to a JVM thread,
-            // since that changes the thread name to something like "Thread-2".
-            let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
-            libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
+        // Note: the GameActivity implementation will have already attached the main thread to the
+        // JVM before calling _rust_glue_entry so we don't to set the thread name via
+        // attach_current_thread_with_config since that won't actually create a new attachment.
+        //
+        // Calling .attach_current_thread will ensure that the `jni` crate knows about the
+        // attachment, as a convenience.
+        jvm.attach_current_thread(|env| -> jni::errors::Result<()> {
+            // SAFETY: We know jni_activity is a valid JNI global ref to an Activity instance
+            let jni_activity = unsafe { env.as_cast_raw::<Global<JObject>>(&jni_activity)? };
 
-            let app = AndroidApp::from_ptr(NonNull::new(native_app).unwrap(), jvm.clone());
+            if let Err(err) = init_android_main_thread(&jvm, &jni_activity) {
+                eprintln!("Failed to name Java thread and set thread context class loader: {err}");
+            }
 
-            // We want to specifically catch any panic from the application's android_main
-            // so we can finish + destroy the Activity gracefully via the JVM
-            catch_unwind(|| {
-                // XXX: If we were in control of the Java Activity subclass then
-                // we could potentially run the android_main function via a Java native method
-                // springboard (e.g. call an Activity subclass method that calls a jni native
-                // method that then just calls android_main()) that would make sure there was
-                // a Java frame at the base of our call stack which would then be recognised
-                // when calling FindClass to lookup a suitable classLoader, instead of
-                // defaulting to the system loader. Without this then it's difficult for native
-                // code to look up non-standard Java classes.
-                android_main(app);
-            })
-            .unwrap_or_else(log_panic);
+            unsafe {
+                let app = AndroidApp::from_ptr(NonNull::new(native_app).unwrap(), jvm.clone());
+                // We want to specifically catch any panic from the application's android_main
+                // so we can finish + destroy the Activity gracefully via the JVM
+                catch_unwind(|| {
+                    // XXX: If we were in control of the Java Activity subclass then
+                    // we could potentially run the android_main function via a Java native method
+                    // springboard (e.g. call an Activity subclass method that calls a jni native
+                    // method that then just calls android_main()) that would make sure there was
+                    // a Java frame at the base of our call stack which would then be recognised
+                    // when calling FindClass to lookup a suitable classLoader, instead of
+                    // defaulting to the system loader. Without this then it's difficult for native
+                    // code to look up non-standard Java classes.
+                    android_main(app);
+                })
+                .unwrap_or_else(log_panic);
 
-            // Let JVM know that our Activity can be destroyed before detaching from the JVM
-            //
-            // "Note that this method can be called from any thread; it will send a message
-            //  to the main thread of the process where the Java finish call will take place"
-            ffi::GameActivity_finish((*native_app).activity);
+                // Let JVM know that our Activity can be destroyed before detaching from the JVM
+                //
+                // "Note that this method can be called from any thread; it will send a message
+                //  to the main thread of the process where the Java finish call will take place"
+                ffi::GameActivity_finish((*native_app).activity);
 
-            // This should detach automatically but lets detach explicitly to avoid depending
-            // on the TLS trickery in `jni-rs`
-            jvm.detach_current_thread();
+                ndk_context::release_android_context();
+            }
 
-            ndk_context::release_android_context();
-        }
+            Ok(())
+        })
+        .expect("Failed to attach thread to JVM");
     })
 }
