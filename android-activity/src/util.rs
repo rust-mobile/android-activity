@@ -1,3 +1,8 @@
+use jni::{
+    jni_str,
+    objects::{JObject, JString, JThread},
+    vm::JavaVM,
+};
 use log::{error, Level};
 use std::{
     ffi::{CStr, CString},
@@ -109,5 +114,31 @@ pub(crate) fn abort_on_panic<R>(f: impl FnOnce() -> R) -> R {
         // second catch_unwind here.
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| log_panic(panic)));
         std::process::abort();
+    })
+}
+
+/// Name the Java Thread + native thread "android_main" and set the Java Thread context class loader
+/// so that jni code can more-easily find non-system Java classes.
+pub(crate) fn init_android_main_thread(
+    vm: &JavaVM,
+    jni_activity: &JObject,
+) -> jni::errors::Result<()> {
+    vm.with_local_frame(10, |env| -> jni::errors::Result<()> {
+        let activity_class = env.get_object_class(jni_activity)?;
+        let class_loader = activity_class.get_class_loader(env)?;
+
+        let thread = JThread::current_thread(env)?;
+        thread.set_context_class_loader(env, &class_loader)?;
+        let thread_name = JString::from_jni_str(env, jni_str!("android_main"))?;
+        thread.set_name(env, &thread_name)?;
+
+        // Also name native thread - this needs to happen here after attaching to a JVM thread,
+        // since that changes the thread name to something like "Thread-2".
+        unsafe {
+            let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
+            let _ = libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
+        }
+
+        Ok(())
     })
 }

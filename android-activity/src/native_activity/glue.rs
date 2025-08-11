@@ -9,11 +9,11 @@ use std::{
     sync::{Arc, Condvar, Mutex, Weak},
 };
 
+use jni::{objects::JObject, refs::Global, vm::AttachConfig};
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
 use crate::{
-    jni_utils::CloneJavaVM,
-    util::{abort_on_panic, forward_stdio_to_logcat, log_panic},
+    util::{abort_on_panic, forward_stdio_to_logcat, init_android_main_thread, log_panic},
     ConfigurationRef,
 };
 
@@ -840,11 +840,9 @@ extern "C" fn ANativeActivity_onCreate(
     abort_on_panic(|| {
         let _join_log_forwarder = forward_stdio_to_logcat();
 
-        log::trace!(
+        eprintln!(
             "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
-            activity,
-            saved_state,
-            saved_state_size
+            activity, saved_state, saved_state_size
         );
 
         // Conceptually we associate a glue reference with the JVM main thread, and another
@@ -858,60 +856,7 @@ extern "C" fn ANativeActivity_onCreate(
         // Note: we drop the thread handle which will detach the thread
         std::thread::spawn(move || {
             let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
-
-            let jvm = abort_on_panic(|| unsafe {
-                let na = activity;
-                let jvm: *mut jni_sys::JavaVM = (*na).vm;
-                let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
-                ndk_context::initialize_android_context(jvm.cast(), activity.cast());
-
-                let jvm = CloneJavaVM::from_raw(jvm).unwrap();
-                // Since this is a newly spawned thread then the JVM hasn't been attached
-                // to the thread yet. Attach before calling the applications main function
-                // so they can safely make JNI calls
-                jvm.attach_current_thread_permanently().unwrap();
-                jvm
-            });
-
-            let app = AndroidApp::new(rust_glue.clone(), jvm.clone());
-
-            rust_glue.notify_main_thread_running();
-
-            unsafe {
-                // Name thread - this needs to happen here after attaching to a JVM thread,
-                // since that changes the thread name to something like "Thread-2".
-                let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
-                libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
-
-                // We want to specifically catch any panic from the application's android_main
-                // so we can finish + destroy the Activity gracefully via the JVM
-                catch_unwind(|| {
-                    // XXX: If we were in control of the Java Activity subclass then
-                    // we could potentially run the android_main function via a Java native method
-                    // springboard (e.g. call an Activity subclass method that calls a jni native
-                    // method that then just calls android_main()) that would make sure there was
-                    // a Java frame at the base of our call stack which would then be recognised
-                    // when calling FindClass to lookup a suitable classLoader, instead of
-                    // defaulting to the system loader. Without this then it's difficult for native
-                    // code to look up non-standard Java classes.
-                    android_main(app);
-                })
-                .unwrap_or_else(log_panic);
-
-                // Let JVM know that our Activity can be destroyed before detaching from the JVM
-                //
-                // "Note that this method can be called from any thread; it will send a message
-                //  to the main thread of the process where the Java finish call will take place"
-                ndk_sys::ANativeActivity_finish(activity);
-
-                // This should detach automatically but lets detach explicitly to avoid depending
-                // on the TLS trickery in `jni-rs`
-                jvm.detach_current_thread();
-
-                ndk_context::release_android_context();
-            }
-
-            rust_glue.notify_main_thread_stopped_running();
+            rust_glue_entry(rust_glue, activity);
         });
 
         // Wait for thread to start.
@@ -922,5 +867,71 @@ extern "C" fn ANativeActivity_onCreate(
         while guard.thread_state == NativeThreadState::Init {
             guard = jvm_glue.cond.wait(guard).unwrap();
         }
+    })
+}
+
+fn rust_glue_entry(rust_glue: NativeActivityGlue, activity: *mut ndk_sys::ANativeActivity) {
+    abort_on_panic(|| {
+        let (jvm, jni_activity) = unsafe {
+            let jvm: *mut jni::sys::JavaVM = (*activity).vm.cast();
+            let jni_activity: jni::sys::jobject = (*activity).clazz as _; // Completely bogus name; this is the _instance_ not class pointer
+            ndk_context::initialize_android_context(jvm.cast(), jni_activity.cast());
+            (jni::JavaVM::from_raw(jvm), jni_activity)
+        };
+        // Note: At this point we can assume jni::JavaVM::singleton is initialized
+
+        // Since this is a newly spawned thread then the JVM hasn't been attached to the
+        // thread yet.
+        //
+        // For compatibility we attach before calling the applications main function to
+        // allow it to assume the thread is attached before making JNI calls.
+        jvm.attach_current_thread_with_config(
+            || AttachConfig::new().name("android_main"),
+            Some(16),
+            |env| -> jni::errors::Result<()> {
+                // SAFETY: We know jni_activity is a valid JNI global ref to an Activity instance
+                let jni_activity = unsafe { env.as_cast_raw::<Global<JObject>>(&jni_activity)? };
+
+                if let Err(err) = init_android_main_thread(&jvm, &jni_activity) {
+                    eprintln!(
+                        "Failed to name Java thread and set thread context class loader: {err}"
+                    );
+                }
+
+                let app = AndroidApp::new(rust_glue.clone(), jvm.clone());
+
+                rust_glue.notify_main_thread_running();
+
+                unsafe {
+                    // We want to specifically catch any panic from the application's android_main
+                    // so we can finish + destroy the Activity gracefully via the JVM
+                    catch_unwind(|| {
+                        // XXX: If we were in control of the Java Activity subclass then
+                        // we could potentially run the android_main function via a Java native method
+                        // springboard (e.g. call an Activity subclass method that calls a jni native
+                        // method that then just calls android_main()) that would make sure there was
+                        // a Java frame at the base of our call stack which would then be recognised
+                        // when calling FindClass to lookup a suitable classLoader, instead of
+                        // defaulting to the system loader. Without this then it's difficult for native
+                        // code to look up non-standard Java classes.
+                        android_main(app);
+                    })
+                    .unwrap_or_else(log_panic);
+
+                    // Let JVM know that our Activity can be destroyed before detaching from the JVM
+                    //
+                    // "Note that this method can be called from any thread; it will send a message
+                    //  to the main thread of the process where the Java finish call will take place"
+                    ndk_sys::ANativeActivity_finish(activity);
+
+                    ndk_context::release_android_context();
+                }
+
+                rust_glue.notify_main_thread_stopped_running();
+
+                Ok(())
+            },
+        )
+        .expect("Failed to attach thread to JVM");
     })
 }
