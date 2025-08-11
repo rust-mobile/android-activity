@@ -13,15 +13,15 @@
 //!    a wider range of devices.
 //!
 //! Standalone applications based on this crate need to be built as `cdylib` libraries, like:
-//! ```
+//! ```toml
 //! [lib]
 //! crate_type=["cdylib"]
 //! ```
 //!
 //! and implement a `#[no_mangle]` `android_main` entry point like this:
-//! ```rust
+//! ```no_run
 //! #[no_mangle]
-//! fn android_main(app: AndroidApp) {
+//! fn android_main(app: android_activity::AndroidApp) {
 //!
 //! }
 //! ```
@@ -64,6 +64,7 @@
 //! These are undone after `android_main()` returns
 //!
 //! # Android Extensible Enums
+// TODO: Move this to the NDK crate, which now implements this for most of the code?
 //!
 //! There are numerous enums in the `android-activity` API which are effectively
 //! bindings to enums declared in the Android SDK which need to be considered
@@ -95,7 +96,7 @@
 //! For example, here is how you could ensure forwards compatibility with both
 //! compile-time and runtime extensions of a `SomeEnum` enum:
 //!
-//! ```rust
+//! ```ignore
 //! match some_enum {
 //!     SomeEnum::Foo => {},
 //!     SomeEnum::Bar => {},
@@ -556,10 +557,10 @@ impl AndroidApp {
     /// between native Rust code and Java/Kotlin code running within the JVM.
     ///
     /// If you use the [`jni`] crate you can wrap this as a [`JavaVM`] via:
-    /// ```ignore
+    /// ```no_run
     /// # use jni::JavaVM;
-    /// # let app: AndroidApp = todo!();
-    /// let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr()) };
+    /// # let app: android_activity::AndroidApp = todo!();
+    /// let vm = unsafe { JavaVM::from_raw(app.vm_as_ptr().cast()) };
     /// ```
     ///
     /// [`jni`]: https://crates.io/crates/jni
@@ -571,10 +572,10 @@ impl AndroidApp {
     /// Returns a JNI object reference for this application's JVM `Activity` as a pointer
     ///
     /// If you use the [`jni`] crate you can wrap this as an object reference via:
-    /// ```ignore
+    /// ```no_run
     /// # use jni::objects::JObject;
-    /// # let app: AndroidApp = todo!();
-    /// let activity = unsafe { JObject::from_raw(app.activity_as_ptr()) };
+    /// # let app: android_activity::AndroidApp = todo!();
+    /// let activity = unsafe { JObject::from_raw(app.activity_as_ptr().cast()) };
     /// ```
     ///
     /// # JNI Safety
@@ -731,7 +732,9 @@ impl AndroidApp {
     /// # Example
     /// Code to iterate all pending input events would look something like this:
     ///
-    /// ```rust
+    /// ```no_run
+    /// # use android_activity::{AndroidApp, InputStatus, input::InputEvent};
+    /// # let app: AndroidApp = todo!();
     /// match app.input_events_iter() {
     ///     Ok(mut iter) => {
     ///         loop {
@@ -739,12 +742,13 @@ impl AndroidApp {
     ///                 let handled = match event {
     ///                     InputEvent::KeyEvent(key_event) => {
     ///                         // Snip
+    ///                         InputStatus::Handled
     ///                     }
     ///                     InputEvent::MotionEvent(motion_event) => {
-    ///                         // Snip
+    ///                         InputStatus::Unhandled
     ///                     }
     ///                     event => {
-    ///                         // Snip
+    ///                         InputStatus::Unhandled
     ///                     }
     ///                 };
     ///
@@ -766,7 +770,7 @@ impl AndroidApp {
     ///
     /// This must only be called from your `android_main()` thread and it may panic if called
     /// from another thread.
-    pub fn input_events_iter(&self) -> Result<input::InputIterator> {
+    pub fn input_events_iter(&self) -> Result<input::InputIterator<'_>> {
         let receiver = {
             let guard = self.inner.read().unwrap();
             guard.input_events_receiver()?
@@ -786,44 +790,47 @@ impl AndroidApp {
     ///
     /// Code to handle unicode character mapping as well as combining dead keys could look some thing like:
     ///
-    /// ```rust
+    /// ```no_run
+    /// # use android_activity::{AndroidApp, input::{InputEvent, KeyEvent, KeyMapChar}};
+    /// # let app: AndroidApp = todo!();
+    /// # let key_event: KeyEvent = todo!();
     /// let mut combining_accent = None;
     /// // Snip
     ///
-    /// let combined_key_char = if let Ok(map) = app.device_key_character_map(device_id) {
+    /// let combined_key_char = if let Ok(map) = app.device_key_character_map(key_event.device_id()) {
     ///     match map.get(key_event.key_code(), key_event.meta_state()) {
     ///         Ok(KeyMapChar::Unicode(unicode)) => {
     ///             let combined_unicode = if let Some(accent) = combining_accent {
     ///                 match map.get_dead_char(accent, unicode) {
     ///                     Ok(Some(key)) => {
-    ///                         info!("KeyEvent: Combined '{unicode}' with accent '{accent}' to give '{key}'");
+    ///                         println!("KeyEvent: Combined '{unicode}' with accent '{accent}' to give '{key}'");
     ///                         Some(key)
     ///                     }
     ///                     Ok(None) => None,
     ///                     Err(err) => {
-    ///                         log::error!("KeyEvent: Failed to combine 'dead key' accent '{accent}' with '{unicode}': {err:?}");
+    ///                         eprintln!("KeyEvent: Failed to combine 'dead key' accent '{accent}' with '{unicode}': {err:?}");
     ///                         None
     ///                     }
     ///                 }
     ///             } else {
-    ///                 info!("KeyEvent: Pressed '{unicode}'");
+    ///                 println!("KeyEvent: Pressed '{unicode}'");
     ///                 Some(unicode)
     ///             };
     ///             combining_accent = None;
     ///             combined_unicode.map(|unicode| KeyMapChar::Unicode(unicode))
     ///         }
     ///         Ok(KeyMapChar::CombiningAccent(accent)) => {
-    ///             info!("KeyEvent: Pressed 'dead key' combining accent '{accent}'");
+    ///             println!("KeyEvent: Pressed 'dead key' combining accent '{accent}'");
     ///             combining_accent = Some(accent);
     ///             Some(KeyMapChar::CombiningAccent(accent))
     ///         }
     ///         Ok(KeyMapChar::None) => {
-    ///             info!("KeyEvent: Pressed non-unicode key");
+    ///             println!("KeyEvent: Pressed non-unicode key");
     ///             combining_accent = None;
     ///             None
     ///         }
     ///         Err(err) => {
-    ///             log::error!("KeyEvent: Failed to get key map character: {err:?}");
+    ///             eprintln!("KeyEvent: Failed to get key map character: {err:?}");
     ///             combining_accent = None;
     ///             None
     ///         }

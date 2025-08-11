@@ -2,6 +2,7 @@
 
 # First install bindgen-cli via `cargo install bindgen-cli`
 
+SDK_DIR="${ANDROID_GAMES_SDK:-android-games-sdk}"
 if test -z "${ANDROID_NDK_ROOT}"; then
     export ANDROID_NDK_ROOT=${ANDROID_NDK_HOME}
 fi
@@ -14,6 +15,7 @@ while read ARCH && read TARGET ; do
 
     # --module-raw-line 'use '
     bindgen game-activity-ffi.h -o src/game_activity/ffi_$ARCH.rs \
+        --rust-target '1.73.0' \
         --blocklist-item 'JNI\w+' \
         --blocklist-item 'C?_?JNIEnv' \
         --blocklist-item '_?JavaVM' \
@@ -36,7 +38,9 @@ while read ARCH && read TARGET ; do
         --blocklist-function 'GameActivity_onCreate_C' \
         --newtype-enum '\w+_(result|status)_t' \
         -- \
-        -Igame-activity-csrc \
+        "-I$SDK_DIR/game-activity/prefab-src/modules/game-activity/include" \
+        "-I$SDK_DIR/game-text-input/prefab-src/modules/game-text-input/include" \
+        "-I$SDK_DIR/include" \
         --sysroot="$SYSROOT" --target=$TARGET
 
 done << EOF

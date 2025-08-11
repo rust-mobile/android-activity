@@ -246,10 +246,8 @@ impl KeyCharacterMap {
     /// a [`AppError::JavaError`] in case there is a spurious JNI error or an exception
     /// is caught.
     pub fn get(&self, key_code: Keycode, meta_state: MetaState) -> Result<KeyMapChar, AppError> {
-        let key_code: u32 = key_code.into();
-        let key_code = key_code as jni_sys::jint;
-        let meta_state: u32 = meta_state.0;
-        let meta_state = meta_state as jni_sys::jint;
+        let key_code = key_code.into();
+        let meta_state = meta_state.0 as i32;
 
         // Since we expect this API to be called from the `main` thread then we expect to already be
         // attached to the JVM
@@ -286,13 +284,12 @@ impl KeyCharacterMap {
 
     /// Get the character that is produced by combining the dead key producing accent with the key producing character c.
     ///
-    /// For example, ```get_dead_char('`', 'e')``` returns 'è'. `get_dead_char('^', ' ')` returns '^' and `get_dead_char('^', '^')` returns '^'.
+    /// For example, ``get_dead_char('`', 'e')`` returns `'è'`. `get_dead_char('^', ' ')` returns `'^'` and `get_dead_char('^', '^')` returns `'^'`.
     ///
     /// # Errors
     ///
-    /// Since this API needs to use JNI internally to call into the Android JVM it may return
-    /// a [`AppError::JavaError`] in case there is a spurious JNI error or an exception
-    /// is caught.
+    /// Since this API needs to use JNI internally to call into the Android JVM it may return a
+    /// [`AppError::JavaError`] in case there is a spurious JNI error or an exception is caught.
     pub fn get_dead_char(
         &self,
         accent_char: char,
