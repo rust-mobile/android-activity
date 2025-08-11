@@ -353,15 +353,50 @@ impl AndroidAppInner {
 
     // TODO: move into a trait
     pub fn show_soft_input(&self, show_implicit: bool) {
-        let na = self.native_activity();
-        unsafe {
-            let flags = if show_implicit {
-                ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
-            } else {
-                0
-            };
-            ndk_sys::ANativeActivity_showSoftInput(na as *mut _, flags);
-        }
+        let na = unsafe { jni::objects::JObject::from_raw(self.activity_as_ptr() as _) };
+        let jvm = self.jvm.clone();
+        let mut env = jvm.attach_current_thread().unwrap();
+        let class_ctxt = env.find_class("android/content/Context").unwrap();
+        let ims = env
+            .get_static_field(class_ctxt, "INPUT_METHOD_SERVICE", "Ljava/lang/String;")
+            .unwrap();
+
+        let im_manager = env
+            .call_method(
+                &na,
+                "getSystemService",
+                "(Ljava/lang/String;)Ljava/lang/Object;",
+                &[ims.borrow()],
+            )
+            .unwrap()
+            .l()
+            .unwrap();
+
+        let jni_window = env
+            .call_method(na, "getWindow", "()Landroid/view/Window;", &[])
+            .unwrap()
+            .l()
+            .unwrap();
+        let view = env
+            .call_method(jni_window, "getDecorView", "()Landroid/view/View;", &[])
+            .unwrap()
+            .l()
+            .unwrap();
+
+        env.call_method(
+            im_manager,
+            "showSoftInput",
+            "(Landroid/view/View;I)Z",
+            &[
+                jni::objects::JValue::Object(&view),
+                if show_implicit {
+                    (ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT as i32).into()
+                } else {
+                    0i32.into()
+                },
+            ],
+        )
+        .unwrap();
     }
 
     // TODO: move into a trait
