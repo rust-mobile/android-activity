@@ -5,46 +5,21 @@
 //!
 //! These utilities help us check + clear exceptions and map them into Rust Errors.
 
-use std::{ops::Deref, sync::Arc};
+use crate::error::InternalAppError;
 
-use jni::{
-    objects::{JObject, JString},
-    JavaVM,
-};
-
-use crate::{
-    error::{InternalAppError, InternalResult},
-    input::{KeyCharacterMap, KeyCharacterMapBinding},
-};
-
-// TODO: JavaVM should implement Clone
-#[derive(Debug)]
-pub(crate) struct CloneJavaVM {
-    pub jvm: JavaVM,
-}
-impl Clone for CloneJavaVM {
-    fn clone(&self) -> Self {
-        Self {
-            jvm: unsafe { JavaVM::from_raw(self.jvm.get_java_vm_pointer()).unwrap() },
-        }
+fn try_get_stack_trace(
+    env: &mut jni::Env<'_>,
+    throwable: &jni::objects::JThrowable,
+) -> jni::errors::Result<String> {
+    let stack_trace = throwable.get_stack_trace(env)?;
+    let len = stack_trace.len(env)?;
+    let mut trace = String::new();
+    for i in 0..len {
+        let element = stack_trace.get_element(env, i)?;
+        let element_jstr = element.try_to_string(env)?;
+        trace.push_str(&format!("{i}: {element_jstr}\n"));
     }
-}
-impl CloneJavaVM {
-    pub unsafe fn from_raw(jvm: *mut jni_sys::JavaVM) -> InternalResult<Self> {
-        Ok(Self {
-            jvm: JavaVM::from_raw(jvm)?,
-        })
-    }
-}
-unsafe impl Send for CloneJavaVM {}
-unsafe impl Sync for CloneJavaVM {}
-
-impl Deref for CloneJavaVM {
-    type Target = JavaVM;
-
-    fn deref(&self) -> &Self::Target {
-        &self.jvm
-    }
+    Ok(trace)
 }
 
 /// Use with `.map_err()` to map `jni::errors::Error::JavaException` into a
@@ -55,41 +30,28 @@ impl Deref for CloneJavaVM {
 ///
 /// This will also clear the exception
 pub(crate) fn clear_and_map_exception_to_err(
-    env: &mut jni::JNIEnv<'_>,
+    env: &mut jni::Env<'_>,
     err: jni::errors::Error,
 ) -> InternalAppError {
     if matches!(err, jni::errors::Error::JavaException) {
         let result = env.with_local_frame::<_, _, InternalAppError>(5, |env| {
-            let e = env.exception_occurred()?;
-            assert!(!e.is_null()); // should only be called after receiving a JavaException Result
-            env.exception_clear()?;
-
-            let class = env.get_object_class(&e)?;
-            //let get_stack_trace_method = env.get_method_id(&class, "getStackTrace", "()[Ljava/lang/StackTraceElement;")?;
-            let get_message_method =
-                env.get_method_id(&class, "getMessage", "()Ljava/lang/String;")?;
-
-            let msg = unsafe {
-                env.call_method_unchecked(
-                    &e,
-                    get_message_method,
-                    jni::signature::ReturnType::Object,
-                    &[],
-                )?
-                .l()
-                .unwrap()
+            let Some(e) = env.exception_occurred() else {
+                // should only be called after receiving a JavaException Result
+                unreachable!("JNI Error was JavaException but no exception was set");
             };
-            let msg = unsafe { JString::from_raw(JObject::into_raw(msg)) };
-            let msg = env.get_string(&msg)?;
-            let msg: String = msg.into();
+            env.exception_clear();
 
-            // TODO: get Java backtrace:
-            /*
-            if let JValue::Object(elements) = env.call_method_unchecked(&e, get_stack_trace_method, jni::signature::ReturnType::Array, &[])? {
-                let elements = env.auto_local(elements);
-
+            let msg = e.get_message(env)?;
+            let mut msg: String = msg.to_string();
+            match try_get_stack_trace(env, &e) {
+                Ok(stack_trace) => {
+                    msg.push_str("stack trace:\n");
+                    msg.push_str(&stack_trace);
+                }
+                Err(err) => {
+                    msg.push_str(&format!("\nfailed to get stack trace: {err:?}"));
+                }
             }
-            */
 
             Ok(msg)
         });
@@ -103,49 +65,4 @@ pub(crate) fn clear_and_map_exception_to_err(
     } else {
         err.into()
     }
-}
-
-pub(crate) fn device_key_character_map(
-    jvm: CloneJavaVM,
-    key_map_binding: Arc<KeyCharacterMapBinding>,
-    device_id: i32,
-) -> InternalResult<KeyCharacterMap> {
-    // Don't really need to 'attach' since this should be called from the app's main thread that
-    // should already be attached, but the redundancy should be fine
-    //
-    // Attach 'permanently' to avoid any chance of detaching the thread from the VM
-    let mut env = jvm.attach_current_thread_permanently()?;
-
-    // We don't want to accidentally leak any local references while we
-    // aren't going to be returning from here back to the JVM, to unwind, so
-    // we make a local frame
-    let character_map = env.with_local_frame::<_, _, jni::errors::Error>(10, |env| {
-        let input_device_class = env.find_class("android/view/InputDevice")?; // Creates a local ref
-        let device = env
-            .call_static_method(
-                input_device_class,
-                "getDevice",
-                "(I)Landroid/view/InputDevice;",
-                &[device_id.into()],
-            )?
-            .l()?; // Creates a local ref
-
-        let character_map = env
-            .call_method(
-                &device,
-                "getKeyCharacterMap",
-                "()Landroid/view/KeyCharacterMap;",
-                &[],
-            )?
-            .l()?;
-        let character_map = env.new_global_ref(character_map)?;
-
-        Ok(character_map)
-    })?;
-
-    Ok(KeyCharacterMap::new(
-        jvm.clone(),
-        key_map_binding,
-        character_map,
-    ))
 }

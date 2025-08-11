@@ -1,21 +1,9 @@
-use std::sync::Arc;
+use jni::sys::jint;
+use jni::{objects::Global, JavaVM};
 
-use jni::{
-    objects::{GlobalRef, JClass, JMethodID, JObject, JStaticMethodID, JValue},
-    signature::{Primitive, ReturnType},
-    JNIEnv,
-};
-use jni_sys::jint;
-
-use crate::{
-    input::{Keycode, MetaState},
-    jni_utils::CloneJavaVM,
-};
-
-use crate::{
-    error::{AppError, InternalAppError},
-    jni_utils,
-};
+use crate::error::{AppError, InternalAppError, InternalResult};
+use crate::input::{Keycode, MetaState};
+use crate::jni_utils;
 
 /// An enum representing the types of keyboards that may generate key events
 ///
@@ -80,157 +68,86 @@ pub enum KeyMapChar {
     CombiningAccent(char),
 }
 
-// I've also tried to think here about how to we could potentially automatically
-// generate a binding struct like `KeyCharacterMapBinding` with a procmacro and
-// so have intentionally limited the `Binding` being a very thin, un-opinionated
-// wrapper based on basic JNI types.
-
-/// Lower-level JNI binding for `KeyCharacterMap` class only holds 'static state
-/// and can be shared with an `Arc` ref count.
-///
-/// The separation here also neatly helps us separate `InternalAppError` from
-/// `AppError` for mapping JNI errors without exposing any `jni-rs` types in the
-/// public API.
-#[derive(Debug)]
-pub(crate) struct KeyCharacterMapBinding {
-    //vm: JavaVM,
-    klass: GlobalRef,
-    get_method_id: JMethodID,
-    get_dead_char_method_id: JStaticMethodID,
-    get_keyboard_type_method_id: JMethodID,
+jni::bind_java_type! {
+    pub(crate) AKeyCharacterMap => "android.view.KeyCharacterMap",
+    methods {
+        priv fn _get(key_code: jint, meta_state: jint) -> jint,
+        priv static fn _get_dead_char(accent_char: jint, base_char: jint) -> jint,
+        priv fn _get_keyboard_type() -> jint,
+    }
 }
 
-impl KeyCharacterMapBinding {
-    pub(crate) fn new(env: &mut JNIEnv) -> Result<Self, InternalAppError> {
-        let binding = env.with_local_frame::<_, _, InternalAppError>(10, |env| {
-            let klass = env.find_class("android/view/KeyCharacterMap")?; // Creates a local ref
-            Ok(Self {
-                get_method_id: env.get_method_id(&klass, "get", "(II)I")?,
-                get_dead_char_method_id: env.get_static_method_id(
-                    &klass,
-                    "getDeadChar",
-                    "(II)I",
-                )?,
-                get_keyboard_type_method_id: env.get_method_id(&klass, "getKeyboardType", "()I")?,
-                klass: env.new_global_ref(&klass)?,
-            })
-        })?;
-        Ok(binding)
-    }
-
-    pub fn get<'local>(
+impl AKeyCharacterMap<'_> {
+    pub(crate) fn get<'local>(
         &self,
-        env: &'local mut JNIEnv,
-        key_map: impl AsRef<JObject<'local>>,
+        env: &'local mut jni::Env,
         key_code: jint,
         meta_state: jint,
     ) -> Result<jint, InternalAppError> {
-        let key_map = key_map.as_ref();
-
-        // Safety:
-        // - we know our global `key_map` reference is non-null and valid.
-        // - we know `get_method_id` remains valid
-        // - we know that the signature of KeyCharacterMap::get is `(int, int) -> int`
-        // - we know this won't leak any local references as a side effect
-        //
-        // We know it's ok to unwrap the `.i()` value since we explicitly
-        // specify the return type as `Int`
-        let unicode = unsafe {
-            env.call_method_unchecked(
-                key_map,
-                self.get_method_id,
-                ReturnType::Primitive(Primitive::Int),
-                &[
-                    JValue::Int(key_code).as_jni(),
-                    JValue::Int(meta_state).as_jni(),
-                ],
-            )
-        }
-        .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))?;
-        Ok(unicode.i().unwrap())
+        self._get(env, key_code, meta_state)
+            .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))
     }
 
-    pub fn get_dead_char(
-        &self,
-        env: &mut JNIEnv,
+    pub(crate) fn get_dead_char(
+        env: &mut jni::Env,
         accent_char: jint,
         base_char: jint,
     ) -> Result<jint, InternalAppError> {
-        // Safety:
-        // - we know `get_dead_char_method_id` remains valid
-        // - we know that KeyCharacterMap::getDeadKey is a static method
-        // - we know that the signature of KeyCharacterMap::getDeadKey is `(int, int) -> int`
-        // - we know this won't leak any local references as a side effect
-        //
-        // We know it's ok to unwrap the `.i()` value since we explicitly
-        // specify the return type as `Int`
-
-        // Urgh, it's pretty terrible that there's no ergonomic/safe way to get a JClass reference from a GlobalRef
-        // Safety: we don't do anything that would try to delete the JClass as if it were a real local reference
-        let klass = unsafe { JClass::from_raw(self.klass.as_obj().as_raw()) };
-        let unicode = unsafe {
-            env.call_static_method_unchecked(
-                &klass,
-                self.get_dead_char_method_id,
-                ReturnType::Primitive(Primitive::Int),
-                &[
-                    JValue::Int(accent_char).as_jni(),
-                    JValue::Int(base_char).as_jni(),
-                ],
-            )
-        }
-        .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))?;
-        Ok(unicode.i().unwrap())
+        Self::_get_dead_char(env, accent_char, base_char)
+            .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))
     }
 
-    pub fn get_keyboard_type<'local>(
+    pub(crate) fn get_keyboard_type<'local>(
         &self,
-        env: &'local mut JNIEnv,
-        key_map: impl AsRef<JObject<'local>>,
+        env: &'local mut jni::Env,
     ) -> Result<jint, InternalAppError> {
-        let key_map = key_map.as_ref();
-
-        // Safety:
-        // - we know our global `key_map` reference is non-null and valid.
-        // - we know `get_keyboard_type_method_id` remains valid
-        // - we know that the signature of KeyCharacterMap::getKeyboardType is `() -> int`
-        // - we know this won't leak any local references as a side effect
-        //
-        // We know it's ok to unwrap the `.i()` value since we explicitly
-        // specify the return type as `Int`
-        Ok(unsafe {
-            env.call_method_unchecked(
-                key_map,
-                self.get_keyboard_type_method_id,
-                ReturnType::Primitive(Primitive::Int),
-                &[],
-            )
-        }
-        .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))?
-        .i()
-        .unwrap())
+        self._get_keyboard_type(env)
+            .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))
     }
+}
+
+jni::bind_java_type! {
+    rust_type = AInputDevice,
+    java_type = "android.view.InputDevice",
+    type_map {
+        AKeyCharacterMap => "android.view.KeyCharacterMap",
+    },
+    methods {
+        static fn get_device(id: jint) -> AInputDevice,
+        fn get_key_character_map() -> AKeyCharacterMap,
+    }
+}
+
+// Explicitly initialize the JNI bindings so we can get and early, upfront,
+// error if something is wrong.
+pub fn jni_init(env: &jni::Env) -> jni::errors::Result<()> {
+    let _ = AKeyCharacterMapAPI::get(env, &Default::default())?;
+    let _ = AInputDeviceAPI::get(env, &Default::default())?;
+    Ok(())
 }
 
 /// Describes the keys provided by a keyboard device and their associated labels.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct KeyCharacterMap {
-    jvm: CloneJavaVM,
-    binding: Arc<KeyCharacterMapBinding>,
-    key_map: GlobalRef,
+    jvm: JavaVM,
+    key_map: Global<AKeyCharacterMap<'static>>,
+}
+impl Clone for KeyCharacterMap {
+    fn clone(&self) -> Self {
+        let jvm = self.jvm.clone();
+        jvm.attach_current_thread(|env| -> jni::errors::Result<_> {
+            Ok(Self {
+                jvm: jvm.clone(),
+                key_map: env.new_global_ref(&self.key_map)?,
+            })
+        })
+        .expect("Failed to attach thread to JVM and clone key map")
+    }
 }
 
 impl KeyCharacterMap {
-    pub(crate) fn new(
-        jvm: CloneJavaVM,
-        binding: Arc<KeyCharacterMapBinding>,
-        key_map: GlobalRef,
-    ) -> Self {
-        Self {
-            jvm,
-            binding,
-            key_map,
-        }
+    pub(crate) fn new(jvm: JavaVM, key_map: Global<AKeyCharacterMap<'static>>) -> Self {
+        Self { jvm, key_map }
     }
 
     /// Gets the Unicode character generated by the specified [`Keycode`] and [`MetaState`] combination.
@@ -247,41 +164,37 @@ impl KeyCharacterMap {
     /// is caught.
     pub fn get(&self, key_code: Keycode, meta_state: MetaState) -> Result<KeyMapChar, AppError> {
         let key_code: u32 = key_code.into();
-        let key_code = key_code as jni_sys::jint;
+        let key_code = key_code as jni::sys::jint;
         let meta_state: u32 = meta_state.0;
-        let meta_state = meta_state as jni_sys::jint;
+        let meta_state = meta_state as jni::sys::jint;
 
-        // Since we expect this API to be called from the `main` thread then we expect to already be
-        // attached to the JVM
-        //
-        // Safety: there's no other JNIEnv in scope so this env can't be used to subvert the mutable
-        // borrow rules that ensure we can only add local references to the top JNI frame.
-        let mut env = self.jvm.get_env().map_err(|err| {
+        let vm = self.jvm.clone();
+        vm.attach_current_thread(|env| -> InternalResult<_> {
+            let unicode = self.key_map.get(env, key_code, meta_state)?;
+            let unicode = unicode as u32;
+
+            const COMBINING_ACCENT: u32 = 0x80000000;
+            const COMBINING_ACCENT_MASK: u32 = !COMBINING_ACCENT;
+
+            if unicode == 0 {
+                Ok(KeyMapChar::None)
+            } else if unicode & COMBINING_ACCENT == COMBINING_ACCENT {
+                let accent = unicode & COMBINING_ACCENT_MASK;
+                // Safety: assumes Android key maps don't contain invalid unicode characters
+                Ok(KeyMapChar::CombiningAccent(unsafe {
+                    char::from_u32_unchecked(accent)
+                }))
+            } else {
+                // Safety: assumes Android key maps don't contain invalid unicode characters
+                Ok(KeyMapChar::Unicode(unsafe {
+                    char::from_u32_unchecked(unicode)
+                }))
+            }
+        })
+        .map_err(|err| {
             let err: InternalAppError = err.into();
-            err
-        })?;
-        let unicode = self
-            .binding
-            .get(&mut env, self.key_map.as_obj(), key_code, meta_state)?;
-        let unicode = unicode as u32;
-
-        const COMBINING_ACCENT: u32 = 0x80000000;
-        const COMBINING_ACCENT_MASK: u32 = !COMBINING_ACCENT;
-
-        if unicode == 0 {
-            Ok(KeyMapChar::None)
-        } else if unicode & COMBINING_ACCENT == COMBINING_ACCENT {
-            let accent = unicode & COMBINING_ACCENT_MASK;
-            // Safety: assumes Android key maps don't contain invalid unicode characters
-            Ok(KeyMapChar::CombiningAccent(unsafe {
-                char::from_u32_unchecked(accent)
-            }))
-        } else {
-            // Safety: assumes Android key maps don't contain invalid unicode characters
-            Ok(KeyMapChar::Unicode(unsafe {
-                char::from_u32_unchecked(unicode)
-            }))
-        }
+            err.into()
+        })
     }
 
     /// Get the character that is produced by combining the dead key producing accent with the key producing character c.
@@ -297,28 +210,24 @@ impl KeyCharacterMap {
         accent_char: char,
         base_char: char,
     ) -> Result<Option<char>, AppError> {
-        let accent_char = accent_char as jni_sys::jint;
-        let base_char = base_char as jni_sys::jint;
+        let accent_char = accent_char as jni::sys::jint;
+        let base_char = base_char as jni::sys::jint;
 
-        // Since we expect this API to be called from the `main` thread then we expect to already be
-        // attached to the JVM
-        //
-        // Safety: there's no other JNIEnv in scope so this env can't be used to subvert the mutable
-        // borrow rules that ensure we can only add local references to the top JNI frame.
-        let mut env = self.jvm.get_env().map_err(|err| {
+        let vm = self.jvm.clone();
+        vm.attach_current_thread(|env| -> InternalResult<_> {
+            let unicode = AKeyCharacterMap::get_dead_char(env, accent_char, base_char)?;
+            let unicode = unicode as u32;
+
+            // Safety: assumes Android key maps don't contain invalid unicode characters
+            Ok(if unicode == 0 {
+                None
+            } else {
+                Some(unsafe { char::from_u32_unchecked(unicode) })
+            })
+        })
+        .map_err(|err| {
             let err: InternalAppError = err.into();
-            err
-        })?;
-        let unicode = self
-            .binding
-            .get_dead_char(&mut env, accent_char, base_char)?;
-        let unicode = unicode as u32;
-
-        // Safety: assumes Android key maps don't contain invalid unicode characters
-        Ok(if unicode == 0 {
-            None
-        } else {
-            Some(unsafe { char::from_u32_unchecked(unicode) })
+            err.into()
         })
     }
 
@@ -332,19 +241,47 @@ impl KeyCharacterMap {
     /// a [`AppError::JavaError`] in case there is a spurious JNI error or an exception
     /// is caught.
     pub fn get_keyboard_type(&self) -> Result<KeyboardType, AppError> {
-        // Since we expect this API to be called from the `main` thread then we expect to already be
-        // attached to the JVM
-        //
-        // Safety: there's no other JNIEnv in scope so this env can't be used to subvert the mutable
-        // borrow rules that ensure we can only add local references to the top JNI frame.
-        let mut env = self.jvm.get_env().map_err(|err| {
+        let vm = self.jvm.clone();
+        vm.attach_current_thread(|env| -> InternalResult<_> {
+            let keyboard_type = self.key_map.get_keyboard_type(env)?;
+            let keyboard_type = keyboard_type as u32;
+            Ok(keyboard_type.into())
+        })
+        .map_err(|err| {
             let err: InternalAppError = err.into();
-            err
-        })?;
-        let keyboard_type = self
-            .binding
-            .get_keyboard_type(&mut env, self.key_map.as_obj())?;
-        let keyboard_type = keyboard_type as u32;
-        Ok(keyboard_type.into())
+            err.into()
+        })
     }
+}
+
+fn device_key_character_map_with_env(
+    env: &mut jni::Env<'_>,
+    device_id: i32,
+) -> jni::errors::Result<KeyCharacterMap> {
+    let device = AInputDevice::get_device(env, device_id)?;
+    if device.is_null() {
+        // This isn't really an error from a JNI perspective but we would only expect
+        // this to return null for a device ID of zero or an invalid device ID.
+        log::error!("No input device with id {}", device_id);
+        return Err(jni::errors::Error::WrongObjectType);
+    }
+    let character_map = device.get_key_character_map(env)?;
+    let character_map = env.new_global_ref(character_map)?;
+    let jvm = JavaVM::singleton().expect("Failed to get singleton JavaVM");
+    Ok(KeyCharacterMap::new(jvm, character_map))
+}
+
+pub(crate) fn device_key_character_map(
+    jvm: JavaVM,
+    device_id: i32,
+) -> InternalResult<KeyCharacterMap> {
+    jvm.attach_current_thread(|env| {
+        if device_id == 0 {
+            return Err(InternalAppError::JniBadArgument(
+                "Can't get key character map for non-physical device_id 0".into(),
+            ));
+        }
+        device_key_character_map_with_env(env, device_id)
+            .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))
+    })
 }
