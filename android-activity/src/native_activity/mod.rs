@@ -1,5 +1,3 @@
-#![cfg(any(feature = "native-activity", doc))]
-
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;

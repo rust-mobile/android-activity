@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 fn build_glue_for_game_activity() {
     let android_games_sdk =
         std::env::var("ANDROID_GAMES_SDK").unwrap_or_else(|_err| "android-games-sdk".to_string());
@@ -94,6 +92,16 @@ fn build_glue_for_game_activity() {
 }
 
 fn main() {
-    #[cfg(feature = "game-activity")]
-    build_glue_for_game_activity();
+    // Avoid re-running build script if nothing changed.
+    println!("cargo:rerun-if-changed=build.rs");
+
+    if cfg!(feature = "game-activity") {
+        build_glue_for_game_activity();
+    }
+
+    // Whether this is used directly in or as a dependency on docs.rs.
+    println!("cargo:rustc-check-cfg=cfg(used_on_docsrs)");
+    if std::env::var("DOCS_RS").is_ok() {
+        println!("cargo:rustc-cfg=used_on_docsrs");
+    }
 }
