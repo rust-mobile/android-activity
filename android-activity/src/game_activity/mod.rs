@@ -13,7 +13,7 @@ use std::time::Duration;
 use libc::c_void;
 use log::{error, trace};
 
-use jni_sys::*;
+use jni::sys::*;
 
 use ndk_sys::ALooper_wake;
 use ndk_sys::{ALooper, ALooper_pollAll};
@@ -24,7 +24,7 @@ use ndk::native_window::NativeWindow;
 
 use crate::error::InternalResult;
 use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding};
-use crate::jni_utils::{self, CloneJavaVM};
+use crate::jni_utils;
 use crate::util::{abort_on_panic, forward_stdio_to_logcat, log_panic, try_get_path_from_ptr};
 use crate::{
     AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
@@ -121,32 +121,35 @@ impl AndroidAppWaker {
 }
 
 impl AndroidApp {
-    pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>, jvm: CloneJavaVM) -> Self {
-        let mut env = jvm.get_env().unwrap(); // We attach to the thread before creating the AndroidApp
+    pub(crate) unsafe fn from_ptr(ptr: NonNull<ffi::android_app>, jvm: jni::JavaVM) -> Self {
+        // We attach to the thread before creating the AndroidApp
+        jni::JavaVM::with_env::<_, _, jni::errors::Error>(|env| {
+            let key_map_binding = match KeyCharacterMapBinding::new(env) {
+                Ok(b) => b,
+                Err(err) => {
+                    panic!("Failed to create KeyCharacterMap JNI bindings: {err:?}");
+                }
+            };
 
-        let key_map_binding = match KeyCharacterMapBinding::new(&mut env) {
-            Ok(b) => b,
-            Err(err) => {
-                panic!("Failed to create KeyCharacterMap JNI bindings: {err:?}");
-            }
-        };
+            // Note: we don't use from_ptr since we don't own the android_app.config
+            // and need to keep in mind that the Drop handler is going to call
+            // AConfiguration_delete()
+            let config =
+                Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
 
-        // Note: we don't use from_ptr since we don't own the android_app.config
-        // and need to keep in mind that the Drop handler is going to call
-        // AConfiguration_delete()
-        let config = Configuration::clone_from_ptr(NonNull::new_unchecked((*ptr.as_ptr()).config));
-
-        Self {
-            inner: Arc::new(RwLock::new(AndroidAppInner {
-                jvm,
-                native_app: NativeAppGlue { ptr },
-                config: ConfigurationRef::new(config),
-                native_window: Default::default(),
-                key_map_binding: Arc::new(key_map_binding),
-                key_maps: Mutex::new(HashMap::new()),
-                input_receiver: Mutex::new(None),
-            })),
-        }
+            Ok(Self {
+                inner: Arc::new(RwLock::new(AndroidAppInner {
+                    jvm,
+                    native_app: NativeAppGlue { ptr },
+                    config: ConfigurationRef::new(config),
+                    native_window: Default::default(),
+                    key_map_binding: Arc::new(key_map_binding),
+                    key_maps: Mutex::new(HashMap::new()),
+                    input_receiver: Mutex::new(None),
+                })),
+            })
+        })
+        .expect("Failed to create AndroidApp instance")
     }
 }
 
@@ -253,7 +256,7 @@ impl NativeAppGlue {
 
 #[derive(Debug)]
 pub struct AndroidAppInner {
-    pub(crate) jvm: CloneJavaVM,
+    pub(crate) jvm: jni::JavaVM,
     native_app: NativeAppGlue,
     config: ConfigurationRef,
     native_window: RwLock<Option<NativeWindow>>,
@@ -875,7 +878,7 @@ pub unsafe extern "C" fn Java_com_google_androidgamesdk_GameActivity_initializeN
     jasset_mgr: jobject,
     saved_state: jbyteArray,
     java_config: jobject,
-) -> jni_sys::jlong {
+) -> jlong {
     Java_com_google_androidgamesdk_GameActivity_initializeNativeCode_C(
         env,
         java_game_activity,
@@ -914,11 +917,17 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
             let activity: jobject = (*(*native_app).activity).javaGameActivity;
             ndk_context::initialize_android_context(jvm.cast(), activity.cast());
 
-            let jvm = CloneJavaVM::from_raw(jvm).unwrap();
-            // Since this is a newly spawned thread then the JVM hasn't been attached
-            // to the thread yet. Attach before calling the applications main function
-            // so they can safely make JNI calls
-            jvm.attach_current_thread_permanently().unwrap();
+            let jvm = jni::JavaVM::from_raw(jvm);
+            // Since this is a newly spawned thread then the JVM hasn't been attached to the
+            // thread yet.
+            //
+            // For compatibility we attach before calling the applications main function to
+            // allow it to assume the thread is attached before making JNI calls.
+            jvm.attach_current_thread::<_, _, jni::errors::Error>(
+                jni::JNIVersion::V1_4,
+                |_| Ok(()),
+            )
+            .expect("Failed to attach thread to JVM");
             jvm
         };
 
@@ -953,7 +962,11 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
 
             // This should detach automatically but lets detach explicitly to avoid depending
             // on the TLS trickery in `jni-rs`
-            jvm.detach_current_thread();
+            if let Err(err) = jvm.detach_current_thread() {
+                log::error!("Failed to detach thread from JVM: {}", err);
+            } else {
+                log::debug!("Detached thread from JVM");
+            }
 
             ndk_context::release_android_context();
         }

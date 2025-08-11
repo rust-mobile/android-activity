@@ -9,10 +9,10 @@ use std::{
     sync::{Arc, Condvar, Mutex, Weak},
 };
 
+use jni::JNIVersion;
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
 use crate::{
-    jni_utils::CloneJavaVM,
     util::{abort_on_panic, forward_stdio_to_logcat, log_panic},
     ConfigurationRef,
 };
@@ -855,15 +855,18 @@ extern "C" fn ANativeActivity_onCreate(
 
             let jvm = abort_on_panic(|| unsafe {
                 let na = activity;
-                let jvm: *mut jni_sys::JavaVM = (*na).vm;
+                let jvm: *mut jni::sys::JavaVM = (*na).vm.cast();
                 let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
                 ndk_context::initialize_android_context(jvm.cast(), activity.cast());
 
-                let jvm = CloneJavaVM::from_raw(jvm).unwrap();
-                // Since this is a newly spawned thread then the JVM hasn't been attached
-                // to the thread yet. Attach before calling the applications main function
-                // so they can safely make JNI calls
-                jvm.attach_current_thread_permanently().unwrap();
+                let jvm = jni::JavaVM::from_raw(jvm);
+                // Since this is a newly spawned thread then the JVM hasn't been attached to the
+                // thread yet.
+                //
+                // For compatibility we attach before calling the applications main function to
+                // allow it to assume the thread is attached before making JNI calls.
+                jvm.attach_current_thread::<_, _, jni::errors::Error>(JNIVersion::V1_4, |_| Ok(()))
+                    .expect("Failed to attach thread to JVM");
                 jvm
             });
 
@@ -900,7 +903,11 @@ extern "C" fn ANativeActivity_onCreate(
 
                 // This should detach automatically but lets detach explicitly to avoid depending
                 // on the TLS trickery in `jni-rs`
-                jvm.detach_current_thread();
+                if let Err(err) = jvm.detach_current_thread() {
+                    log::error!("Failed to detach thread from JVM: {}", err);
+                } else {
+                    log::debug!("Detached thread from JVM");
+                }
 
                 ndk_context::release_android_context();
             }

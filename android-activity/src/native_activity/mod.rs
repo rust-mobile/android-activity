@@ -8,6 +8,7 @@ use std::ptr::NonNull;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::time::Duration;
 
+use jni::JavaVM;
 use libc::c_void;
 use log::{error, trace};
 use ndk::input_queue::InputQueue;
@@ -16,7 +17,7 @@ use ndk::{asset::AssetManager, native_window::NativeWindow};
 use crate::error::InternalResult;
 use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding};
 use crate::input::{TextInputState, TextSpan};
-use crate::jni_utils::{self, CloneJavaVM};
+use crate::jni_utils;
 use crate::{
     util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
@@ -86,50 +87,51 @@ impl AndroidAppWaker {
 }
 
 impl AndroidApp {
-    pub(crate) fn new(native_activity: NativeActivityGlue, jvm: CloneJavaVM) -> Self {
-        let mut env = jvm.get_env().unwrap(); // We attach to the thread before creating the AndroidApp
+    pub(crate) fn new(native_activity: NativeActivityGlue, jvm: JavaVM) -> Self {
+        JavaVM::with_env::<_, _, jni::errors::Error>(|env| {
+            let key_map_binding = match KeyCharacterMapBinding::new(env) {
+                Ok(b) => b,
+                Err(err) => {
+                    panic!("Failed to create KeyCharacterMap JNI bindings: {err:?}");
+                }
+            };
 
-        let key_map_binding = match KeyCharacterMapBinding::new(&mut env) {
-            Ok(b) => b,
-            Err(err) => {
-                panic!("Failed to create KeyCharacterMap JNI bindings: {err:?}");
+            let app = Self {
+                inner: Arc::new(RwLock::new(AndroidAppInner {
+                    jvm,
+                    native_activity,
+                    looper: Looper {
+                        ptr: ptr::null_mut(),
+                    },
+                    key_map_binding: Arc::new(key_map_binding),
+                    key_maps: Mutex::new(HashMap::new()),
+                    input_receiver: Mutex::new(None),
+                })),
+            };
+
+            {
+                let mut guard = app.inner.write().unwrap();
+
+                let main_fd = guard.native_activity.cmd_read_fd();
+                unsafe {
+                    guard.looper.ptr = ndk_sys::ALooper_prepare(
+                        ndk_sys::ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as libc::c_int,
+                    );
+                    ndk_sys::ALooper_addFd(
+                        guard.looper.ptr,
+                        main_fd,
+                        LOOPER_ID_MAIN,
+                        ndk_sys::ALOOPER_EVENT_INPUT as libc::c_int,
+                        None,
+                        //&mut guard.cmd_poll_source as *mut _ as *mut _);
+                        ptr::null_mut(),
+                    );
+                }
             }
-        };
 
-        let app = Self {
-            inner: Arc::new(RwLock::new(AndroidAppInner {
-                jvm,
-                native_activity,
-                looper: Looper {
-                    ptr: ptr::null_mut(),
-                },
-                key_map_binding: Arc::new(key_map_binding),
-                key_maps: Mutex::new(HashMap::new()),
-                input_receiver: Mutex::new(None),
-            })),
-        };
-
-        {
-            let mut guard = app.inner.write().unwrap();
-
-            let main_fd = guard.native_activity.cmd_read_fd();
-            unsafe {
-                guard.looper.ptr = ndk_sys::ALooper_prepare(
-                    ndk_sys::ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as libc::c_int,
-                );
-                ndk_sys::ALooper_addFd(
-                    guard.looper.ptr,
-                    main_fd,
-                    LOOPER_ID_MAIN,
-                    ndk_sys::ALOOPER_EVENT_INPUT as libc::c_int,
-                    None,
-                    //&mut guard.cmd_poll_source as *mut _ as *mut _);
-                    ptr::null_mut(),
-                );
-            }
-        }
-
-        app
+            Ok(app)
+        })
+        .expect("Failed to create AndroidApp instance")
     }
 }
 
@@ -142,7 +144,7 @@ unsafe impl Sync for Looper {}
 
 #[derive(Debug)]
 pub(crate) struct AndroidAppInner {
-    pub(crate) jvm: CloneJavaVM,
+    pub(crate) jvm: JavaVM,
 
     pub(crate) native_activity: NativeActivityGlue,
     looper: Looper,

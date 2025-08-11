@@ -5,47 +5,17 @@
 //!
 //! These utilities help us check + clear exceptions and map them into Rust Errors.
 
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 use jni::{
     objects::{JObject, JString},
-    JavaVM,
+    JNIVersion, JavaVM,
 };
 
 use crate::{
     error::{InternalAppError, InternalResult},
     input::{KeyCharacterMap, KeyCharacterMapBinding},
 };
-
-// TODO: JavaVM should implement Clone
-#[derive(Debug)]
-pub(crate) struct CloneJavaVM {
-    pub jvm: JavaVM,
-}
-impl Clone for CloneJavaVM {
-    fn clone(&self) -> Self {
-        Self {
-            jvm: unsafe { JavaVM::from_raw(self.jvm.get_java_vm_pointer()).unwrap() },
-        }
-    }
-}
-impl CloneJavaVM {
-    pub unsafe fn from_raw(jvm: *mut jni_sys::JavaVM) -> InternalResult<Self> {
-        Ok(Self {
-            jvm: JavaVM::from_raw(jvm)?,
-        })
-    }
-}
-unsafe impl Send for CloneJavaVM {}
-unsafe impl Sync for CloneJavaVM {}
-
-impl Deref for CloneJavaVM {
-    type Target = JavaVM;
-
-    fn deref(&self) -> &Self::Target {
-        &self.jvm
-    }
-}
 
 /// Use with `.map_err()` to map `jni::errors::Error::JavaException` into a
 /// richer error based on the actual contents of the `JThrowable`
@@ -60,9 +30,11 @@ pub(crate) fn clear_and_map_exception_to_err(
 ) -> InternalAppError {
     if matches!(err, jni::errors::Error::JavaException) {
         let result = env.with_local_frame::<_, _, InternalAppError>(5, |env| {
-            let e = env.exception_occurred()?;
-            assert!(!e.is_null()); // should only be called after receiving a JavaException Result
-            env.exception_clear()?;
+            let Some(e) = env.exception_occurred() else {
+                // should only be called after receiving a JavaException Result
+                unreachable!("JNI Error was JavaException but no exception was set");
+            };
+            env.exception_clear();
 
             let class = env.get_object_class(&e)?;
             //let get_stack_trace_method = env.get_method_id(&class, "getStackTrace", "()[Ljava/lang/StackTraceElement;")?;
@@ -105,47 +77,45 @@ pub(crate) fn clear_and_map_exception_to_err(
     }
 }
 
-pub(crate) fn device_key_character_map(
-    jvm: CloneJavaVM,
+pub(crate) fn device_key_character_map_with_env(
+    env: &mut jni::JNIEnv<'_>,
     key_map_binding: Arc<KeyCharacterMapBinding>,
     device_id: i32,
-) -> InternalResult<KeyCharacterMap> {
-    // Don't really need to 'attach' since this should be called from the app's main thread that
-    // should already be attached, but the redundancy should be fine
-    //
-    // Attach 'permanently' to avoid any chance of detaching the thread from the VM
-    let mut env = jvm.attach_current_thread_permanently()?;
+) -> jni::errors::Result<KeyCharacterMap> {
+    let input_device_class = env.find_class("android/view/InputDevice")?; // Creates a local ref
+    let device = env
+        .call_static_method(
+            input_device_class,
+            "getDevice",
+            "(I)Landroid/view/InputDevice;",
+            &[device_id.into()],
+        )?
+        .l()?; // Creates a local ref
 
-    // We don't want to accidentally leak any local references while we
-    // aren't going to be returning from here back to the JVM, to unwind, so
-    // we make a local frame
-    let character_map = env.with_local_frame::<_, _, jni::errors::Error>(10, |env| {
-        let input_device_class = env.find_class("android/view/InputDevice")?; // Creates a local ref
-        let device = env
-            .call_static_method(
-                input_device_class,
-                "getDevice",
-                "(I)Landroid/view/InputDevice;",
-                &[device_id.into()],
-            )?
-            .l()?; // Creates a local ref
-
-        let character_map = env
-            .call_method(
-                &device,
-                "getKeyCharacterMap",
-                "()Landroid/view/KeyCharacterMap;",
-                &[],
-            )?
-            .l()?;
-        let character_map = env.new_global_ref(character_map)?;
-
-        Ok(character_map)
-    })?;
+    let character_map = env
+        .call_method(
+            &device,
+            "getKeyCharacterMap",
+            "()Landroid/view/KeyCharacterMap;",
+            &[],
+        )?
+        .l()?;
+    let character_map = env.new_global_ref(character_map)?;
 
     Ok(KeyCharacterMap::new(
-        jvm.clone(),
+        env.get_java_vm().clone(),
         key_map_binding,
         character_map,
     ))
+}
+
+pub(crate) fn device_key_character_map(
+    jvm: JavaVM,
+    key_map_binding: Arc<KeyCharacterMapBinding>,
+    device_id: i32,
+) -> InternalResult<KeyCharacterMap> {
+    jvm.attach_current_thread(JNIVersion::V1_4, |env| {
+        device_key_character_map_with_env(env, key_map_binding, device_id)
+            .map_err(|err| clear_and_map_exception_to_err(env, err))
+    })
 }
