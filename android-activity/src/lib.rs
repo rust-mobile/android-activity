@@ -267,6 +267,9 @@ pub enum MainEvent<'a> {
     #[non_exhaustive]
     ContentRectChanged {},
 
+    /// Command from main thread: the soft keyboard visibility has changed.
+    SoftKbVisibilityChanged,
+
     /// Command from main thread: the app's activity window has gained
     /// input focus.
     GainedFocus,
