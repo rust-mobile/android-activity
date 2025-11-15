@@ -3,3 +3,7 @@ resolver = "2"
 members = ["android-activity"]
 
 exclude = ["examples"]
+
+[patch.crates-io]
+# https://github.com/rust-mobile/ndk/pull/495
+ndk = { git = "https://github.com/rust-mobile/ndk", rev = "9c63222" }

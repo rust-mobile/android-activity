@@ -855,15 +855,14 @@ impl AndroidApp {
 
     /// The user-visible SDK version of the framework
     ///
-    /// Also referred to as [`Build.VERSION_CODES`](https://developer.android.com/reference/android/os/Build.VERSION_CODES)
+    /// The same value as [`Build.VERSION.SDK_INT`], containing a value from [`Build.VERSION_CODES`].
+    ///
+    /// [`Build.VERSION.SDK_INT`]: https://developer.android.com/reference/android/os/Build.VERSION#SDK_INT
+    /// [`Build.VERSION_CODES`]: https://developer.android.com/reference/android/os/Build.VERSION_CODES
     pub fn sdk_version() -> i32 {
-        let mut prop = android_properties::getprop("ro.build.version.sdk");
-        if let Some(val) = prop.value() {
-            val.parse::<i32>()
-                .expect("Failed to parse ro.build.version.sdk property")
-        } else {
-            panic!("Couldn't read ro.build.version.sdk system property");
-        }
+        // TODO: Replace with ndk::api_level::device_api_level() from https://github.com/rust-mobile/ndk/pull/479?
+        ndk::system_properties::get::<i32>(c"ro.build.version.sdk")
+            .expect("Failed to get or parse `ro.build.version.sdk` property")
     }
 
     /// Path to this application's internal data directory
