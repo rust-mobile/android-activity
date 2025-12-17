@@ -295,6 +295,11 @@ impl AndroidAppInner {
 
         unsafe {
             let native_app = &self.native_app;
+            assert_eq!(
+                ndk_sys::ALooper_forThread(),
+                (*native_app.as_ptr()).looper,
+                "Application tried to poll events from non-main thread"
+            );
 
             let mut fd: i32 = 0;
             let mut events: i32 = 0;
@@ -590,7 +595,7 @@ impl AndroidAppInner {
         let mut guard = self.input_receiver.lock().unwrap();
 
         // Make sure we don't hand out more than one receiver at a time because
-        // turning the reciever into an interator will perform a swap_buffers
+        // turning the receiver into an iterator will perform a swap_buffers
         // for the buffered input events which shouldn't happen while we're in
         // the middle of iterating events
         if let Some(receiver) = &*guard {

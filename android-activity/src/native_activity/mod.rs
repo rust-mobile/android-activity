@@ -201,8 +201,9 @@ impl AndroidAppInner {
             };
 
             trace!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
-            assert!(
-                !ndk_sys::ALooper_forThread().is_null(),
+            assert_eq!(
+                ndk_sys::ALooper_forThread(),
+                self.looper.ptr,
                 "Application tried to poll events from non-main thread"
             );
             let id = ndk_sys::ALooper_pollAll(
