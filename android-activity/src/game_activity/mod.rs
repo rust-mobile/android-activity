@@ -368,46 +368,61 @@ impl AndroidAppInner {
                                 let cmd = match cmd_i as ffi::NativeAppGlueAppCmd {
                                     //NativeAppGlueAppCmd_UNUSED_APP_CMD_INPUT_CHANGED => AndroidAppMainEvent::InputChanged,
                                     ffi::NativeAppGlueAppCmd_APP_CMD_INIT_WINDOW => {
-                                        MainEvent::InitWindow {}
+                                        Some(MainEvent::InitWindow {})
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_TERM_WINDOW => {
-                                        MainEvent::TerminateWindow {}
+                                        Some(MainEvent::TerminateWindow {})
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_RESIZED => {
-                                        MainEvent::WindowResized {}
+                                        Some(MainEvent::WindowResized {})
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_REDRAW_NEEDED => {
-                                        MainEvent::RedrawNeeded {}
+                                        Some(MainEvent::RedrawNeeded {})
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_CONTENT_RECT_CHANGED => {
-                                        MainEvent::ContentRectChanged {}
+                                        Some(MainEvent::ContentRectChanged {})
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_GAINED_FOCUS => {
-                                        MainEvent::GainedFocus
+                                        Some(MainEvent::GainedFocus)
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_LOST_FOCUS => {
-                                        MainEvent::LostFocus
+                                        Some(MainEvent::LostFocus)
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_CONFIG_CHANGED => {
-                                        MainEvent::ConfigChanged {}
+                                        Some(MainEvent::ConfigChanged {})
                                     }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_LOW_MEMORY => {
-                                        MainEvent::LowMemory
+                                        Some(MainEvent::LowMemory)
                                     }
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_START => MainEvent::Start,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_RESUME => MainEvent::Resume {
-                                        loader: StateLoader { app: self },
-                                    },
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_START => {
+                                        Some(MainEvent::Start)
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_RESUME => {
+                                        Some(MainEvent::Resume {
+                                            loader: StateLoader { app: self },
+                                        })
+                                    }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_SAVE_STATE => {
-                                        MainEvent::SaveState {
+                                        Some(MainEvent::SaveState {
                                             saver: StateSaver { app: self },
-                                        }
+                                        })
                                     }
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_PAUSE => MainEvent::Pause,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_STOP => MainEvent::Stop,
-                                    ffi::NativeAppGlueAppCmd_APP_CMD_DESTROY => MainEvent::Destroy,
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_PAUSE => {
+                                        Some(MainEvent::Pause)
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_STOP => Some(MainEvent::Stop),
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_DESTROY => {
+                                        Some(MainEvent::Destroy)
+                                    }
                                     ffi::NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED => {
-                                        MainEvent::InsetsChanged {}
+                                        Some(MainEvent::InsetsChanged {})
+                                    }
+                                    ffi::NativeAppGlueAppCmd_APP_CMD_SOFTWARE_KB_VIS_CHANGED => {
+                                        // NOOP: we ignore these events because they are driven by a
+                                        // potentially-unreliable heuristic (based on watching for
+                                        // inset changes) and we don't currently have a public event
+                                        // for exposing this state.
+                                        None
                                     }
                                     _ => unreachable!(),
                                 };
@@ -416,30 +431,35 @@ impl AndroidAppInner {
 
                                 trace!("Calling android_app_pre_exec_cmd({cmd_i})");
                                 ffi::android_app_pre_exec_cmd(native_app.as_ptr(), cmd_i);
-                                match cmd {
-                                    MainEvent::ConfigChanged { .. } => {
-                                        self.config.replace(Configuration::clone_from_ptr(
-                                            NonNull::new_unchecked((*native_app.as_ptr()).config),
-                                        ));
-                                    }
-                                    MainEvent::InitWindow { .. } => {
-                                        let win_ptr = (*native_app.as_ptr()).window;
-                                        // It's important that we use ::clone_from_ptr() here
-                                        // because NativeWindow has a Drop implementation that
-                                        // will unconditionally _release() the native window
-                                        *self.native_window.write().unwrap() =
-                                            Some(NativeWindow::clone_from_ptr(
-                                                NonNull::new(win_ptr).unwrap(),
-                                            ));
-                                    }
-                                    MainEvent::TerminateWindow { .. } => {
-                                        *self.native_window.write().unwrap() = None;
-                                    }
-                                    _ => {}
-                                }
 
-                                trace!("Invoking callback for ID_MAIN command = {:?}", cmd);
-                                callback(PollEvent::Main(cmd));
+                                if let Some(cmd) = cmd {
+                                    match cmd {
+                                        MainEvent::ConfigChanged { .. } => {
+                                            self.config.replace(Configuration::clone_from_ptr(
+                                                NonNull::new_unchecked(
+                                                    (*native_app.as_ptr()).config,
+                                                ),
+                                            ));
+                                        }
+                                        MainEvent::InitWindow { .. } => {
+                                            let win_ptr = (*native_app.as_ptr()).window;
+                                            // It's important that we use ::clone_from_ptr() here
+                                            // because NativeWindow has a Drop implementation that
+                                            // will unconditionally _release() the native window
+                                            *self.native_window.write().unwrap() =
+                                                Some(NativeWindow::clone_from_ptr(
+                                                    NonNull::new(win_ptr).unwrap(),
+                                                ));
+                                        }
+                                        MainEvent::TerminateWindow { .. } => {
+                                            *self.native_window.write().unwrap() = None;
+                                        }
+                                        _ => {}
+                                    }
+
+                                    trace!("Invoking callback for ID_MAIN command = {:?}", cmd);
+                                    callback(PollEvent::Main(cmd));
+                                }
 
                                 trace!("Calling android_app_post_exec_cmd({cmd_i})");
                                 ffi::android_app_post_exec_cmd(native_app.as_ptr(), cmd_i);
