@@ -78,6 +78,33 @@ pub struct TextInputState {
     pub compose_region: Option<TextSpan>,
 }
 
+// Represents the action button on a soft keyboard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
+#[repr(i32)]
+pub enum TextInputAction {
+    /// Let receiver decide what logical action to perform
+    Unspecified = 0,
+    /// No action - receiver could instead interpret as an "enter" key that inserts a newline character
+    None = 1,
+    /// Navigate to the input location (such as a URL)
+    Go = 2,
+    /// Search based on the input text
+    Search = 3,
+    /// Send the input to the target
+    Send = 4,
+    /// Move to the next input field
+    Next = 5,
+    /// Indicate that input is done
+    Done = 6,
+    /// Move to the previous input field
+    Previous = 7,
+
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(i32),
+}
+
 /// An exclusive, lending iterator for input events
 pub struct InputIterator<'a> {
     pub(crate) inner: crate::activity_impl::InputIteratorInner<'a>,
