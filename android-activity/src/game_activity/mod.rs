@@ -21,7 +21,7 @@ use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
 use crate::error::InternalResult;
-use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding};
+use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding, TextInputAction};
 use crate::jni_utils::{self, CloneJavaVM};
 use crate::util::{abort_on_panic, forward_stdio_to_logcat, log_panic, try_get_path_from_ptr};
 use crate::{
@@ -174,9 +174,6 @@ impl NativeAppGlue {
             };
             let out_ptr = &mut out_state as *mut TextInputState;
 
-            let app_ptr = self.as_ptr();
-            (*app_ptr).textInputState = 0;
-
             // NEON WARNING:
             //
             // It's not clearly documented but the GameActivity API over the
@@ -202,6 +199,14 @@ impl NativeAppGlue {
 
             out_state
         }
+    }
+
+    pub fn take_text_input_state(&self) -> TextInputState {
+        unsafe {
+            let app_ptr = self.as_ptr();
+            (*app_ptr).textInputState = 0;
+        }
+        self.text_input_state()
     }
 
     // TODO: move into a trait
@@ -245,6 +250,18 @@ impl NativeAppGlue {
                 },
             };
             ffi::GameActivity_setTextInputState(activity, &ffi_state as *const _);
+        }
+    }
+
+    pub fn take_pending_editor_action(&self) -> Option<i32> {
+        unsafe {
+            let app_ptr = self.as_ptr();
+            if (*app_ptr).pendingEditorAction {
+                (*app_ptr).pendingEditorAction = false;
+                Some((*app_ptr).editorAction)
+            } else {
+                None
+            }
         }
     }
 }
@@ -804,7 +821,8 @@ impl<'a> From<Arc<InputReceiver>> for InputIteratorInner<'a> {
             _receiver: receiver,
             buffered,
             native_app,
-            text_event_checked: false,
+            ime_text_input_state_checked: false,
+            ime_editor_action_checked: false,
         }
     }
 }
@@ -821,7 +839,8 @@ pub(crate) struct InputIteratorInner<'a> {
 
     buffered: Option<BufferedEvents<'a>>,
     native_app: NativeAppGlue,
-    text_event_checked: bool,
+    ime_text_input_state_checked: bool,
+    ime_editor_action_checked: bool,
 }
 
 impl InputIteratorInner<'_> {
@@ -841,8 +860,10 @@ impl InputIteratorInner<'_> {
             self.buffered = None;
         }
 
-        if !self.text_event_checked {
-            self.text_event_checked = true;
+        // We make sure any input state changes are sent before we check
+        // for editor actions, so actions will apply to the latest state.
+        if !self.ime_text_input_state_checked {
+            self.ime_text_input_state_checked = true;
             unsafe {
                 let app_ptr = self.native_app.as_ptr();
 
@@ -854,12 +875,21 @@ impl InputIteratorInner<'_> {
                 // the compiler isn't reordering code so this gets flagged
                 // before the java main thread really updates the state.
                 if (*app_ptr).textInputState != 0 {
-                    let state = self.native_app.text_input_state(); // Will clear .textInputState
+                    let state = self.native_app.take_text_input_state(); // Will clear .textInputState
                     let _ = callback(&InputEvent::TextEvent(state));
                     return true;
                 }
             }
         }
+
+        if !self.ime_editor_action_checked {
+            self.ime_editor_action_checked = true;
+            if let Some(action) = self.native_app.take_pending_editor_action() {
+                let _ = callback(&InputEvent::TextAction(TextInputAction::from(action)));
+                return true;
+            }
+        }
+
         false
     }
 }

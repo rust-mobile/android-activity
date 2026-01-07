@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- input: TextInputAction enum representing action button types on soft keyboards.
+- input: InputEvent::TextAction event for handling action button presses from soft keyboards.
 - The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
 
 ### Changed
