@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- input: TextInputAction enum representing action button types on soft keyboards.
+- input: InputEvent::TextAction event for handling action button presses from soft keyboards.
+
 ### Changed
 - input: Replaced custom types with their `ndk` crate equivalent.
   > [!NOTE]
