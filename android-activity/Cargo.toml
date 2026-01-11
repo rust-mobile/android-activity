@@ -16,10 +16,7 @@ include = [
     "/src",
 ]
 
-# Even though we could technically still build with 1.69, 1.73 has a fix for the
-# definition of the `stat` struct on Android, and so it seems worthwhile drawing
-# a line under that to ensure android-activity applications have that fix.
-rust-version = "1.73.0"
+rust-version = "1.85.0"
 
 [features]
 # Note: we don't enable any backend by default since features

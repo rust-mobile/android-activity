@@ -15,7 +15,7 @@ while read ARCH && read TARGET ; do
 
     # --module-raw-line 'use '
     bindgen game-activity-ffi.h -o src/game_activity/ffi_$ARCH.rs \
-        --rust-target '1.73.0' \
+        --rust-target '1.85.0' \
         --blocklist-item 'JNI\w+' \
         --blocklist-item 'C?_?JNIEnv' \
         --blocklist-item '_?JavaVM' \

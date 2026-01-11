@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   > - `Source::is_xxx_class()` functions are replaced by querying `Source::class()` and comparing against variants from the returned `SourceClass` `bitflags` enum.
   > - `SourceFlags::TRACKBALL` (from `Source::is_trackball_class()`) is named `SourceClass::NAVIGATION` in the `ndk`.
 
-- rust-version bumped to 1.73.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193))
+- rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), TODO: link)
 - The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
 - GameActivity updated to 4.0.0 (requires the corresponding 4.0.0 `.aar` release from Google) ([#191](https://github.com/rust-mobile/android-activity/pull/191))
 

@@ -671,10 +671,10 @@ pub const PTHREAD_PROCESS_SHARED: u32 = 1;
 pub const PTHREAD_SCOPE_SYSTEM: u32 = 0;
 pub const PTHREAD_SCOPE_PROCESS: u32 = 1;
 pub const NATIVE_APP_GLUE_MAX_INPUT_BUFFERS: u32 = 2;
-extern "C" {
+unsafe extern "C" {
     pub fn android_get_application_target_sdk_version() -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn android_get_device_api_level() -> ::std::os::raw::c_int;
 }
 pub type wchar_t = ::std::os::raw::c_int;
@@ -685,31 +685,15 @@ pub struct max_align_t {
     pub __clang_max_align_nonce1: ::std::os::raw::c_longlong,
     pub __clang_max_align_nonce2: f64,
 }
-#[test]
-fn bindgen_test_layout_max_align_t() {
-    const UNINIT: ::std::mem::MaybeUninit<max_align_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<max_align_t>(),
-        16usize,
-        "Size of max_align_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<max_align_t>(),
-        8usize,
-        "Alignment of max_align_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__clang_max_align_nonce1) as usize - ptr as usize },
-        0usize,
-        "Offset of field: max_align_t::__clang_max_align_nonce1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__clang_max_align_nonce2) as usize - ptr as usize },
-        8usize,
-        "Offset of field: max_align_t::__clang_max_align_nonce2"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of max_align_t"][::std::mem::size_of::<max_align_t>() - 16usize];
+    ["Alignment of max_align_t"][::std::mem::align_of::<max_align_t>() - 8usize];
+    ["Offset of field: max_align_t::__clang_max_align_nonce1"]
+        [::std::mem::offset_of!(max_align_t, __clang_max_align_nonce1) - 0usize];
+    ["Offset of field: max_align_t::__clang_max_align_nonce2"]
+        [::std::mem::offset_of!(max_align_t, __clang_max_align_nonce2) - 8usize];
+};
 pub type __int8_t = ::std::os::raw::c_schar;
 pub type __uint8_t = ::std::os::raw::c_uchar;
 pub type __int16_t = ::std::os::raw::c_short;
@@ -751,26 +735,13 @@ pub type __u64 = ::std::os::raw::c_ulonglong;
 pub struct __kernel_fd_set {
     pub fds_bits: [::std::os::raw::c_ulong; 32usize],
 }
-#[test]
-fn bindgen_test_layout___kernel_fd_set() {
-    const UNINIT: ::std::mem::MaybeUninit<__kernel_fd_set> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__kernel_fd_set>(),
-        128usize,
-        "Size of __kernel_fd_set"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__kernel_fd_set>(),
-        4usize,
-        "Alignment of __kernel_fd_set"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fds_bits) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_fd_set::fds_bits"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __kernel_fd_set"][::std::mem::size_of::<__kernel_fd_set>() - 128usize];
+    ["Alignment of __kernel_fd_set"][::std::mem::align_of::<__kernel_fd_set>() - 4usize];
+    ["Offset of field: __kernel_fd_set::fds_bits"]
+        [::std::mem::offset_of!(__kernel_fd_set, fds_bits) - 0usize];
+};
 pub type __kernel_sighandler_t =
     ::std::option::Option<unsafe extern "C" fn(arg1: ::std::os::raw::c_int)>;
 pub type __kernel_key_t = ::std::os::raw::c_int;
@@ -798,26 +769,13 @@ pub type __kernel_ptrdiff_t = ::std::os::raw::c_int;
 pub struct __kernel_fsid_t {
     pub val: [::std::os::raw::c_int; 2usize],
 }
-#[test]
-fn bindgen_test_layout___kernel_fsid_t() {
-    const UNINIT: ::std::mem::MaybeUninit<__kernel_fsid_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__kernel_fsid_t>(),
-        8usize,
-        "Size of __kernel_fsid_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__kernel_fsid_t>(),
-        4usize,
-        "Alignment of __kernel_fsid_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).val) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_fsid_t::val"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __kernel_fsid_t"][::std::mem::size_of::<__kernel_fsid_t>() - 8usize];
+    ["Alignment of __kernel_fsid_t"][::std::mem::align_of::<__kernel_fsid_t>() - 4usize];
+    ["Offset of field: __kernel_fsid_t::val"]
+        [::std::mem::offset_of!(__kernel_fsid_t, val) - 0usize];
+};
 pub type __kernel_off_t = __kernel_long_t;
 pub type __kernel_loff_t = ::std::os::raw::c_longlong;
 pub type __kernel_old_time_t = __kernel_long_t;
@@ -1221,67 +1179,32 @@ pub struct JavaVMAttachArgs {
     pub name: *const ::std::os::raw::c_char,
     pub group: jobject,
 }
-#[test]
-fn bindgen_test_layout_JavaVMAttachArgs() {
-    const UNINIT: ::std::mem::MaybeUninit<JavaVMAttachArgs> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<JavaVMAttachArgs>(),
-        12usize,
-        "Size of JavaVMAttachArgs"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<JavaVMAttachArgs>(),
-        4usize,
-        "Alignment of JavaVMAttachArgs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).version) as usize - ptr as usize },
-        0usize,
-        "Offset of field: JavaVMAttachArgs::version"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).name) as usize - ptr as usize },
-        4usize,
-        "Offset of field: JavaVMAttachArgs::name"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).group) as usize - ptr as usize },
-        8usize,
-        "Offset of field: JavaVMAttachArgs::group"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of JavaVMAttachArgs"][::std::mem::size_of::<JavaVMAttachArgs>() - 12usize];
+    ["Alignment of JavaVMAttachArgs"][::std::mem::align_of::<JavaVMAttachArgs>() - 4usize];
+    ["Offset of field: JavaVMAttachArgs::version"]
+        [::std::mem::offset_of!(JavaVMAttachArgs, version) - 0usize];
+    ["Offset of field: JavaVMAttachArgs::name"]
+        [::std::mem::offset_of!(JavaVMAttachArgs, name) - 4usize];
+    ["Offset of field: JavaVMAttachArgs::group"]
+        [::std::mem::offset_of!(JavaVMAttachArgs, group) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct JavaVMOption {
     pub optionString: *const ::std::os::raw::c_char,
     pub extraInfo: *mut ::std::os::raw::c_void,
 }
-#[test]
-fn bindgen_test_layout_JavaVMOption() {
-    const UNINIT: ::std::mem::MaybeUninit<JavaVMOption> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<JavaVMOption>(),
-        8usize,
-        "Size of JavaVMOption"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<JavaVMOption>(),
-        4usize,
-        "Alignment of JavaVMOption"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).optionString) as usize - ptr as usize },
-        0usize,
-        "Offset of field: JavaVMOption::optionString"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).extraInfo) as usize - ptr as usize },
-        4usize,
-        "Offset of field: JavaVMOption::extraInfo"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of JavaVMOption"][::std::mem::size_of::<JavaVMOption>() - 8usize];
+    ["Alignment of JavaVMOption"][::std::mem::align_of::<JavaVMOption>() - 4usize];
+    ["Offset of field: JavaVMOption::optionString"]
+        [::std::mem::offset_of!(JavaVMOption, optionString) - 0usize];
+    ["Offset of field: JavaVMOption::extraInfo"]
+        [::std::mem::offset_of!(JavaVMOption, extraInfo) - 4usize];
+};
 #[repr(C)]
 pub struct JavaVMInitArgs {
     pub version: jint,
@@ -1289,41 +1212,19 @@ pub struct JavaVMInitArgs {
     pub options: *mut JavaVMOption,
     pub ignoreUnrecognized: jboolean,
 }
-#[test]
-fn bindgen_test_layout_JavaVMInitArgs() {
-    const UNINIT: ::std::mem::MaybeUninit<JavaVMInitArgs> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<JavaVMInitArgs>(),
-        16usize,
-        "Size of JavaVMInitArgs"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<JavaVMInitArgs>(),
-        4usize,
-        "Alignment of JavaVMInitArgs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).version) as usize - ptr as usize },
-        0usize,
-        "Offset of field: JavaVMInitArgs::version"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).nOptions) as usize - ptr as usize },
-        4usize,
-        "Offset of field: JavaVMInitArgs::nOptions"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).options) as usize - ptr as usize },
-        8usize,
-        "Offset of field: JavaVMInitArgs::options"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ignoreUnrecognized) as usize - ptr as usize },
-        12usize,
-        "Offset of field: JavaVMInitArgs::ignoreUnrecognized"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of JavaVMInitArgs"][::std::mem::size_of::<JavaVMInitArgs>() - 16usize];
+    ["Alignment of JavaVMInitArgs"][::std::mem::align_of::<JavaVMInitArgs>() - 4usize];
+    ["Offset of field: JavaVMInitArgs::version"]
+        [::std::mem::offset_of!(JavaVMInitArgs, version) - 0usize];
+    ["Offset of field: JavaVMInitArgs::nOptions"]
+        [::std::mem::offset_of!(JavaVMInitArgs, nOptions) - 4usize];
+    ["Offset of field: JavaVMInitArgs::options"]
+        [::std::mem::offset_of!(JavaVMInitArgs, options) - 8usize];
+    ["Offset of field: JavaVMInitArgs::ignoreUnrecognized"]
+        [::std::mem::offset_of!(JavaVMInitArgs, ignoreUnrecognized) - 12usize];
+};
 pub const AKEY_STATE_UNKNOWN: _bindgen_ty_6 = -1;
 pub const AKEY_STATE_UP: _bindgen_ty_6 = 0;
 pub const AKEY_STATE_DOWN: _bindgen_ty_6 = 1;
@@ -1506,226 +1407,226 @@ pub const AINPUT_MOTION_RANGE_TOOL_MAJOR: _bindgen_ty_20 = 6;
 pub const AINPUT_MOTION_RANGE_TOOL_MINOR: _bindgen_ty_20 = 7;
 pub const AINPUT_MOTION_RANGE_ORIENTATION: _bindgen_ty_20 = 8;
 pub type _bindgen_ty_20 = ::std::os::raw::c_uint;
-extern "C" {
+unsafe extern "C" {
     pub fn AInputEvent_getType(event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputEvent_getDeviceId(event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputEvent_getSource(event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputEvent_release(event: *const AInputEvent);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_getAction(key_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_getFlags(key_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_getKeyCode(key_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_getScanCode(key_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_getMetaState(key_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_getRepeatCount(key_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_getDownTime(key_event: *const AInputEvent) -> i64;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_getEventTime(key_event: *const AInputEvent) -> i64;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AKeyEvent_fromJava(env: *mut JNIEnv, keyEvent: jobject) -> *const AInputEvent;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getAction(motion_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getFlags(motion_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getMetaState(motion_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getButtonState(motion_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getEdgeFlags(motion_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getDownTime(motion_event: *const AInputEvent) -> i64;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getEventTime(motion_event: *const AInputEvent) -> i64;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getXOffset(motion_event: *const AInputEvent) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getYOffset(motion_event: *const AInputEvent) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getXPrecision(motion_event: *const AInputEvent) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getYPrecision(motion_event: *const AInputEvent) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getPointerCount(motion_event: *const AInputEvent) -> usize;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getPointerId(motion_event: *const AInputEvent, pointer_index: usize)
         -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getToolType(motion_event: *const AInputEvent, pointer_index: usize) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getRawX(motion_event: *const AInputEvent, pointer_index: usize) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getRawY(motion_event: *const AInputEvent, pointer_index: usize) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getX(motion_event: *const AInputEvent, pointer_index: usize) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getY(motion_event: *const AInputEvent, pointer_index: usize) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getPressure(motion_event: *const AInputEvent, pointer_index: usize) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getSize(motion_event: *const AInputEvent, pointer_index: usize) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getTouchMajor(
         motion_event: *const AInputEvent,
         pointer_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getTouchMinor(
         motion_event: *const AInputEvent,
         pointer_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getToolMajor(motion_event: *const AInputEvent, pointer_index: usize)
         -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getToolMinor(motion_event: *const AInputEvent, pointer_index: usize)
         -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getOrientation(
         motion_event: *const AInputEvent,
         pointer_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getAxisValue(
         motion_event: *const AInputEvent,
         axis: i32,
         pointer_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistorySize(motion_event: *const AInputEvent) -> usize;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalEventTime(
         motion_event: *const AInputEvent,
         history_index: usize,
     ) -> i64;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalRawX(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalRawY(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalX(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalY(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalPressure(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalSize(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalTouchMajor(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalTouchMinor(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalToolMajor(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalToolMinor(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalOrientation(
         motion_event: *const AInputEvent,
         pointer_index: usize,
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getHistoricalAxisValue(
         motion_event: *const AInputEvent,
         axis: i32,
@@ -1733,13 +1634,13 @@ extern "C" {
         history_index: usize,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getActionButton(motion_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_getClassification(motion_event: *const AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AMotionEvent_fromJava(env: *mut JNIEnv, motionEvent: jobject) -> *const AInputEvent;
 }
 #[repr(C)]
@@ -1747,7 +1648,7 @@ extern "C" {
 pub struct AInputQueue {
     _unused: [u8; 0],
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputQueue_attachLooper(
         queue: *mut AInputQueue,
         looper: *mut ALooper,
@@ -1756,26 +1657,26 @@ extern "C" {
         data: *mut ::std::os::raw::c_void,
     );
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputQueue_detachLooper(queue: *mut AInputQueue);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputQueue_hasEvents(queue: *mut AInputQueue) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputQueue_getEvent(queue: *mut AInputQueue, outEvent: *mut *mut AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputQueue_preDispatchEvent(queue: *mut AInputQueue, event: *mut AInputEvent) -> i32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputQueue_finishEvent(
         queue: *mut AInputQueue,
         event: *mut AInputEvent,
         handled: ::std::os::raw::c_int,
     );
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AInputQueue_fromJava(env: *mut JNIEnv, inputQueue: jobject) -> *mut AInputQueue;
 }
 #[repr(C)]
@@ -1784,59 +1685,41 @@ pub struct imaxdiv_t {
     pub quot: intmax_t,
     pub rem: intmax_t,
 }
-#[test]
-fn bindgen_test_layout_imaxdiv_t() {
-    const UNINIT: ::std::mem::MaybeUninit<imaxdiv_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<imaxdiv_t>(),
-        16usize,
-        "Size of imaxdiv_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<imaxdiv_t>(),
-        4usize,
-        "Alignment of imaxdiv_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).quot) as usize - ptr as usize },
-        0usize,
-        "Offset of field: imaxdiv_t::quot"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).rem) as usize - ptr as usize },
-        8usize,
-        "Offset of field: imaxdiv_t::rem"
-    );
-}
-extern "C" {
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of imaxdiv_t"][::std::mem::size_of::<imaxdiv_t>() - 16usize];
+    ["Alignment of imaxdiv_t"][::std::mem::align_of::<imaxdiv_t>() - 4usize];
+    ["Offset of field: imaxdiv_t::quot"][::std::mem::offset_of!(imaxdiv_t, quot) - 0usize];
+    ["Offset of field: imaxdiv_t::rem"][::std::mem::offset_of!(imaxdiv_t, rem) - 8usize];
+};
+unsafe extern "C" {
     pub fn imaxabs(__i: intmax_t) -> intmax_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn imaxdiv(__numerator: intmax_t, __denominator: intmax_t) -> imaxdiv_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn strtoimax(
         __s: *const ::std::os::raw::c_char,
         __end_ptr: *mut *mut ::std::os::raw::c_char,
         __base: ::std::os::raw::c_int,
     ) -> intmax_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn strtoumax(
         __s: *const ::std::os::raw::c_char,
         __end_ptr: *mut *mut ::std::os::raw::c_char,
         __base: ::std::os::raw::c_int,
     ) -> uintmax_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn wcstoimax(
         __s: *const wchar_t,
         __end_ptr: *mut *mut wchar_t,
         __base: ::std::os::raw::c_int,
     ) -> intmax_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn wcstoumax(
         __s: *const wchar_t,
         __end_ptr: *mut *mut wchar_t,
@@ -2007,61 +1890,27 @@ pub struct AHardwareBuffer_Desc {
     pub rfu0: u32,
     pub rfu1: u64,
 }
-#[test]
-fn bindgen_test_layout_AHardwareBuffer_Desc() {
-    const UNINIT: ::std::mem::MaybeUninit<AHardwareBuffer_Desc> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<AHardwareBuffer_Desc>(),
-        40usize,
-        "Size of AHardwareBuffer_Desc"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<AHardwareBuffer_Desc>(),
-        4usize,
-        "Alignment of AHardwareBuffer_Desc"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).width) as usize - ptr as usize },
-        0usize,
-        "Offset of field: AHardwareBuffer_Desc::width"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).height) as usize - ptr as usize },
-        4usize,
-        "Offset of field: AHardwareBuffer_Desc::height"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).layers) as usize - ptr as usize },
-        8usize,
-        "Offset of field: AHardwareBuffer_Desc::layers"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).format) as usize - ptr as usize },
-        12usize,
-        "Offset of field: AHardwareBuffer_Desc::format"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).usage) as usize - ptr as usize },
-        16usize,
-        "Offset of field: AHardwareBuffer_Desc::usage"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).stride) as usize - ptr as usize },
-        24usize,
-        "Offset of field: AHardwareBuffer_Desc::stride"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).rfu0) as usize - ptr as usize },
-        28usize,
-        "Offset of field: AHardwareBuffer_Desc::rfu0"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).rfu1) as usize - ptr as usize },
-        32usize,
-        "Offset of field: AHardwareBuffer_Desc::rfu1"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of AHardwareBuffer_Desc"][::std::mem::size_of::<AHardwareBuffer_Desc>() - 40usize];
+    ["Alignment of AHardwareBuffer_Desc"][::std::mem::align_of::<AHardwareBuffer_Desc>() - 4usize];
+    ["Offset of field: AHardwareBuffer_Desc::width"]
+        [::std::mem::offset_of!(AHardwareBuffer_Desc, width) - 0usize];
+    ["Offset of field: AHardwareBuffer_Desc::height"]
+        [::std::mem::offset_of!(AHardwareBuffer_Desc, height) - 4usize];
+    ["Offset of field: AHardwareBuffer_Desc::layers"]
+        [::std::mem::offset_of!(AHardwareBuffer_Desc, layers) - 8usize];
+    ["Offset of field: AHardwareBuffer_Desc::format"]
+        [::std::mem::offset_of!(AHardwareBuffer_Desc, format) - 12usize];
+    ["Offset of field: AHardwareBuffer_Desc::usage"]
+        [::std::mem::offset_of!(AHardwareBuffer_Desc, usage) - 16usize];
+    ["Offset of field: AHardwareBuffer_Desc::stride"]
+        [::std::mem::offset_of!(AHardwareBuffer_Desc, stride) - 24usize];
+    ["Offset of field: AHardwareBuffer_Desc::rfu0"]
+        [::std::mem::offset_of!(AHardwareBuffer_Desc, rfu0) - 28usize];
+    ["Offset of field: AHardwareBuffer_Desc::rfu1"]
+        [::std::mem::offset_of!(AHardwareBuffer_Desc, rfu1) - 32usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct AHardwareBuffer_Plane {
@@ -2069,93 +1918,58 @@ pub struct AHardwareBuffer_Plane {
     pub pixelStride: u32,
     pub rowStride: u32,
 }
-#[test]
-fn bindgen_test_layout_AHardwareBuffer_Plane() {
-    const UNINIT: ::std::mem::MaybeUninit<AHardwareBuffer_Plane> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<AHardwareBuffer_Plane>(),
-        12usize,
-        "Size of AHardwareBuffer_Plane"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<AHardwareBuffer_Plane>(),
-        4usize,
-        "Alignment of AHardwareBuffer_Plane"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).data) as usize - ptr as usize },
-        0usize,
-        "Offset of field: AHardwareBuffer_Plane::data"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).pixelStride) as usize - ptr as usize },
-        4usize,
-        "Offset of field: AHardwareBuffer_Plane::pixelStride"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).rowStride) as usize - ptr as usize },
-        8usize,
-        "Offset of field: AHardwareBuffer_Plane::rowStride"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of AHardwareBuffer_Plane"][::std::mem::size_of::<AHardwareBuffer_Plane>() - 12usize];
+    ["Alignment of AHardwareBuffer_Plane"]
+        [::std::mem::align_of::<AHardwareBuffer_Plane>() - 4usize];
+    ["Offset of field: AHardwareBuffer_Plane::data"]
+        [::std::mem::offset_of!(AHardwareBuffer_Plane, data) - 0usize];
+    ["Offset of field: AHardwareBuffer_Plane::pixelStride"]
+        [::std::mem::offset_of!(AHardwareBuffer_Plane, pixelStride) - 4usize];
+    ["Offset of field: AHardwareBuffer_Plane::rowStride"]
+        [::std::mem::offset_of!(AHardwareBuffer_Plane, rowStride) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct AHardwareBuffer_Planes {
     pub planeCount: u32,
     pub planes: [AHardwareBuffer_Plane; 4usize],
 }
-#[test]
-fn bindgen_test_layout_AHardwareBuffer_Planes() {
-    const UNINIT: ::std::mem::MaybeUninit<AHardwareBuffer_Planes> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<AHardwareBuffer_Planes>(),
-        52usize,
-        "Size of AHardwareBuffer_Planes"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<AHardwareBuffer_Planes>(),
-        4usize,
-        "Alignment of AHardwareBuffer_Planes"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).planeCount) as usize - ptr as usize },
-        0usize,
-        "Offset of field: AHardwareBuffer_Planes::planeCount"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).planes) as usize - ptr as usize },
-        4usize,
-        "Offset of field: AHardwareBuffer_Planes::planes"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of AHardwareBuffer_Planes"][::std::mem::size_of::<AHardwareBuffer_Planes>() - 52usize];
+    ["Alignment of AHardwareBuffer_Planes"]
+        [::std::mem::align_of::<AHardwareBuffer_Planes>() - 4usize];
+    ["Offset of field: AHardwareBuffer_Planes::planeCount"]
+        [::std::mem::offset_of!(AHardwareBuffer_Planes, planeCount) - 0usize];
+    ["Offset of field: AHardwareBuffer_Planes::planes"]
+        [::std::mem::offset_of!(AHardwareBuffer_Planes, planes) - 4usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct AHardwareBuffer {
     _unused: [u8; 0],
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_allocate(
         desc: *const AHardwareBuffer_Desc,
         outBuffer: *mut *mut AHardwareBuffer,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_acquire(buffer: *mut AHardwareBuffer);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_release(buffer: *mut AHardwareBuffer);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_describe(
         buffer: *const AHardwareBuffer,
         outDesc: *mut AHardwareBuffer_Desc,
     );
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_lock(
         buffer: *mut AHardwareBuffer,
         usage: u64,
@@ -2164,25 +1978,25 @@ extern "C" {
         outVirtualAddress: *mut *mut ::std::os::raw::c_void,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_unlock(
         buffer: *mut AHardwareBuffer,
         fence: *mut i32,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_sendHandleToUnixSocket(
         buffer: *const AHardwareBuffer,
         socketFd: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_recvHandleFromUnixSocket(
         socketFd: ::std::os::raw::c_int,
         outBuffer: *mut *mut AHardwareBuffer,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_lockPlanes(
         buffer: *mut AHardwareBuffer,
         usage: u64,
@@ -2191,10 +2005,10 @@ extern "C" {
         outPlanes: *mut AHardwareBuffer_Planes,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_isSupported(desc: *const AHardwareBuffer_Desc) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_lockAndGetInfo(
         buffer: *mut AHardwareBuffer,
         usage: u64,
@@ -2205,7 +2019,7 @@ extern "C" {
         outBytesPerStride: *mut i32,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn AHardwareBuffer_getId(
         buffer: *const AHardwareBuffer,
         outId: *mut u64,
@@ -2221,56 +2035,32 @@ pub struct GameActivityPointerAxes {
     pub rawX: f32,
     pub rawY: f32,
 }
-#[test]
-fn bindgen_test_layout_GameActivityPointerAxes() {
-    const UNINIT: ::std::mem::MaybeUninit<GameActivityPointerAxes> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<GameActivityPointerAxes>(),
-        208usize,
-        "Size of GameActivityPointerAxes"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<GameActivityPointerAxes>(),
-        4usize,
-        "Alignment of GameActivityPointerAxes"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).id) as usize - ptr as usize },
-        0usize,
-        "Offset of field: GameActivityPointerAxes::id"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).toolType) as usize - ptr as usize },
-        4usize,
-        "Offset of field: GameActivityPointerAxes::toolType"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).axisValues) as usize - ptr as usize },
-        8usize,
-        "Offset of field: GameActivityPointerAxes::axisValues"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).rawX) as usize - ptr as usize },
-        200usize,
-        "Offset of field: GameActivityPointerAxes::rawX"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).rawY) as usize - ptr as usize },
-        204usize,
-        "Offset of field: GameActivityPointerAxes::rawY"
-    );
-}
-extern "C" {
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of GameActivityPointerAxes"]
+        [::std::mem::size_of::<GameActivityPointerAxes>() - 208usize];
+    ["Alignment of GameActivityPointerAxes"]
+        [::std::mem::align_of::<GameActivityPointerAxes>() - 4usize];
+    ["Offset of field: GameActivityPointerAxes::id"]
+        [::std::mem::offset_of!(GameActivityPointerAxes, id) - 0usize];
+    ["Offset of field: GameActivityPointerAxes::toolType"]
+        [::std::mem::offset_of!(GameActivityPointerAxes, toolType) - 4usize];
+    ["Offset of field: GameActivityPointerAxes::axisValues"]
+        [::std::mem::offset_of!(GameActivityPointerAxes, axisValues) - 8usize];
+    ["Offset of field: GameActivityPointerAxes::rawX"]
+        [::std::mem::offset_of!(GameActivityPointerAxes, rawX) - 200usize];
+    ["Offset of field: GameActivityPointerAxes::rawY"]
+        [::std::mem::offset_of!(GameActivityPointerAxes, rawY) - 204usize];
+};
+unsafe extern "C" {
     #[doc = " \\brief Enable the specified axis, so that its value is reported in the\n GameActivityPointerAxes structures stored in a motion event.\n\n You must enable any axis that you want to read, apart from\n `AMOTION_EVENT_AXIS_X` and `AMOTION_EVENT_AXIS_Y` that are enabled by\n default.\n\n If the axis index is out of range, nothing is done."]
     pub fn GameActivityPointerAxes_enableAxis(axis: i32);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " \\brief Disable the specified axis. Its value won't be reported in the\n GameActivityPointerAxes structures stored in a motion event anymore.\n\n Apart from X and Y, any axis that you want to read **must** be enabled first,\n using `GameActivityPointerAxes_enableAxis`.\n\n If the axis index is out of range, nothing is done."]
     pub fn GameActivityPointerAxes_disableAxis(axis: i32);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " \\brief Get the value of the requested axis.\n\n Apart from X and Y, any axis that you want to read **must** be enabled first,\n using `GameActivityPointerAxes_enableAxis`.\n\n Find the valid enums for the axis (`AMOTION_EVENT_AXIS_X`,\n `AMOTION_EVENT_AXIS_Y`, `AMOTION_EVENT_AXIS_PRESSURE`...)\n in https://developer.android.com/ndk/reference/group/input.\n\n @param pointerInfo The structure containing information about the pointer,\n obtained from GameActivityMotionEvent.\n @param axis The axis to get the value from\n @return The value of the axis, or 0 if the axis is invalid or was not\n enabled."]
     pub fn GameActivityPointerAxes_getAxisValue(
         pointerInfo: *const GameActivityPointerAxes,
@@ -2301,118 +2091,52 @@ pub struct GameActivityMotionEvent {
     pub precisionX: f32,
     pub precisionY: f32,
 }
-#[test]
-fn bindgen_test_layout_GameActivityMotionEvent() {
-    const UNINIT: ::std::mem::MaybeUninit<GameActivityMotionEvent> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<GameActivityMotionEvent>(),
-        1744usize,
-        "Size of GameActivityMotionEvent"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<GameActivityMotionEvent>(),
-        4usize,
-        "Alignment of GameActivityMotionEvent"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).deviceId) as usize - ptr as usize },
-        0usize,
-        "Offset of field: GameActivityMotionEvent::deviceId"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).source) as usize - ptr as usize },
-        4usize,
-        "Offset of field: GameActivityMotionEvent::source"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).action) as usize - ptr as usize },
-        8usize,
-        "Offset of field: GameActivityMotionEvent::action"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).eventTime) as usize - ptr as usize },
-        12usize,
-        "Offset of field: GameActivityMotionEvent::eventTime"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).downTime) as usize - ptr as usize },
-        20usize,
-        "Offset of field: GameActivityMotionEvent::downTime"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).flags) as usize - ptr as usize },
-        28usize,
-        "Offset of field: GameActivityMotionEvent::flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).metaState) as usize - ptr as usize },
-        32usize,
-        "Offset of field: GameActivityMotionEvent::metaState"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).actionButton) as usize - ptr as usize },
-        36usize,
-        "Offset of field: GameActivityMotionEvent::actionButton"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).buttonState) as usize - ptr as usize },
-        40usize,
-        "Offset of field: GameActivityMotionEvent::buttonState"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).classification) as usize - ptr as usize },
-        44usize,
-        "Offset of field: GameActivityMotionEvent::classification"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).edgeFlags) as usize - ptr as usize },
-        48usize,
-        "Offset of field: GameActivityMotionEvent::edgeFlags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).pointerCount) as usize - ptr as usize },
-        52usize,
-        "Offset of field: GameActivityMotionEvent::pointerCount"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).pointers) as usize - ptr as usize },
-        56usize,
-        "Offset of field: GameActivityMotionEvent::pointers"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).historySize) as usize - ptr as usize },
-        1720usize,
-        "Offset of field: GameActivityMotionEvent::historySize"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).historicalEventTimesMillis) as usize - ptr as usize },
-        1724usize,
-        "Offset of field: GameActivityMotionEvent::historicalEventTimesMillis"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).historicalEventTimesNanos) as usize - ptr as usize },
-        1728usize,
-        "Offset of field: GameActivityMotionEvent::historicalEventTimesNanos"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).historicalAxisValues) as usize - ptr as usize },
-        1732usize,
-        "Offset of field: GameActivityMotionEvent::historicalAxisValues"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).precisionX) as usize - ptr as usize },
-        1736usize,
-        "Offset of field: GameActivityMotionEvent::precisionX"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).precisionY) as usize - ptr as usize },
-        1740usize,
-        "Offset of field: GameActivityMotionEvent::precisionY"
-    );
-}
-extern "C" {
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of GameActivityMotionEvent"]
+        [::std::mem::size_of::<GameActivityMotionEvent>() - 1744usize];
+    ["Alignment of GameActivityMotionEvent"]
+        [::std::mem::align_of::<GameActivityMotionEvent>() - 4usize];
+    ["Offset of field: GameActivityMotionEvent::deviceId"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, deviceId) - 0usize];
+    ["Offset of field: GameActivityMotionEvent::source"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, source) - 4usize];
+    ["Offset of field: GameActivityMotionEvent::action"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, action) - 8usize];
+    ["Offset of field: GameActivityMotionEvent::eventTime"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, eventTime) - 12usize];
+    ["Offset of field: GameActivityMotionEvent::downTime"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, downTime) - 20usize];
+    ["Offset of field: GameActivityMotionEvent::flags"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, flags) - 28usize];
+    ["Offset of field: GameActivityMotionEvent::metaState"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, metaState) - 32usize];
+    ["Offset of field: GameActivityMotionEvent::actionButton"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, actionButton) - 36usize];
+    ["Offset of field: GameActivityMotionEvent::buttonState"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, buttonState) - 40usize];
+    ["Offset of field: GameActivityMotionEvent::classification"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, classification) - 44usize];
+    ["Offset of field: GameActivityMotionEvent::edgeFlags"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, edgeFlags) - 48usize];
+    ["Offset of field: GameActivityMotionEvent::pointerCount"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, pointerCount) - 52usize];
+    ["Offset of field: GameActivityMotionEvent::pointers"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, pointers) - 56usize];
+    ["Offset of field: GameActivityMotionEvent::historySize"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, historySize) - 1720usize];
+    ["Offset of field: GameActivityMotionEvent::historicalEventTimesMillis"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, historicalEventTimesMillis) - 1724usize];
+    ["Offset of field: GameActivityMotionEvent::historicalEventTimesNanos"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, historicalEventTimesNanos) - 1728usize];
+    ["Offset of field: GameActivityMotionEvent::historicalAxisValues"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, historicalAxisValues) - 1732usize];
+    ["Offset of field: GameActivityMotionEvent::precisionX"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, precisionX) - 1736usize];
+    ["Offset of field: GameActivityMotionEvent::precisionY"]
+        [::std::mem::offset_of!(GameActivityMotionEvent, precisionY) - 1740usize];
+};
+unsafe extern "C" {
     pub fn GameActivityMotionEvent_getHistoricalAxisValue(
         event: *const GameActivityMotionEvent,
         axis: ::std::os::raw::c_int,
@@ -2420,7 +2144,7 @@ extern "C" {
         historyPos: ::std::os::raw::c_int,
     ) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " \\brief Handle the freeing of the GameActivityMotionEvent struct."]
     pub fn GameActivityMotionEvent_destroy(c_event: *mut GameActivityMotionEvent);
 }
@@ -2440,76 +2164,33 @@ pub struct GameActivityKeyEvent {
     pub keyCode: i32,
     pub scanCode: i32,
 }
-#[test]
-fn bindgen_test_layout_GameActivityKeyEvent() {
-    const UNINIT: ::std::mem::MaybeUninit<GameActivityKeyEvent> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<GameActivityKeyEvent>(),
-        52usize,
-        "Size of GameActivityKeyEvent"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<GameActivityKeyEvent>(),
-        4usize,
-        "Alignment of GameActivityKeyEvent"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).deviceId) as usize - ptr as usize },
-        0usize,
-        "Offset of field: GameActivityKeyEvent::deviceId"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).source) as usize - ptr as usize },
-        4usize,
-        "Offset of field: GameActivityKeyEvent::source"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).action) as usize - ptr as usize },
-        8usize,
-        "Offset of field: GameActivityKeyEvent::action"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).eventTime) as usize - ptr as usize },
-        12usize,
-        "Offset of field: GameActivityKeyEvent::eventTime"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).downTime) as usize - ptr as usize },
-        20usize,
-        "Offset of field: GameActivityKeyEvent::downTime"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).flags) as usize - ptr as usize },
-        28usize,
-        "Offset of field: GameActivityKeyEvent::flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).metaState) as usize - ptr as usize },
-        32usize,
-        "Offset of field: GameActivityKeyEvent::metaState"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).modifiers) as usize - ptr as usize },
-        36usize,
-        "Offset of field: GameActivityKeyEvent::modifiers"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).repeatCount) as usize - ptr as usize },
-        40usize,
-        "Offset of field: GameActivityKeyEvent::repeatCount"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).keyCode) as usize - ptr as usize },
-        44usize,
-        "Offset of field: GameActivityKeyEvent::keyCode"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).scanCode) as usize - ptr as usize },
-        48usize,
-        "Offset of field: GameActivityKeyEvent::scanCode"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of GameActivityKeyEvent"][::std::mem::size_of::<GameActivityKeyEvent>() - 52usize];
+    ["Alignment of GameActivityKeyEvent"][::std::mem::align_of::<GameActivityKeyEvent>() - 4usize];
+    ["Offset of field: GameActivityKeyEvent::deviceId"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, deviceId) - 0usize];
+    ["Offset of field: GameActivityKeyEvent::source"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, source) - 4usize];
+    ["Offset of field: GameActivityKeyEvent::action"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, action) - 8usize];
+    ["Offset of field: GameActivityKeyEvent::eventTime"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, eventTime) - 12usize];
+    ["Offset of field: GameActivityKeyEvent::downTime"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, downTime) - 20usize];
+    ["Offset of field: GameActivityKeyEvent::flags"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, flags) - 28usize];
+    ["Offset of field: GameActivityKeyEvent::metaState"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, metaState) - 32usize];
+    ["Offset of field: GameActivityKeyEvent::modifiers"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, modifiers) - 36usize];
+    ["Offset of field: GameActivityKeyEvent::repeatCount"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, repeatCount) - 40usize];
+    ["Offset of field: GameActivityKeyEvent::keyCode"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, keyCode) - 44usize];
+    ["Offset of field: GameActivityKeyEvent::scanCode"]
+        [::std::mem::offset_of!(GameActivityKeyEvent, scanCode) - 48usize];
+};
 #[doc = " This struct holds a span within a region of text from start (inclusive) to\n end (exclusive). An empty span or cursor position is specified with\n start==end. An undefined span is specified with start = end = SPAN_UNDEFINED."]
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -2519,31 +2200,15 @@ pub struct GameTextInputSpan {
     #[doc = " The end of the region (exclusive)."]
     pub end: i32,
 }
-#[test]
-fn bindgen_test_layout_GameTextInputSpan() {
-    const UNINIT: ::std::mem::MaybeUninit<GameTextInputSpan> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<GameTextInputSpan>(),
-        8usize,
-        "Size of GameTextInputSpan"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<GameTextInputSpan>(),
-        4usize,
-        "Alignment of GameTextInputSpan"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).start) as usize - ptr as usize },
-        0usize,
-        "Offset of field: GameTextInputSpan::start"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).end) as usize - ptr as usize },
-        4usize,
-        "Offset of field: GameTextInputSpan::end"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of GameTextInputSpan"][::std::mem::size_of::<GameTextInputSpan>() - 8usize];
+    ["Alignment of GameTextInputSpan"][::std::mem::align_of::<GameTextInputSpan>() - 4usize];
+    ["Offset of field: GameTextInputSpan::start"]
+        [::std::mem::offset_of!(GameTextInputSpan, start) - 0usize];
+    ["Offset of field: GameTextInputSpan::end"]
+        [::std::mem::offset_of!(GameTextInputSpan, end) - 4usize];
+};
 pub const GameTextInputSpanFlag_SPAN_UNDEFINED: GameTextInputSpanFlag = -1;
 #[doc = " Values with special meaning in a GameTextInputSpan."]
 pub type GameTextInputSpanFlag = i32;
@@ -2560,41 +2225,19 @@ pub struct GameTextInputState {
     #[doc = " A composing region defined on the text."]
     pub composingRegion: GameTextInputSpan,
 }
-#[test]
-fn bindgen_test_layout_GameTextInputState() {
-    const UNINIT: ::std::mem::MaybeUninit<GameTextInputState> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<GameTextInputState>(),
-        24usize,
-        "Size of GameTextInputState"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<GameTextInputState>(),
-        4usize,
-        "Alignment of GameTextInputState"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).text_UTF8) as usize - ptr as usize },
-        0usize,
-        "Offset of field: GameTextInputState::text_UTF8"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).text_length) as usize - ptr as usize },
-        4usize,
-        "Offset of field: GameTextInputState::text_length"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).selection) as usize - ptr as usize },
-        8usize,
-        "Offset of field: GameTextInputState::selection"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).composingRegion) as usize - ptr as usize },
-        16usize,
-        "Offset of field: GameTextInputState::composingRegion"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of GameTextInputState"][::std::mem::size_of::<GameTextInputState>() - 24usize];
+    ["Alignment of GameTextInputState"][::std::mem::align_of::<GameTextInputState>() - 4usize];
+    ["Offset of field: GameTextInputState::text_UTF8"]
+        [::std::mem::offset_of!(GameTextInputState, text_UTF8) - 0usize];
+    ["Offset of field: GameTextInputState::text_length"]
+        [::std::mem::offset_of!(GameTextInputState, text_length) - 4usize];
+    ["Offset of field: GameTextInputState::selection"]
+        [::std::mem::offset_of!(GameTextInputState, selection) - 8usize];
+    ["Offset of field: GameTextInputState::composingRegion"]
+        [::std::mem::offset_of!(GameTextInputState, composingRegion) - 16usize];
+};
 #[doc = " A callback called by GameTextInput_getState.\n @param context User-defined context.\n @param state State, owned by the library, that will be valid for the duration\n of the callback."]
 pub type GameTextInputGetStateCallback = ::std::option::Option<
     unsafe extern "C" fn(context: *mut ::std::os::raw::c_void, state: *const GameTextInputState),
@@ -2604,19 +2247,19 @@ pub type GameTextInputGetStateCallback = ::std::option::Option<
 pub struct GameTextInput {
     _unused: [u8; 0],
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Initialize the GameTextInput library.\n If called twice without GameTextInput_destroy being called, the same pointer\n will be returned and a warning will be issued.\n @param env A JNI env valid on the calling thread.\n @param max_string_size The maximum length of a string that can be edited. If\n zero, the maximum defaults to 65536 bytes. A buffer of this size is allocated\n at initialization.\n @return A handle to the library."]
     pub fn GameTextInput_init(env: *mut JNIEnv, max_string_size: u32) -> *mut GameTextInput;
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " When using GameTextInput, you need to create a gametextinput.InputConnection\n on the Java side and pass it using this function to the library, unless using\n GameActivity in which case this will be done for you. See the GameActivity\n source code or GameTextInput samples for examples of usage.\n @param input A valid GameTextInput library handle.\n @param inputConnection A gametextinput.InputConnection object."]
     pub fn GameTextInput_setInputConnection(input: *mut GameTextInput, inputConnection: jobject);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Unless using GameActivity, it is required to call this function from your\n Java gametextinput.Listener.stateChanged method to convert eventState and\n trigger any event callbacks. When using GameActivity, this does not need to\n be called as event processing is handled by the Activity.\n @param input A valid GameTextInput library handle.\n @param eventState A Java gametextinput.State object."]
     pub fn GameTextInput_processEvent(input: *mut GameTextInput, eventState: jobject);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Free any resources owned by the GameTextInput library.\n Any subsequent calls to the library will fail until GameTextInput_init is\n called again.\n @param input A valid GameTextInput library handle."]
     pub fn GameTextInput_destroy(input: *mut GameTextInput);
 }
@@ -2625,7 +2268,7 @@ pub const ShowImeFlags_SHOW_IMPLICIT: ShowImeFlags = 1;
 pub const ShowImeFlags_SHOW_FORCED: ShowImeFlags = 2;
 #[doc = " Flags to be passed to GameTextInput_showIme."]
 pub type ShowImeFlags = u32;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Show the IME. Calls InputMethodManager.showSoftInput().\n @param input A valid GameTextInput library handle.\n @param flags Defined in ShowImeFlags above. For more information see:\n https://developer.android.com/reference/android/view/inputmethod/InputMethodManager"]
     pub fn GameTextInput_showIme(input: *mut GameTextInput, flags: u32);
 }
@@ -2634,15 +2277,15 @@ pub const HideImeFlags_HIDE_IMPLICIT_ONLY: HideImeFlags = 1;
 pub const HideImeFlags_HIDE_NOT_ALWAYS: HideImeFlags = 2;
 #[doc = " Flags to be passed to GameTextInput_hideIme."]
 pub type HideImeFlags = u32;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Hide the IME. Calls InputMethodManager.hideSoftInputFromWindow().\n @param input A valid GameTextInput library handle.\n @param flags Defined in HideImeFlags above. For more information see:\n https://developer.android.com/reference/android/view/inputmethod/InputMethodManager"]
     pub fn GameTextInput_hideIme(input: *mut GameTextInput, flags: u32);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Restarts the input method. Calls InputMethodManager.restartInput().\n @param input A valid GameTextInput library handle."]
     pub fn GameTextInput_restartInput(input: *mut GameTextInput);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Call a callback with the current GameTextInput state, which may have been\n modified by changes in the IME and calls to GameTextInput_setState. We use a\n callback rather than returning the state in order to simplify ownership of\n text_UTF8 strings. These strings are only valid during the calling of the\n callback.\n @param input A valid GameTextInput library handle.\n @param callback A function that will be called with valid state.\n @param context Context used by the callback."]
     pub fn GameTextInput_getState(
         input: *mut GameTextInput,
@@ -2650,7 +2293,7 @@ extern "C" {
         context: *mut ::std::os::raw::c_void,
     );
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Set the current GameTextInput state. This state is reflected to any active\n IME.\n @param input A valid GameTextInput library handle.\n @param state The state to set. Ownership is maintained by the caller and must\n remain valid for the duration of the call."]
     pub fn GameTextInput_setState(input: *mut GameTextInput, state: *const GameTextInputState);
 }
@@ -2661,7 +2304,7 @@ pub type GameTextInputEventCallback = ::std::option::Option<
         current_state: *const GameTextInputState,
     ),
 >;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Optionally set a callback to be called whenever the IME state changes.\n Not necessary if you are using GameActivity, which handles these callbacks\n for you.\n @param input A valid GameTextInput library handle.\n @param callback Called by the library when the IME state changes.\n @param context Context passed as first argument to the callback.\n <b>This function is deprecated. Don't perform any complex processing inside\n the callback other than copying the state variable. Using any synchronization\n primitives inside this callback may cause a deadlock.</b>"]
     pub fn GameTextInput_setEventCallback(
         input: *mut GameTextInput,
@@ -2673,7 +2316,7 @@ extern "C" {
 pub type GameTextInputImeInsetsCallback = ::std::option::Option<
     unsafe extern "C" fn(context: *mut ::std::os::raw::c_void, current_insets: *const ARect),
 >;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Optionally set a callback to be called whenever the IME insets change.\n Not necessary if you are using GameActivity, which handles these callbacks\n for you.\n @param input A valid GameTextInput library handle.\n @param callback Called by the library when the IME insets change.\n @param context Context passed as first argument to the callback."]
     pub fn GameTextInput_setImeInsetsCallback(
         input: *mut GameTextInput,
@@ -2681,22 +2324,22 @@ extern "C" {
         context: *mut ::std::os::raw::c_void,
     );
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Get the current window insets for the IME.\n @param input A valid GameTextInput library handle.\n @param insets Filled with the current insets by this function."]
     pub fn GameTextInput_getImeInsets(input: *const GameTextInput, insets: *mut ARect);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Unless using GameActivity, it is required to call this function from your\n Java gametextinput.Listener.onImeInsetsChanged method to\n trigger any event callbacks. When using GameActivity, this does not need to\n be called as insets processing is handled by the Activity.\n @param input A valid GameTextInput library handle.\n @param eventState A Java gametextinput.State object."]
     pub fn GameTextInput_processImeInsets(input: *mut GameTextInput, insets: *const ARect);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Convert a GameTextInputState struct to a Java gametextinput.State object.\n Don't forget to delete the returned Java local ref when you're done.\n @param input A valid GameTextInput library handle.\n @param state Input state to convert.\n @return A Java object of class gametextinput.State. The caller is required to\n delete this local reference."]
     pub fn GameTextInputState_toJava(
         input: *const GameTextInput,
         state: *const GameTextInputState,
     ) -> jobject;
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Convert from a Java gametextinput.State object into a C GameTextInputState\n struct.\n @param input A valid GameTextInput library handle.\n @param state A Java gametextinput.State object.\n @param callback A function called with the C struct, valid for the duration\n of the call.\n @param context Context passed to the callback."]
     pub fn GameTextInputState_fromJava(
         input: *const GameTextInput,
@@ -2867,71 +2510,29 @@ pub struct GameActivity {
     #[doc = " Available starting with Honeycomb: path to the directory containing\n the application's OBB files (if any).  If the app doesn't have any\n OBB files, this directory may not exist."]
     pub obbPath: *const ::std::os::raw::c_char,
 }
-#[test]
-fn bindgen_test_layout_GameActivity() {
-    const UNINIT: ::std::mem::MaybeUninit<GameActivity> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<GameActivity>(),
-        40usize,
-        "Size of GameActivity"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<GameActivity>(),
-        4usize,
-        "Alignment of GameActivity"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).callbacks) as usize - ptr as usize },
-        0usize,
-        "Offset of field: GameActivity::callbacks"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).vm) as usize - ptr as usize },
-        4usize,
-        "Offset of field: GameActivity::vm"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).env) as usize - ptr as usize },
-        8usize,
-        "Offset of field: GameActivity::env"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).javaGameActivity) as usize - ptr as usize },
-        12usize,
-        "Offset of field: GameActivity::javaGameActivity"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).internalDataPath) as usize - ptr as usize },
-        16usize,
-        "Offset of field: GameActivity::internalDataPath"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).externalDataPath) as usize - ptr as usize },
-        20usize,
-        "Offset of field: GameActivity::externalDataPath"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sdkVersion) as usize - ptr as usize },
-        24usize,
-        "Offset of field: GameActivity::sdkVersion"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).instance) as usize - ptr as usize },
-        28usize,
-        "Offset of field: GameActivity::instance"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).assetManager) as usize - ptr as usize },
-        32usize,
-        "Offset of field: GameActivity::assetManager"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).obbPath) as usize - ptr as usize },
-        36usize,
-        "Offset of field: GameActivity::obbPath"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of GameActivity"][::std::mem::size_of::<GameActivity>() - 40usize];
+    ["Alignment of GameActivity"][::std::mem::align_of::<GameActivity>() - 4usize];
+    ["Offset of field: GameActivity::callbacks"]
+        [::std::mem::offset_of!(GameActivity, callbacks) - 0usize];
+    ["Offset of field: GameActivity::vm"][::std::mem::offset_of!(GameActivity, vm) - 4usize];
+    ["Offset of field: GameActivity::env"][::std::mem::offset_of!(GameActivity, env) - 8usize];
+    ["Offset of field: GameActivity::javaGameActivity"]
+        [::std::mem::offset_of!(GameActivity, javaGameActivity) - 12usize];
+    ["Offset of field: GameActivity::internalDataPath"]
+        [::std::mem::offset_of!(GameActivity, internalDataPath) - 16usize];
+    ["Offset of field: GameActivity::externalDataPath"]
+        [::std::mem::offset_of!(GameActivity, externalDataPath) - 20usize];
+    ["Offset of field: GameActivity::sdkVersion"]
+        [::std::mem::offset_of!(GameActivity, sdkVersion) - 24usize];
+    ["Offset of field: GameActivity::instance"]
+        [::std::mem::offset_of!(GameActivity, instance) - 28usize];
+    ["Offset of field: GameActivity::assetManager"]
+        [::std::mem::offset_of!(GameActivity, assetManager) - 32usize];
+    ["Offset of field: GameActivity::obbPath"]
+        [::std::mem::offset_of!(GameActivity, obbPath) - 36usize];
+};
 #[doc = " A function the user should call from their callback with the data, its length\n and the library- supplied context."]
 pub type SaveInstanceStateRecallback = ::std::option::Option<
     unsafe extern "C" fn(
@@ -3033,129 +2634,56 @@ pub struct GameActivityCallbacks {
         unsafe extern "C" fn(activity: *mut GameActivity, action: ::std::os::raw::c_int) -> bool,
     >,
 }
-#[test]
-fn bindgen_test_layout_GameActivityCallbacks() {
-    const UNINIT: ::std::mem::MaybeUninit<GameActivityCallbacks> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<GameActivityCallbacks>(),
-        84usize,
-        "Size of GameActivityCallbacks"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<GameActivityCallbacks>(),
-        4usize,
-        "Alignment of GameActivityCallbacks"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onStart) as usize - ptr as usize },
-        0usize,
-        "Offset of field: GameActivityCallbacks::onStart"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onResume) as usize - ptr as usize },
-        4usize,
-        "Offset of field: GameActivityCallbacks::onResume"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onSaveInstanceState) as usize - ptr as usize },
-        8usize,
-        "Offset of field: GameActivityCallbacks::onSaveInstanceState"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onPause) as usize - ptr as usize },
-        12usize,
-        "Offset of field: GameActivityCallbacks::onPause"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onStop) as usize - ptr as usize },
-        16usize,
-        "Offset of field: GameActivityCallbacks::onStop"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onDestroy) as usize - ptr as usize },
-        20usize,
-        "Offset of field: GameActivityCallbacks::onDestroy"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onWindowFocusChanged) as usize - ptr as usize },
-        24usize,
-        "Offset of field: GameActivityCallbacks::onWindowFocusChanged"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onNativeWindowCreated) as usize - ptr as usize },
-        28usize,
-        "Offset of field: GameActivityCallbacks::onNativeWindowCreated"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onNativeWindowResized) as usize - ptr as usize },
-        32usize,
-        "Offset of field: GameActivityCallbacks::onNativeWindowResized"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onNativeWindowRedrawNeeded) as usize - ptr as usize },
-        36usize,
-        "Offset of field: GameActivityCallbacks::onNativeWindowRedrawNeeded"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onNativeWindowDestroyed) as usize - ptr as usize },
-        40usize,
-        "Offset of field: GameActivityCallbacks::onNativeWindowDestroyed"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onConfigurationChanged) as usize - ptr as usize },
-        44usize,
-        "Offset of field: GameActivityCallbacks::onConfigurationChanged"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onTrimMemory) as usize - ptr as usize },
-        48usize,
-        "Offset of field: GameActivityCallbacks::onTrimMemory"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onTouchEvent) as usize - ptr as usize },
-        52usize,
-        "Offset of field: GameActivityCallbacks::onTouchEvent"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onKeyDown) as usize - ptr as usize },
-        56usize,
-        "Offset of field: GameActivityCallbacks::onKeyDown"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onKeyUp) as usize - ptr as usize },
-        60usize,
-        "Offset of field: GameActivityCallbacks::onKeyUp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onTextInputEvent) as usize - ptr as usize },
-        64usize,
-        "Offset of field: GameActivityCallbacks::onTextInputEvent"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onWindowInsetsChanged) as usize - ptr as usize },
-        68usize,
-        "Offset of field: GameActivityCallbacks::onWindowInsetsChanged"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onContentRectChanged) as usize - ptr as usize },
-        72usize,
-        "Offset of field: GameActivityCallbacks::onContentRectChanged"
-    );
-    assert_eq!(
-        unsafe {
-            ::std::ptr::addr_of!((*ptr).onSoftwareKeyboardVisibilityChanged) as usize - ptr as usize
-        },
-        76usize,
-        "Offset of field: GameActivityCallbacks::onSoftwareKeyboardVisibilityChanged"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onEditorAction) as usize - ptr as usize },
-        80usize,
-        "Offset of field: GameActivityCallbacks::onEditorAction"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of GameActivityCallbacks"][::std::mem::size_of::<GameActivityCallbacks>() - 84usize];
+    ["Alignment of GameActivityCallbacks"]
+        [::std::mem::align_of::<GameActivityCallbacks>() - 4usize];
+    ["Offset of field: GameActivityCallbacks::onStart"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onStart) - 0usize];
+    ["Offset of field: GameActivityCallbacks::onResume"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onResume) - 4usize];
+    ["Offset of field: GameActivityCallbacks::onSaveInstanceState"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onSaveInstanceState) - 8usize];
+    ["Offset of field: GameActivityCallbacks::onPause"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onPause) - 12usize];
+    ["Offset of field: GameActivityCallbacks::onStop"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onStop) - 16usize];
+    ["Offset of field: GameActivityCallbacks::onDestroy"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onDestroy) - 20usize];
+    ["Offset of field: GameActivityCallbacks::onWindowFocusChanged"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onWindowFocusChanged) - 24usize];
+    ["Offset of field: GameActivityCallbacks::onNativeWindowCreated"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onNativeWindowCreated) - 28usize];
+    ["Offset of field: GameActivityCallbacks::onNativeWindowResized"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onNativeWindowResized) - 32usize];
+    ["Offset of field: GameActivityCallbacks::onNativeWindowRedrawNeeded"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onNativeWindowRedrawNeeded) - 36usize];
+    ["Offset of field: GameActivityCallbacks::onNativeWindowDestroyed"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onNativeWindowDestroyed) - 40usize];
+    ["Offset of field: GameActivityCallbacks::onConfigurationChanged"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onConfigurationChanged) - 44usize];
+    ["Offset of field: GameActivityCallbacks::onTrimMemory"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onTrimMemory) - 48usize];
+    ["Offset of field: GameActivityCallbacks::onTouchEvent"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onTouchEvent) - 52usize];
+    ["Offset of field: GameActivityCallbacks::onKeyDown"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onKeyDown) - 56usize];
+    ["Offset of field: GameActivityCallbacks::onKeyUp"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onKeyUp) - 60usize];
+    ["Offset of field: GameActivityCallbacks::onTextInputEvent"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onTextInputEvent) - 64usize];
+    ["Offset of field: GameActivityCallbacks::onWindowInsetsChanged"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onWindowInsetsChanged) - 68usize];
+    ["Offset of field: GameActivityCallbacks::onContentRectChanged"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onContentRectChanged) - 72usize];
+    ["Offset of field: GameActivityCallbacks::onSoftwareKeyboardVisibilityChanged"][::std::mem::offset_of!(
+        GameActivityCallbacks,
+        onSoftwareKeyboardVisibilityChanged
+    ) - 76usize];
+    ["Offset of field: GameActivityCallbacks::onEditorAction"]
+        [::std::mem::offset_of!(GameActivityCallbacks, onEditorAction) - 80usize];
+};
 #[doc = " This is the function that must be in the native code to instantiate the\n application's native activity.  It is called with the activity instance (see\n above); if the code is being instantiated from a previously saved instance,\n the savedState will be non-NULL and point to the saved data.  You must make\n any copy of this data you need -- it will be released after you return from\n this function."]
 pub type GameActivity_createFunc = ::std::option::Option<
     unsafe extern "C" fn(
@@ -3164,7 +2692,7 @@ pub type GameActivity_createFunc = ::std::option::Option<
         savedStateSize: usize,
     ),
 >;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Finish the given activity.  Its finish() method will be called, causing it\n to be stopped and destroyed.  Note that this method can be called from\n *any* thread; it will send a message to the main thread of the process\n where the Java finish call will take place."]
     pub fn GameActivity_finish(activity: *mut GameActivity);
 }
@@ -3234,7 +2762,7 @@ pub const GameActivitySetWindowFlags_GAMEACTIVITY_FLAG_DISMISS_KEYGUARD:
     GameActivitySetWindowFlags = 4194304;
 #[doc = " Flags for GameActivity_setWindowFlags,\n as per the Java API at android.view.WindowManager.LayoutParams."]
 pub type GameActivitySetWindowFlags = u32;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Change the window flags of the given activity.  Calls getWindow().setFlags()\n of the given activity.\n Note that some flags must be set before the window decoration is created,\n see\n https://developer.android.com/reference/android/view/Window#setFlags(int,%20int).\n Note also that this method can be called from\n *any* thread; it will send a message to the main thread of the process\n where the Java finish call will take place."]
     pub fn GameActivity_setWindowFlags(
         activity: *mut GameActivity,
@@ -3250,22 +2778,22 @@ pub const GameActivityShowSoftInputFlags_GAMEACTIVITY_SHOW_SOFT_INPUT_FORCED:
     GameActivityShowSoftInputFlags = 2;
 #[doc = " Flags for GameActivity_showSoftInput; see the Java InputMethodManager\n API for documentation."]
 pub type GameActivityShowSoftInputFlags = u8;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Show the IME while in the given activity.  Calls\n InputMethodManager.showSoftInput() for the given activity.  Note that this\n method can be called from *any* thread; it will send a message to the main\n thread of the process where the Java call will take place."]
     pub fn GameActivity_showSoftInput(activity: *mut GameActivity, flags: u32);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Restarts the input method. Calls InputMethodManager.restartInput().\n Note that this method can be called from *any* thread; it will send a message\n to the main thread of the process where the Java call will take place."]
     pub fn GameActivity_restartInput(activity: *mut GameActivity);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Set the text entry state (see documentation of the GameTextInputState struct\n in the Game Text Input library reference).\n\n Ownership of the state is maintained by the caller."]
     pub fn GameActivity_setTextInputState(
         activity: *mut GameActivity,
         state: *const GameTextInputState,
     );
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Get the last-received text entry state (see documentation of the\n GameTextInputState struct in the Game Text Input library reference).\n"]
     pub fn GameActivity_getTextInputState(
         activity: *mut GameActivity,
@@ -3273,7 +2801,7 @@ extern "C" {
         context: *mut ::std::os::raw::c_void,
     );
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Get a pointer to the GameTextInput library instance."]
     pub fn GameActivity_getTextInput(activity: *const GameActivity) -> *mut GameTextInput;
 }
@@ -3285,11 +2813,11 @@ pub const GameActivityHideSoftInputFlags_GAMEACTIVITY_HIDE_SOFT_INPUT_NOT_ALWAYS
     GameActivityHideSoftInputFlags = 2;
 #[doc = " Flags for GameActivity_hideSoftInput; see the Java InputMethodManager\n API for documentation."]
 pub type GameActivityHideSoftInputFlags = u16;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Hide the IME while in the given activity.  Calls\n InputMethodManager.hideSoftInput() for the given activity.  Note that this\n method can be called from *any* thread; it will send a message to the main\n thread of the process where the Java finish call will take place."]
     pub fn GameActivity_hideSoftInput(activity: *mut GameActivity, flags: u32);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Get the current window insets of the particular component. See\n https://developer.android.com/reference/androidx/core/view/WindowInsetsCompat.Type\n for more details.\n You can use these insets to influence what you show on the screen."]
     pub fn GameActivity_getWindowInsets(
         activity: *mut GameActivity,
@@ -3297,11 +2825,11 @@ extern "C" {
         insets: *mut ARect,
     );
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Tells whether the software keyboard is visible or not."]
     pub fn GameActivity_isSoftwareKeyboardVisible(activity: *mut GameActivity) -> bool;
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Set options on how the IME behaves when it is requested for text input.\n See\n https://developer.android.com/reference/android/view/inputmethod/EditorInfo\n for the meaning of inputType, actionId and imeOptions.\n\n <b>Note:</b> currently only TYPE_NULL AND TYPE_CLASS_NUMBER are supported."]
     pub fn GameActivity_setImeEditorInfo(
         activity: *mut GameActivity,
@@ -3310,70 +2838,70 @@ extern "C" {
         imeOptions: GameTextInputImeOptions,
     );
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " These are getters for Configuration class members. They may be called from\n any thread."]
     pub fn GameActivity_getOrientation(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getColorMode(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getDensityDpi(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getFontScale(activity: *mut GameActivity) -> f32;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getFontWeightAdjustment(
         activity: *mut GameActivity,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getHardKeyboardHidden(activity: *mut GameActivity)
         -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getKeyboard(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getKeyboardHidden(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getLocalesCount(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getMcc(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getMnc(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getNavigation(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getNavigationHidden(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getScreenHeightDp(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getScreenLayout(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getScreenWidthDp(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getSmallestScreenWidthDp(
         activity: *mut GameActivity,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getTouchscreen(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getUIMode(activity: *mut GameActivity) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " The functions below return Java locale information.\n\n In simple cases there will be just one locale, but it's possible tha\n there are more than one locale objects. Users are encouraged to write code\n that handles all locales and not just the first one.\n\n The functions in the block below return string values in the provided buffer.\n Return value is zero if there were no errors, otherwise it's non-zero.\n If the return value is zero, `dst` will contain a null-terminated string:\n strlen(dst) <= dst_size - 1.\n If the return value is non-zero, the content of dst is undefined.\n\n Parameters:\n\n dst, dst_size: define a receiver buffer. Locale string can be something\n short like \"EN/EN\", but it may be longer. You should be safe with a buffer\n size of 256 bytes.\n\n If the buffer is too small, ENOBUFS is returned. Try allocating a larger\n buffer in this case.\n\n localeIdx must be between 0 and the value of GameActivity_getLocalesCount().\n If localeIdx is out of range, EINVAL is returned.\n\n Refer to Java documentation of locales for more information."]
     pub fn GameActivity_getLocaleLanguage(
         dst: *mut ::std::os::raw::c_char,
@@ -3382,7 +2910,7 @@ extern "C" {
         localeIdx: usize,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getLocaleScript(
         dst: *mut ::std::os::raw::c_char,
         dst_size: usize,
@@ -3390,7 +2918,7 @@ extern "C" {
         localeIdx: usize,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getLocaleCountry(
         dst: *mut ::std::os::raw::c_char,
         dst_size: usize,
@@ -3398,7 +2926,7 @@ extern "C" {
         localeIdx: usize,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn GameActivity_getLocaleVariant(
         dst: *mut ::std::os::raw::c_char,
         dst_size: usize,
@@ -3500,32 +3028,14 @@ pub struct pollfd {
     pub events: ::std::os::raw::c_short,
     pub revents: ::std::os::raw::c_short,
 }
-#[test]
-fn bindgen_test_layout_pollfd() {
-    const UNINIT: ::std::mem::MaybeUninit<pollfd> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<pollfd>(), 8usize, "Size of pollfd");
-    assert_eq!(
-        ::std::mem::align_of::<pollfd>(),
-        4usize,
-        "Alignment of pollfd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fd) as usize - ptr as usize },
-        0usize,
-        "Offset of field: pollfd::fd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).events) as usize - ptr as usize },
-        4usize,
-        "Offset of field: pollfd::events"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).revents) as usize - ptr as usize },
-        6usize,
-        "Offset of field: pollfd::revents"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of pollfd"][::std::mem::size_of::<pollfd>() - 8usize];
+    ["Alignment of pollfd"][::std::mem::align_of::<pollfd>() - 4usize];
+    ["Offset of field: pollfd::fd"][::std::mem::offset_of!(pollfd, fd) - 0usize];
+    ["Offset of field: pollfd::events"][::std::mem::offset_of!(pollfd, events) - 4usize];
+    ["Offset of field: pollfd::revents"][::std::mem::offset_of!(pollfd, revents) - 6usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct _fpx_sw_bytes {
@@ -3535,73 +3045,34 @@ pub struct _fpx_sw_bytes {
     pub xstate_size: __u32,
     pub padding: [__u32; 7usize],
 }
-#[test]
-fn bindgen_test_layout__fpx_sw_bytes() {
-    const UNINIT: ::std::mem::MaybeUninit<_fpx_sw_bytes> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_fpx_sw_bytes>(),
-        48usize,
-        "Size of _fpx_sw_bytes"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_fpx_sw_bytes>(),
-        4usize,
-        "Alignment of _fpx_sw_bytes"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).magic1) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpx_sw_bytes::magic1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).extended_size) as usize - ptr as usize },
-        4usize,
-        "Offset of field: _fpx_sw_bytes::extended_size"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xfeatures) as usize - ptr as usize },
-        8usize,
-        "Offset of field: _fpx_sw_bytes::xfeatures"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xstate_size) as usize - ptr as usize },
-        16usize,
-        "Offset of field: _fpx_sw_bytes::xstate_size"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).padding) as usize - ptr as usize },
-        20usize,
-        "Offset of field: _fpx_sw_bytes::padding"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _fpx_sw_bytes"][::std::mem::size_of::<_fpx_sw_bytes>() - 48usize];
+    ["Alignment of _fpx_sw_bytes"][::std::mem::align_of::<_fpx_sw_bytes>() - 4usize];
+    ["Offset of field: _fpx_sw_bytes::magic1"]
+        [::std::mem::offset_of!(_fpx_sw_bytes, magic1) - 0usize];
+    ["Offset of field: _fpx_sw_bytes::extended_size"]
+        [::std::mem::offset_of!(_fpx_sw_bytes, extended_size) - 4usize];
+    ["Offset of field: _fpx_sw_bytes::xfeatures"]
+        [::std::mem::offset_of!(_fpx_sw_bytes, xfeatures) - 8usize];
+    ["Offset of field: _fpx_sw_bytes::xstate_size"]
+        [::std::mem::offset_of!(_fpx_sw_bytes, xstate_size) - 16usize];
+    ["Offset of field: _fpx_sw_bytes::padding"]
+        [::std::mem::offset_of!(_fpx_sw_bytes, padding) - 20usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct _fpreg {
     pub significand: [__u16; 4usize],
     pub exponent: __u16,
 }
-#[test]
-fn bindgen_test_layout__fpreg() {
-    const UNINIT: ::std::mem::MaybeUninit<_fpreg> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<_fpreg>(), 10usize, "Size of _fpreg");
-    assert_eq!(
-        ::std::mem::align_of::<_fpreg>(),
-        2usize,
-        "Alignment of _fpreg"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).significand) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpreg::significand"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).exponent) as usize - ptr as usize },
-        8usize,
-        "Offset of field: _fpreg::exponent"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _fpreg"][::std::mem::size_of::<_fpreg>() - 10usize];
+    ["Alignment of _fpreg"][::std::mem::align_of::<_fpreg>() - 2usize];
+    ["Offset of field: _fpreg::significand"][::std::mem::offset_of!(_fpreg, significand) - 0usize];
+    ["Offset of field: _fpreg::exponent"][::std::mem::offset_of!(_fpreg, exponent) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct _fpxreg {
@@ -3609,53 +3080,26 @@ pub struct _fpxreg {
     pub exponent: __u16,
     pub padding: [__u16; 3usize],
 }
-#[test]
-fn bindgen_test_layout__fpxreg() {
-    const UNINIT: ::std::mem::MaybeUninit<_fpxreg> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<_fpxreg>(), 16usize, "Size of _fpxreg");
-    assert_eq!(
-        ::std::mem::align_of::<_fpxreg>(),
-        2usize,
-        "Alignment of _fpxreg"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).significand) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpxreg::significand"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).exponent) as usize - ptr as usize },
-        8usize,
-        "Offset of field: _fpxreg::exponent"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).padding) as usize - ptr as usize },
-        10usize,
-        "Offset of field: _fpxreg::padding"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _fpxreg"][::std::mem::size_of::<_fpxreg>() - 16usize];
+    ["Alignment of _fpxreg"][::std::mem::align_of::<_fpxreg>() - 2usize];
+    ["Offset of field: _fpxreg::significand"]
+        [::std::mem::offset_of!(_fpxreg, significand) - 0usize];
+    ["Offset of field: _fpxreg::exponent"][::std::mem::offset_of!(_fpxreg, exponent) - 8usize];
+    ["Offset of field: _fpxreg::padding"][::std::mem::offset_of!(_fpxreg, padding) - 10usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct _xmmreg {
     pub element: [__u32; 4usize],
 }
-#[test]
-fn bindgen_test_layout__xmmreg() {
-    const UNINIT: ::std::mem::MaybeUninit<_xmmreg> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<_xmmreg>(), 16usize, "Size of _xmmreg");
-    assert_eq!(
-        ::std::mem::align_of::<_xmmreg>(),
-        4usize,
-        "Alignment of _xmmreg"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).element) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _xmmreg::element"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _xmmreg"][::std::mem::size_of::<_xmmreg>() - 16usize];
+    ["Alignment of _xmmreg"][::std::mem::align_of::<_xmmreg>() - 4usize];
+    ["Offset of field: _xmmreg::element"][::std::mem::offset_of!(_xmmreg, element) - 0usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct _fpstate_32 {
@@ -3683,154 +3127,60 @@ pub union _fpstate_32__bindgen_ty_1 {
     pub padding1: [__u32; 44usize],
     pub padding: [__u32; 44usize],
 }
-#[test]
-fn bindgen_test_layout__fpstate_32__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<_fpstate_32__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_fpstate_32__bindgen_ty_1>(),
-        176usize,
-        "Size of _fpstate_32__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_fpstate_32__bindgen_ty_1>(),
-        4usize,
-        "Alignment of _fpstate_32__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).padding1) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpstate_32__bindgen_ty_1::padding1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).padding) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpstate_32__bindgen_ty_1::padding"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _fpstate_32__bindgen_ty_1"]
+        [::std::mem::size_of::<_fpstate_32__bindgen_ty_1>() - 176usize];
+    ["Alignment of _fpstate_32__bindgen_ty_1"]
+        [::std::mem::align_of::<_fpstate_32__bindgen_ty_1>() - 4usize];
+    ["Offset of field: _fpstate_32__bindgen_ty_1::padding1"]
+        [::std::mem::offset_of!(_fpstate_32__bindgen_ty_1, padding1) - 0usize];
+    ["Offset of field: _fpstate_32__bindgen_ty_1::padding"]
+        [::std::mem::offset_of!(_fpstate_32__bindgen_ty_1, padding) - 0usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union _fpstate_32__bindgen_ty_2 {
     pub padding2: [__u32; 12usize],
     pub sw_reserved: _fpx_sw_bytes,
 }
-#[test]
-fn bindgen_test_layout__fpstate_32__bindgen_ty_2() {
-    const UNINIT: ::std::mem::MaybeUninit<_fpstate_32__bindgen_ty_2> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_fpstate_32__bindgen_ty_2>(),
-        48usize,
-        "Size of _fpstate_32__bindgen_ty_2"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_fpstate_32__bindgen_ty_2>(),
-        4usize,
-        "Alignment of _fpstate_32__bindgen_ty_2"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).padding2) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpstate_32__bindgen_ty_2::padding2"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sw_reserved) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpstate_32__bindgen_ty_2::sw_reserved"
-    );
-}
-#[test]
-fn bindgen_test_layout__fpstate_32() {
-    const UNINIT: ::std::mem::MaybeUninit<_fpstate_32> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_fpstate_32>(),
-        624usize,
-        "Size of _fpstate_32"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_fpstate_32>(),
-        4usize,
-        "Alignment of _fpstate_32"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cw) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpstate_32::cw"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sw) as usize - ptr as usize },
-        4usize,
-        "Offset of field: _fpstate_32::sw"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tag) as usize - ptr as usize },
-        8usize,
-        "Offset of field: _fpstate_32::tag"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ipoff) as usize - ptr as usize },
-        12usize,
-        "Offset of field: _fpstate_32::ipoff"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cssel) as usize - ptr as usize },
-        16usize,
-        "Offset of field: _fpstate_32::cssel"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).dataoff) as usize - ptr as usize },
-        20usize,
-        "Offset of field: _fpstate_32::dataoff"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).datasel) as usize - ptr as usize },
-        24usize,
-        "Offset of field: _fpstate_32::datasel"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._st) as usize - ptr as usize },
-        28usize,
-        "Offset of field: _fpstate_32::_st"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).status) as usize - ptr as usize },
-        108usize,
-        "Offset of field: _fpstate_32::status"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).magic) as usize - ptr as usize },
-        110usize,
-        "Offset of field: _fpstate_32::magic"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._fxsr_env) as usize - ptr as usize },
-        112usize,
-        "Offset of field: _fpstate_32::_fxsr_env"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).mxcsr) as usize - ptr as usize },
-        136usize,
-        "Offset of field: _fpstate_32::mxcsr"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
-        140usize,
-        "Offset of field: _fpstate_32::reserved"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._fxsr_st) as usize - ptr as usize },
-        144usize,
-        "Offset of field: _fpstate_32::_fxsr_st"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._xmm) as usize - ptr as usize },
-        272usize,
-        "Offset of field: _fpstate_32::_xmm"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _fpstate_32__bindgen_ty_2"]
+        [::std::mem::size_of::<_fpstate_32__bindgen_ty_2>() - 48usize];
+    ["Alignment of _fpstate_32__bindgen_ty_2"]
+        [::std::mem::align_of::<_fpstate_32__bindgen_ty_2>() - 4usize];
+    ["Offset of field: _fpstate_32__bindgen_ty_2::padding2"]
+        [::std::mem::offset_of!(_fpstate_32__bindgen_ty_2, padding2) - 0usize];
+    ["Offset of field: _fpstate_32__bindgen_ty_2::sw_reserved"]
+        [::std::mem::offset_of!(_fpstate_32__bindgen_ty_2, sw_reserved) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _fpstate_32"][::std::mem::size_of::<_fpstate_32>() - 624usize];
+    ["Alignment of _fpstate_32"][::std::mem::align_of::<_fpstate_32>() - 4usize];
+    ["Offset of field: _fpstate_32::cw"][::std::mem::offset_of!(_fpstate_32, cw) - 0usize];
+    ["Offset of field: _fpstate_32::sw"][::std::mem::offset_of!(_fpstate_32, sw) - 4usize];
+    ["Offset of field: _fpstate_32::tag"][::std::mem::offset_of!(_fpstate_32, tag) - 8usize];
+    ["Offset of field: _fpstate_32::ipoff"][::std::mem::offset_of!(_fpstate_32, ipoff) - 12usize];
+    ["Offset of field: _fpstate_32::cssel"][::std::mem::offset_of!(_fpstate_32, cssel) - 16usize];
+    ["Offset of field: _fpstate_32::dataoff"]
+        [::std::mem::offset_of!(_fpstate_32, dataoff) - 20usize];
+    ["Offset of field: _fpstate_32::datasel"]
+        [::std::mem::offset_of!(_fpstate_32, datasel) - 24usize];
+    ["Offset of field: _fpstate_32::_st"][::std::mem::offset_of!(_fpstate_32, _st) - 28usize];
+    ["Offset of field: _fpstate_32::status"]
+        [::std::mem::offset_of!(_fpstate_32, status) - 108usize];
+    ["Offset of field: _fpstate_32::magic"][::std::mem::offset_of!(_fpstate_32, magic) - 110usize];
+    ["Offset of field: _fpstate_32::_fxsr_env"]
+        [::std::mem::offset_of!(_fpstate_32, _fxsr_env) - 112usize];
+    ["Offset of field: _fpstate_32::mxcsr"][::std::mem::offset_of!(_fpstate_32, mxcsr) - 136usize];
+    ["Offset of field: _fpstate_32::reserved"]
+        [::std::mem::offset_of!(_fpstate_32, reserved) - 140usize];
+    ["Offset of field: _fpstate_32::_fxsr_st"]
+        [::std::mem::offset_of!(_fpstate_32, _fxsr_st) - 144usize];
+    ["Offset of field: _fpstate_32::_xmm"][::std::mem::offset_of!(_fpstate_32, _xmm) - 272usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct _fpstate_64 {
@@ -3853,102 +3203,37 @@ pub union _fpstate_64__bindgen_ty_1 {
     pub reserved3: [__u32; 12usize],
     pub sw_reserved: _fpx_sw_bytes,
 }
-#[test]
-fn bindgen_test_layout__fpstate_64__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<_fpstate_64__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_fpstate_64__bindgen_ty_1>(),
-        48usize,
-        "Size of _fpstate_64__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_fpstate_64__bindgen_ty_1>(),
-        4usize,
-        "Alignment of _fpstate_64__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reserved3) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpstate_64__bindgen_ty_1::reserved3"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sw_reserved) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpstate_64__bindgen_ty_1::sw_reserved"
-    );
-}
-#[test]
-fn bindgen_test_layout__fpstate_64() {
-    const UNINIT: ::std::mem::MaybeUninit<_fpstate_64> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_fpstate_64>(),
-        512usize,
-        "Size of _fpstate_64"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_fpstate_64>(),
-        4usize,
-        "Alignment of _fpstate_64"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cwd) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _fpstate_64::cwd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).swd) as usize - ptr as usize },
-        2usize,
-        "Offset of field: _fpstate_64::swd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).twd) as usize - ptr as usize },
-        4usize,
-        "Offset of field: _fpstate_64::twd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fop) as usize - ptr as usize },
-        6usize,
-        "Offset of field: _fpstate_64::fop"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).rip) as usize - ptr as usize },
-        8usize,
-        "Offset of field: _fpstate_64::rip"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).rdp) as usize - ptr as usize },
-        16usize,
-        "Offset of field: _fpstate_64::rdp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).mxcsr) as usize - ptr as usize },
-        24usize,
-        "Offset of field: _fpstate_64::mxcsr"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).mxcsr_mask) as usize - ptr as usize },
-        28usize,
-        "Offset of field: _fpstate_64::mxcsr_mask"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).st_space) as usize - ptr as usize },
-        32usize,
-        "Offset of field: _fpstate_64::st_space"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xmm_space) as usize - ptr as usize },
-        160usize,
-        "Offset of field: _fpstate_64::xmm_space"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
-        416usize,
-        "Offset of field: _fpstate_64::reserved2"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _fpstate_64__bindgen_ty_1"]
+        [::std::mem::size_of::<_fpstate_64__bindgen_ty_1>() - 48usize];
+    ["Alignment of _fpstate_64__bindgen_ty_1"]
+        [::std::mem::align_of::<_fpstate_64__bindgen_ty_1>() - 4usize];
+    ["Offset of field: _fpstate_64__bindgen_ty_1::reserved3"]
+        [::std::mem::offset_of!(_fpstate_64__bindgen_ty_1, reserved3) - 0usize];
+    ["Offset of field: _fpstate_64__bindgen_ty_1::sw_reserved"]
+        [::std::mem::offset_of!(_fpstate_64__bindgen_ty_1, sw_reserved) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _fpstate_64"][::std::mem::size_of::<_fpstate_64>() - 512usize];
+    ["Alignment of _fpstate_64"][::std::mem::align_of::<_fpstate_64>() - 4usize];
+    ["Offset of field: _fpstate_64::cwd"][::std::mem::offset_of!(_fpstate_64, cwd) - 0usize];
+    ["Offset of field: _fpstate_64::swd"][::std::mem::offset_of!(_fpstate_64, swd) - 2usize];
+    ["Offset of field: _fpstate_64::twd"][::std::mem::offset_of!(_fpstate_64, twd) - 4usize];
+    ["Offset of field: _fpstate_64::fop"][::std::mem::offset_of!(_fpstate_64, fop) - 6usize];
+    ["Offset of field: _fpstate_64::rip"][::std::mem::offset_of!(_fpstate_64, rip) - 8usize];
+    ["Offset of field: _fpstate_64::rdp"][::std::mem::offset_of!(_fpstate_64, rdp) - 16usize];
+    ["Offset of field: _fpstate_64::mxcsr"][::std::mem::offset_of!(_fpstate_64, mxcsr) - 24usize];
+    ["Offset of field: _fpstate_64::mxcsr_mask"]
+        [::std::mem::offset_of!(_fpstate_64, mxcsr_mask) - 28usize];
+    ["Offset of field: _fpstate_64::st_space"]
+        [::std::mem::offset_of!(_fpstate_64, st_space) - 32usize];
+    ["Offset of field: _fpstate_64::xmm_space"]
+        [::std::mem::offset_of!(_fpstate_64, xmm_space) - 160usize];
+    ["Offset of field: _fpstate_64::reserved2"]
+        [::std::mem::offset_of!(_fpstate_64, reserved2) - 416usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct _header {
@@ -3956,57 +3241,26 @@ pub struct _header {
     pub reserved1: [__u64; 2usize],
     pub reserved2: [__u64; 5usize],
 }
-#[test]
-fn bindgen_test_layout__header() {
-    const UNINIT: ::std::mem::MaybeUninit<_header> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<_header>(), 64usize, "Size of _header");
-    assert_eq!(
-        ::std::mem::align_of::<_header>(),
-        4usize,
-        "Alignment of _header"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xfeatures) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _header::xfeatures"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
-        8usize,
-        "Offset of field: _header::reserved1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
-        24usize,
-        "Offset of field: _header::reserved2"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _header"][::std::mem::size_of::<_header>() - 64usize];
+    ["Alignment of _header"][::std::mem::align_of::<_header>() - 4usize];
+    ["Offset of field: _header::xfeatures"][::std::mem::offset_of!(_header, xfeatures) - 0usize];
+    ["Offset of field: _header::reserved1"][::std::mem::offset_of!(_header, reserved1) - 8usize];
+    ["Offset of field: _header::reserved2"][::std::mem::offset_of!(_header, reserved2) - 24usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct _ymmh_state {
     pub ymmh_space: [__u32; 64usize],
 }
-#[test]
-fn bindgen_test_layout__ymmh_state() {
-    const UNINIT: ::std::mem::MaybeUninit<_ymmh_state> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_ymmh_state>(),
-        256usize,
-        "Size of _ymmh_state"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_ymmh_state>(),
-        4usize,
-        "Alignment of _ymmh_state"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ymmh_space) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _ymmh_state::ymmh_space"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _ymmh_state"][::std::mem::size_of::<_ymmh_state>() - 256usize];
+    ["Alignment of _ymmh_state"][::std::mem::align_of::<_ymmh_state>() - 4usize];
+    ["Offset of field: _ymmh_state::ymmh_space"]
+        [::std::mem::offset_of!(_ymmh_state, ymmh_space) - 0usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct _xstate {
@@ -4014,36 +3268,15 @@ pub struct _xstate {
     pub xstate_hdr: _header,
     pub ymmh: _ymmh_state,
 }
-#[test]
-fn bindgen_test_layout__xstate() {
-    const UNINIT: ::std::mem::MaybeUninit<_xstate> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_xstate>(),
-        944usize,
-        "Size of _xstate"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_xstate>(),
-        4usize,
-        "Alignment of _xstate"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fpstate) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _xstate::fpstate"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xstate_hdr) as usize - ptr as usize },
-        624usize,
-        "Offset of field: _xstate::xstate_hdr"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ymmh) as usize - ptr as usize },
-        688usize,
-        "Offset of field: _xstate::ymmh"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _xstate"][::std::mem::size_of::<_xstate>() - 944usize];
+    ["Alignment of _xstate"][::std::mem::align_of::<_xstate>() - 4usize];
+    ["Offset of field: _xstate::fpstate"][::std::mem::offset_of!(_xstate, fpstate) - 0usize];
+    ["Offset of field: _xstate::xstate_hdr"]
+        [::std::mem::offset_of!(_xstate, xstate_hdr) - 624usize];
+    ["Offset of field: _xstate::ymmh"][::std::mem::offset_of!(_xstate, ymmh) - 688usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct sigcontext_32 {
@@ -4076,161 +3309,50 @@ pub struct sigcontext_32 {
     pub oldmask: __u32,
     pub cr2: __u32,
 }
-#[test]
-fn bindgen_test_layout_sigcontext_32() {
-    const UNINIT: ::std::mem::MaybeUninit<sigcontext_32> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigcontext_32>(),
-        88usize,
-        "Size of sigcontext_32"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigcontext_32>(),
-        4usize,
-        "Alignment of sigcontext_32"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).gs) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigcontext_32::gs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__gsh) as usize - ptr as usize },
-        2usize,
-        "Offset of field: sigcontext_32::__gsh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fs) as usize - ptr as usize },
-        4usize,
-        "Offset of field: sigcontext_32::fs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__fsh) as usize - ptr as usize },
-        6usize,
-        "Offset of field: sigcontext_32::__fsh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).es) as usize - ptr as usize },
-        8usize,
-        "Offset of field: sigcontext_32::es"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__esh) as usize - ptr as usize },
-        10usize,
-        "Offset of field: sigcontext_32::__esh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ds) as usize - ptr as usize },
-        12usize,
-        "Offset of field: sigcontext_32::ds"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__dsh) as usize - ptr as usize },
-        14usize,
-        "Offset of field: sigcontext_32::__dsh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).di) as usize - ptr as usize },
-        16usize,
-        "Offset of field: sigcontext_32::di"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).si) as usize - ptr as usize },
-        20usize,
-        "Offset of field: sigcontext_32::si"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).bp) as usize - ptr as usize },
-        24usize,
-        "Offset of field: sigcontext_32::bp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sp) as usize - ptr as usize },
-        28usize,
-        "Offset of field: sigcontext_32::sp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).bx) as usize - ptr as usize },
-        32usize,
-        "Offset of field: sigcontext_32::bx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).dx) as usize - ptr as usize },
-        36usize,
-        "Offset of field: sigcontext_32::dx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cx) as usize - ptr as usize },
-        40usize,
-        "Offset of field: sigcontext_32::cx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ax) as usize - ptr as usize },
-        44usize,
-        "Offset of field: sigcontext_32::ax"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).trapno) as usize - ptr as usize },
-        48usize,
-        "Offset of field: sigcontext_32::trapno"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).err) as usize - ptr as usize },
-        52usize,
-        "Offset of field: sigcontext_32::err"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ip) as usize - ptr as usize },
-        56usize,
-        "Offset of field: sigcontext_32::ip"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cs) as usize - ptr as usize },
-        60usize,
-        "Offset of field: sigcontext_32::cs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__csh) as usize - ptr as usize },
-        62usize,
-        "Offset of field: sigcontext_32::__csh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).flags) as usize - ptr as usize },
-        64usize,
-        "Offset of field: sigcontext_32::flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sp_at_signal) as usize - ptr as usize },
-        68usize,
-        "Offset of field: sigcontext_32::sp_at_signal"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ss) as usize - ptr as usize },
-        72usize,
-        "Offset of field: sigcontext_32::ss"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__ssh) as usize - ptr as usize },
-        74usize,
-        "Offset of field: sigcontext_32::__ssh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fpstate) as usize - ptr as usize },
-        76usize,
-        "Offset of field: sigcontext_32::fpstate"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).oldmask) as usize - ptr as usize },
-        80usize,
-        "Offset of field: sigcontext_32::oldmask"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cr2) as usize - ptr as usize },
-        84usize,
-        "Offset of field: sigcontext_32::cr2"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigcontext_32"][::std::mem::size_of::<sigcontext_32>() - 88usize];
+    ["Alignment of sigcontext_32"][::std::mem::align_of::<sigcontext_32>() - 4usize];
+    ["Offset of field: sigcontext_32::gs"][::std::mem::offset_of!(sigcontext_32, gs) - 0usize];
+    ["Offset of field: sigcontext_32::__gsh"]
+        [::std::mem::offset_of!(sigcontext_32, __gsh) - 2usize];
+    ["Offset of field: sigcontext_32::fs"][::std::mem::offset_of!(sigcontext_32, fs) - 4usize];
+    ["Offset of field: sigcontext_32::__fsh"]
+        [::std::mem::offset_of!(sigcontext_32, __fsh) - 6usize];
+    ["Offset of field: sigcontext_32::es"][::std::mem::offset_of!(sigcontext_32, es) - 8usize];
+    ["Offset of field: sigcontext_32::__esh"]
+        [::std::mem::offset_of!(sigcontext_32, __esh) - 10usize];
+    ["Offset of field: sigcontext_32::ds"][::std::mem::offset_of!(sigcontext_32, ds) - 12usize];
+    ["Offset of field: sigcontext_32::__dsh"]
+        [::std::mem::offset_of!(sigcontext_32, __dsh) - 14usize];
+    ["Offset of field: sigcontext_32::di"][::std::mem::offset_of!(sigcontext_32, di) - 16usize];
+    ["Offset of field: sigcontext_32::si"][::std::mem::offset_of!(sigcontext_32, si) - 20usize];
+    ["Offset of field: sigcontext_32::bp"][::std::mem::offset_of!(sigcontext_32, bp) - 24usize];
+    ["Offset of field: sigcontext_32::sp"][::std::mem::offset_of!(sigcontext_32, sp) - 28usize];
+    ["Offset of field: sigcontext_32::bx"][::std::mem::offset_of!(sigcontext_32, bx) - 32usize];
+    ["Offset of field: sigcontext_32::dx"][::std::mem::offset_of!(sigcontext_32, dx) - 36usize];
+    ["Offset of field: sigcontext_32::cx"][::std::mem::offset_of!(sigcontext_32, cx) - 40usize];
+    ["Offset of field: sigcontext_32::ax"][::std::mem::offset_of!(sigcontext_32, ax) - 44usize];
+    ["Offset of field: sigcontext_32::trapno"]
+        [::std::mem::offset_of!(sigcontext_32, trapno) - 48usize];
+    ["Offset of field: sigcontext_32::err"][::std::mem::offset_of!(sigcontext_32, err) - 52usize];
+    ["Offset of field: sigcontext_32::ip"][::std::mem::offset_of!(sigcontext_32, ip) - 56usize];
+    ["Offset of field: sigcontext_32::cs"][::std::mem::offset_of!(sigcontext_32, cs) - 60usize];
+    ["Offset of field: sigcontext_32::__csh"]
+        [::std::mem::offset_of!(sigcontext_32, __csh) - 62usize];
+    ["Offset of field: sigcontext_32::flags"]
+        [::std::mem::offset_of!(sigcontext_32, flags) - 64usize];
+    ["Offset of field: sigcontext_32::sp_at_signal"]
+        [::std::mem::offset_of!(sigcontext_32, sp_at_signal) - 68usize];
+    ["Offset of field: sigcontext_32::ss"][::std::mem::offset_of!(sigcontext_32, ss) - 72usize];
+    ["Offset of field: sigcontext_32::__ssh"]
+        [::std::mem::offset_of!(sigcontext_32, __ssh) - 74usize];
+    ["Offset of field: sigcontext_32::fpstate"]
+        [::std::mem::offset_of!(sigcontext_32, fpstate) - 76usize];
+    ["Offset of field: sigcontext_32::oldmask"]
+        [::std::mem::offset_of!(sigcontext_32, oldmask) - 80usize];
+    ["Offset of field: sigcontext_32::cr2"][::std::mem::offset_of!(sigcontext_32, cr2) - 84usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct sigcontext_64 {
@@ -4263,161 +3385,44 @@ pub struct sigcontext_64 {
     pub fpstate: __u64,
     pub reserved1: [__u64; 8usize],
 }
-#[test]
-fn bindgen_test_layout_sigcontext_64() {
-    const UNINIT: ::std::mem::MaybeUninit<sigcontext_64> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigcontext_64>(),
-        256usize,
-        "Size of sigcontext_64"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigcontext_64>(),
-        4usize,
-        "Alignment of sigcontext_64"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).r8) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigcontext_64::r8"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).r9) as usize - ptr as usize },
-        8usize,
-        "Offset of field: sigcontext_64::r9"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).r10) as usize - ptr as usize },
-        16usize,
-        "Offset of field: sigcontext_64::r10"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).r11) as usize - ptr as usize },
-        24usize,
-        "Offset of field: sigcontext_64::r11"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).r12) as usize - ptr as usize },
-        32usize,
-        "Offset of field: sigcontext_64::r12"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).r13) as usize - ptr as usize },
-        40usize,
-        "Offset of field: sigcontext_64::r13"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).r14) as usize - ptr as usize },
-        48usize,
-        "Offset of field: sigcontext_64::r14"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).r15) as usize - ptr as usize },
-        56usize,
-        "Offset of field: sigcontext_64::r15"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).di) as usize - ptr as usize },
-        64usize,
-        "Offset of field: sigcontext_64::di"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).si) as usize - ptr as usize },
-        72usize,
-        "Offset of field: sigcontext_64::si"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).bp) as usize - ptr as usize },
-        80usize,
-        "Offset of field: sigcontext_64::bp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).bx) as usize - ptr as usize },
-        88usize,
-        "Offset of field: sigcontext_64::bx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).dx) as usize - ptr as usize },
-        96usize,
-        "Offset of field: sigcontext_64::dx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ax) as usize - ptr as usize },
-        104usize,
-        "Offset of field: sigcontext_64::ax"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cx) as usize - ptr as usize },
-        112usize,
-        "Offset of field: sigcontext_64::cx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sp) as usize - ptr as usize },
-        120usize,
-        "Offset of field: sigcontext_64::sp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ip) as usize - ptr as usize },
-        128usize,
-        "Offset of field: sigcontext_64::ip"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).flags) as usize - ptr as usize },
-        136usize,
-        "Offset of field: sigcontext_64::flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cs) as usize - ptr as usize },
-        144usize,
-        "Offset of field: sigcontext_64::cs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).gs) as usize - ptr as usize },
-        146usize,
-        "Offset of field: sigcontext_64::gs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fs) as usize - ptr as usize },
-        148usize,
-        "Offset of field: sigcontext_64::fs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ss) as usize - ptr as usize },
-        150usize,
-        "Offset of field: sigcontext_64::ss"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).err) as usize - ptr as usize },
-        152usize,
-        "Offset of field: sigcontext_64::err"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).trapno) as usize - ptr as usize },
-        160usize,
-        "Offset of field: sigcontext_64::trapno"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).oldmask) as usize - ptr as usize },
-        168usize,
-        "Offset of field: sigcontext_64::oldmask"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cr2) as usize - ptr as usize },
-        176usize,
-        "Offset of field: sigcontext_64::cr2"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fpstate) as usize - ptr as usize },
-        184usize,
-        "Offset of field: sigcontext_64::fpstate"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
-        192usize,
-        "Offset of field: sigcontext_64::reserved1"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigcontext_64"][::std::mem::size_of::<sigcontext_64>() - 256usize];
+    ["Alignment of sigcontext_64"][::std::mem::align_of::<sigcontext_64>() - 4usize];
+    ["Offset of field: sigcontext_64::r8"][::std::mem::offset_of!(sigcontext_64, r8) - 0usize];
+    ["Offset of field: sigcontext_64::r9"][::std::mem::offset_of!(sigcontext_64, r9) - 8usize];
+    ["Offset of field: sigcontext_64::r10"][::std::mem::offset_of!(sigcontext_64, r10) - 16usize];
+    ["Offset of field: sigcontext_64::r11"][::std::mem::offset_of!(sigcontext_64, r11) - 24usize];
+    ["Offset of field: sigcontext_64::r12"][::std::mem::offset_of!(sigcontext_64, r12) - 32usize];
+    ["Offset of field: sigcontext_64::r13"][::std::mem::offset_of!(sigcontext_64, r13) - 40usize];
+    ["Offset of field: sigcontext_64::r14"][::std::mem::offset_of!(sigcontext_64, r14) - 48usize];
+    ["Offset of field: sigcontext_64::r15"][::std::mem::offset_of!(sigcontext_64, r15) - 56usize];
+    ["Offset of field: sigcontext_64::di"][::std::mem::offset_of!(sigcontext_64, di) - 64usize];
+    ["Offset of field: sigcontext_64::si"][::std::mem::offset_of!(sigcontext_64, si) - 72usize];
+    ["Offset of field: sigcontext_64::bp"][::std::mem::offset_of!(sigcontext_64, bp) - 80usize];
+    ["Offset of field: sigcontext_64::bx"][::std::mem::offset_of!(sigcontext_64, bx) - 88usize];
+    ["Offset of field: sigcontext_64::dx"][::std::mem::offset_of!(sigcontext_64, dx) - 96usize];
+    ["Offset of field: sigcontext_64::ax"][::std::mem::offset_of!(sigcontext_64, ax) - 104usize];
+    ["Offset of field: sigcontext_64::cx"][::std::mem::offset_of!(sigcontext_64, cx) - 112usize];
+    ["Offset of field: sigcontext_64::sp"][::std::mem::offset_of!(sigcontext_64, sp) - 120usize];
+    ["Offset of field: sigcontext_64::ip"][::std::mem::offset_of!(sigcontext_64, ip) - 128usize];
+    ["Offset of field: sigcontext_64::flags"]
+        [::std::mem::offset_of!(sigcontext_64, flags) - 136usize];
+    ["Offset of field: sigcontext_64::cs"][::std::mem::offset_of!(sigcontext_64, cs) - 144usize];
+    ["Offset of field: sigcontext_64::gs"][::std::mem::offset_of!(sigcontext_64, gs) - 146usize];
+    ["Offset of field: sigcontext_64::fs"][::std::mem::offset_of!(sigcontext_64, fs) - 148usize];
+    ["Offset of field: sigcontext_64::ss"][::std::mem::offset_of!(sigcontext_64, ss) - 150usize];
+    ["Offset of field: sigcontext_64::err"][::std::mem::offset_of!(sigcontext_64, err) - 152usize];
+    ["Offset of field: sigcontext_64::trapno"]
+        [::std::mem::offset_of!(sigcontext_64, trapno) - 160usize];
+    ["Offset of field: sigcontext_64::oldmask"]
+        [::std::mem::offset_of!(sigcontext_64, oldmask) - 168usize];
+    ["Offset of field: sigcontext_64::cr2"][::std::mem::offset_of!(sigcontext_64, cr2) - 176usize];
+    ["Offset of field: sigcontext_64::fpstate"]
+        [::std::mem::offset_of!(sigcontext_64, fpstate) - 184usize];
+    ["Offset of field: sigcontext_64::reserved1"]
+        [::std::mem::offset_of!(sigcontext_64, reserved1) - 192usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct sigcontext {
@@ -4450,438 +3455,172 @@ pub struct sigcontext {
     pub oldmask: __u32,
     pub cr2: __u32,
 }
-#[test]
-fn bindgen_test_layout_sigcontext() {
-    const UNINIT: ::std::mem::MaybeUninit<sigcontext> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigcontext>(),
-        88usize,
-        "Size of sigcontext"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigcontext>(),
-        4usize,
-        "Alignment of sigcontext"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).gs) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigcontext::gs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__gsh) as usize - ptr as usize },
-        2usize,
-        "Offset of field: sigcontext::__gsh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fs) as usize - ptr as usize },
-        4usize,
-        "Offset of field: sigcontext::fs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__fsh) as usize - ptr as usize },
-        6usize,
-        "Offset of field: sigcontext::__fsh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).es) as usize - ptr as usize },
-        8usize,
-        "Offset of field: sigcontext::es"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__esh) as usize - ptr as usize },
-        10usize,
-        "Offset of field: sigcontext::__esh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ds) as usize - ptr as usize },
-        12usize,
-        "Offset of field: sigcontext::ds"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__dsh) as usize - ptr as usize },
-        14usize,
-        "Offset of field: sigcontext::__dsh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).edi) as usize - ptr as usize },
-        16usize,
-        "Offset of field: sigcontext::edi"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).esi) as usize - ptr as usize },
-        20usize,
-        "Offset of field: sigcontext::esi"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ebp) as usize - ptr as usize },
-        24usize,
-        "Offset of field: sigcontext::ebp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).esp) as usize - ptr as usize },
-        28usize,
-        "Offset of field: sigcontext::esp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ebx) as usize - ptr as usize },
-        32usize,
-        "Offset of field: sigcontext::ebx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).edx) as usize - ptr as usize },
-        36usize,
-        "Offset of field: sigcontext::edx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ecx) as usize - ptr as usize },
-        40usize,
-        "Offset of field: sigcontext::ecx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).eax) as usize - ptr as usize },
-        44usize,
-        "Offset of field: sigcontext::eax"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).trapno) as usize - ptr as usize },
-        48usize,
-        "Offset of field: sigcontext::trapno"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).err) as usize - ptr as usize },
-        52usize,
-        "Offset of field: sigcontext::err"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).eip) as usize - ptr as usize },
-        56usize,
-        "Offset of field: sigcontext::eip"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cs) as usize - ptr as usize },
-        60usize,
-        "Offset of field: sigcontext::cs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__csh) as usize - ptr as usize },
-        62usize,
-        "Offset of field: sigcontext::__csh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).eflags) as usize - ptr as usize },
-        64usize,
-        "Offset of field: sigcontext::eflags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).esp_at_signal) as usize - ptr as usize },
-        68usize,
-        "Offset of field: sigcontext::esp_at_signal"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ss) as usize - ptr as usize },
-        72usize,
-        "Offset of field: sigcontext::ss"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__ssh) as usize - ptr as usize },
-        74usize,
-        "Offset of field: sigcontext::__ssh"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fpstate) as usize - ptr as usize },
-        76usize,
-        "Offset of field: sigcontext::fpstate"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).oldmask) as usize - ptr as usize },
-        80usize,
-        "Offset of field: sigcontext::oldmask"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cr2) as usize - ptr as usize },
-        84usize,
-        "Offset of field: sigcontext::cr2"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigcontext"][::std::mem::size_of::<sigcontext>() - 88usize];
+    ["Alignment of sigcontext"][::std::mem::align_of::<sigcontext>() - 4usize];
+    ["Offset of field: sigcontext::gs"][::std::mem::offset_of!(sigcontext, gs) - 0usize];
+    ["Offset of field: sigcontext::__gsh"][::std::mem::offset_of!(sigcontext, __gsh) - 2usize];
+    ["Offset of field: sigcontext::fs"][::std::mem::offset_of!(sigcontext, fs) - 4usize];
+    ["Offset of field: sigcontext::__fsh"][::std::mem::offset_of!(sigcontext, __fsh) - 6usize];
+    ["Offset of field: sigcontext::es"][::std::mem::offset_of!(sigcontext, es) - 8usize];
+    ["Offset of field: sigcontext::__esh"][::std::mem::offset_of!(sigcontext, __esh) - 10usize];
+    ["Offset of field: sigcontext::ds"][::std::mem::offset_of!(sigcontext, ds) - 12usize];
+    ["Offset of field: sigcontext::__dsh"][::std::mem::offset_of!(sigcontext, __dsh) - 14usize];
+    ["Offset of field: sigcontext::edi"][::std::mem::offset_of!(sigcontext, edi) - 16usize];
+    ["Offset of field: sigcontext::esi"][::std::mem::offset_of!(sigcontext, esi) - 20usize];
+    ["Offset of field: sigcontext::ebp"][::std::mem::offset_of!(sigcontext, ebp) - 24usize];
+    ["Offset of field: sigcontext::esp"][::std::mem::offset_of!(sigcontext, esp) - 28usize];
+    ["Offset of field: sigcontext::ebx"][::std::mem::offset_of!(sigcontext, ebx) - 32usize];
+    ["Offset of field: sigcontext::edx"][::std::mem::offset_of!(sigcontext, edx) - 36usize];
+    ["Offset of field: sigcontext::ecx"][::std::mem::offset_of!(sigcontext, ecx) - 40usize];
+    ["Offset of field: sigcontext::eax"][::std::mem::offset_of!(sigcontext, eax) - 44usize];
+    ["Offset of field: sigcontext::trapno"][::std::mem::offset_of!(sigcontext, trapno) - 48usize];
+    ["Offset of field: sigcontext::err"][::std::mem::offset_of!(sigcontext, err) - 52usize];
+    ["Offset of field: sigcontext::eip"][::std::mem::offset_of!(sigcontext, eip) - 56usize];
+    ["Offset of field: sigcontext::cs"][::std::mem::offset_of!(sigcontext, cs) - 60usize];
+    ["Offset of field: sigcontext::__csh"][::std::mem::offset_of!(sigcontext, __csh) - 62usize];
+    ["Offset of field: sigcontext::eflags"][::std::mem::offset_of!(sigcontext, eflags) - 64usize];
+    ["Offset of field: sigcontext::esp_at_signal"]
+        [::std::mem::offset_of!(sigcontext, esp_at_signal) - 68usize];
+    ["Offset of field: sigcontext::ss"][::std::mem::offset_of!(sigcontext, ss) - 72usize];
+    ["Offset of field: sigcontext::__ssh"][::std::mem::offset_of!(sigcontext, __ssh) - 74usize];
+    ["Offset of field: sigcontext::fpstate"][::std::mem::offset_of!(sigcontext, fpstate) - 76usize];
+    ["Offset of field: sigcontext::oldmask"][::std::mem::offset_of!(sigcontext, oldmask) - 80usize];
+    ["Offset of field: sigcontext::cr2"][::std::mem::offset_of!(sigcontext, cr2) - 84usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct timespec {
     pub tv_sec: time_t,
     pub tv_nsec: ::std::os::raw::c_long,
 }
-#[test]
-fn bindgen_test_layout_timespec() {
-    const UNINIT: ::std::mem::MaybeUninit<timespec> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<timespec>(),
-        8usize,
-        "Size of timespec"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<timespec>(),
-        4usize,
-        "Alignment of timespec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_sec) as usize - ptr as usize },
-        0usize,
-        "Offset of field: timespec::tv_sec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_nsec) as usize - ptr as usize },
-        4usize,
-        "Offset of field: timespec::tv_nsec"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of timespec"][::std::mem::size_of::<timespec>() - 8usize];
+    ["Alignment of timespec"][::std::mem::align_of::<timespec>() - 4usize];
+    ["Offset of field: timespec::tv_sec"][::std::mem::offset_of!(timespec, tv_sec) - 0usize];
+    ["Offset of field: timespec::tv_nsec"][::std::mem::offset_of!(timespec, tv_nsec) - 4usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __kernel_timespec {
     pub tv_sec: __kernel_time64_t,
     pub tv_nsec: ::std::os::raw::c_longlong,
 }
-#[test]
-fn bindgen_test_layout___kernel_timespec() {
-    const UNINIT: ::std::mem::MaybeUninit<__kernel_timespec> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__kernel_timespec>(),
-        16usize,
-        "Size of __kernel_timespec"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__kernel_timespec>(),
-        4usize,
-        "Alignment of __kernel_timespec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_sec) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_timespec::tv_sec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_nsec) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __kernel_timespec::tv_nsec"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __kernel_timespec"][::std::mem::size_of::<__kernel_timespec>() - 16usize];
+    ["Alignment of __kernel_timespec"][::std::mem::align_of::<__kernel_timespec>() - 4usize];
+    ["Offset of field: __kernel_timespec::tv_sec"]
+        [::std::mem::offset_of!(__kernel_timespec, tv_sec) - 0usize];
+    ["Offset of field: __kernel_timespec::tv_nsec"]
+        [::std::mem::offset_of!(__kernel_timespec, tv_nsec) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __kernel_itimerspec {
     pub it_interval: __kernel_timespec,
     pub it_value: __kernel_timespec,
 }
-#[test]
-fn bindgen_test_layout___kernel_itimerspec() {
-    const UNINIT: ::std::mem::MaybeUninit<__kernel_itimerspec> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__kernel_itimerspec>(),
-        32usize,
-        "Size of __kernel_itimerspec"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__kernel_itimerspec>(),
-        4usize,
-        "Alignment of __kernel_itimerspec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).it_interval) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_itimerspec::it_interval"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).it_value) as usize - ptr as usize },
-        16usize,
-        "Offset of field: __kernel_itimerspec::it_value"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __kernel_itimerspec"][::std::mem::size_of::<__kernel_itimerspec>() - 32usize];
+    ["Alignment of __kernel_itimerspec"][::std::mem::align_of::<__kernel_itimerspec>() - 4usize];
+    ["Offset of field: __kernel_itimerspec::it_interval"]
+        [::std::mem::offset_of!(__kernel_itimerspec, it_interval) - 0usize];
+    ["Offset of field: __kernel_itimerspec::it_value"]
+        [::std::mem::offset_of!(__kernel_itimerspec, it_value) - 16usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __kernel_old_timespec {
     pub tv_sec: __kernel_old_time_t,
     pub tv_nsec: ::std::os::raw::c_long,
 }
-#[test]
-fn bindgen_test_layout___kernel_old_timespec() {
-    const UNINIT: ::std::mem::MaybeUninit<__kernel_old_timespec> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__kernel_old_timespec>(),
-        8usize,
-        "Size of __kernel_old_timespec"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__kernel_old_timespec>(),
-        4usize,
-        "Alignment of __kernel_old_timespec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_sec) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_old_timespec::tv_sec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_nsec) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __kernel_old_timespec::tv_nsec"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __kernel_old_timespec"][::std::mem::size_of::<__kernel_old_timespec>() - 8usize];
+    ["Alignment of __kernel_old_timespec"]
+        [::std::mem::align_of::<__kernel_old_timespec>() - 4usize];
+    ["Offset of field: __kernel_old_timespec::tv_sec"]
+        [::std::mem::offset_of!(__kernel_old_timespec, tv_sec) - 0usize];
+    ["Offset of field: __kernel_old_timespec::tv_nsec"]
+        [::std::mem::offset_of!(__kernel_old_timespec, tv_nsec) - 4usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __kernel_sock_timeval {
     pub tv_sec: __s64,
     pub tv_usec: __s64,
 }
-#[test]
-fn bindgen_test_layout___kernel_sock_timeval() {
-    const UNINIT: ::std::mem::MaybeUninit<__kernel_sock_timeval> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__kernel_sock_timeval>(),
-        16usize,
-        "Size of __kernel_sock_timeval"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__kernel_sock_timeval>(),
-        4usize,
-        "Alignment of __kernel_sock_timeval"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_sec) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_sock_timeval::tv_sec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_usec) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __kernel_sock_timeval::tv_usec"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __kernel_sock_timeval"][::std::mem::size_of::<__kernel_sock_timeval>() - 16usize];
+    ["Alignment of __kernel_sock_timeval"]
+        [::std::mem::align_of::<__kernel_sock_timeval>() - 4usize];
+    ["Offset of field: __kernel_sock_timeval::tv_sec"]
+        [::std::mem::offset_of!(__kernel_sock_timeval, tv_sec) - 0usize];
+    ["Offset of field: __kernel_sock_timeval::tv_usec"]
+        [::std::mem::offset_of!(__kernel_sock_timeval, tv_usec) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct timeval {
     pub tv_sec: __kernel_old_time_t,
     pub tv_usec: __kernel_suseconds_t,
 }
-#[test]
-fn bindgen_test_layout_timeval() {
-    const UNINIT: ::std::mem::MaybeUninit<timeval> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<timeval>(), 8usize, "Size of timeval");
-    assert_eq!(
-        ::std::mem::align_of::<timeval>(),
-        4usize,
-        "Alignment of timeval"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_sec) as usize - ptr as usize },
-        0usize,
-        "Offset of field: timeval::tv_sec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tv_usec) as usize - ptr as usize },
-        4usize,
-        "Offset of field: timeval::tv_usec"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of timeval"][::std::mem::size_of::<timeval>() - 8usize];
+    ["Alignment of timeval"][::std::mem::align_of::<timeval>() - 4usize];
+    ["Offset of field: timeval::tv_sec"][::std::mem::offset_of!(timeval, tv_sec) - 0usize];
+    ["Offset of field: timeval::tv_usec"][::std::mem::offset_of!(timeval, tv_usec) - 4usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct itimerspec {
     pub it_interval: timespec,
     pub it_value: timespec,
 }
-#[test]
-fn bindgen_test_layout_itimerspec() {
-    const UNINIT: ::std::mem::MaybeUninit<itimerspec> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<itimerspec>(),
-        16usize,
-        "Size of itimerspec"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<itimerspec>(),
-        4usize,
-        "Alignment of itimerspec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).it_interval) as usize - ptr as usize },
-        0usize,
-        "Offset of field: itimerspec::it_interval"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).it_value) as usize - ptr as usize },
-        8usize,
-        "Offset of field: itimerspec::it_value"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of itimerspec"][::std::mem::size_of::<itimerspec>() - 16usize];
+    ["Alignment of itimerspec"][::std::mem::align_of::<itimerspec>() - 4usize];
+    ["Offset of field: itimerspec::it_interval"]
+        [::std::mem::offset_of!(itimerspec, it_interval) - 0usize];
+    ["Offset of field: itimerspec::it_value"]
+        [::std::mem::offset_of!(itimerspec, it_value) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct itimerval {
     pub it_interval: timeval,
     pub it_value: timeval,
 }
-#[test]
-fn bindgen_test_layout_itimerval() {
-    const UNINIT: ::std::mem::MaybeUninit<itimerval> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<itimerval>(),
-        16usize,
-        "Size of itimerval"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<itimerval>(),
-        4usize,
-        "Alignment of itimerval"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).it_interval) as usize - ptr as usize },
-        0usize,
-        "Offset of field: itimerval::it_interval"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).it_value) as usize - ptr as usize },
-        8usize,
-        "Offset of field: itimerval::it_value"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of itimerval"][::std::mem::size_of::<itimerval>() - 16usize];
+    ["Alignment of itimerval"][::std::mem::align_of::<itimerval>() - 4usize];
+    ["Offset of field: itimerval::it_interval"]
+        [::std::mem::offset_of!(itimerval, it_interval) - 0usize];
+    ["Offset of field: itimerval::it_value"][::std::mem::offset_of!(itimerval, it_value) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct timezone {
     pub tz_minuteswest: ::std::os::raw::c_int,
     pub tz_dsttime: ::std::os::raw::c_int,
 }
-#[test]
-fn bindgen_test_layout_timezone() {
-    const UNINIT: ::std::mem::MaybeUninit<timezone> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<timezone>(),
-        8usize,
-        "Size of timezone"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<timezone>(),
-        4usize,
-        "Alignment of timezone"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tz_minuteswest) as usize - ptr as usize },
-        0usize,
-        "Offset of field: timezone::tz_minuteswest"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tz_dsttime) as usize - ptr as usize },
-        4usize,
-        "Offset of field: timezone::tz_dsttime"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of timezone"][::std::mem::size_of::<timezone>() - 8usize];
+    ["Alignment of timezone"][::std::mem::align_of::<timezone>() - 4usize];
+    ["Offset of field: timezone::tz_minuteswest"]
+        [::std::mem::offset_of!(timezone, tz_minuteswest) - 0usize];
+    ["Offset of field: timezone::tz_dsttime"]
+        [::std::mem::offset_of!(timezone, tz_dsttime) - 4usize];
+};
 pub type sigset_t = ::std::os::raw::c_ulong;
 pub type __signalfn_t = ::std::option::Option<unsafe extern "C" fn(arg1: ::std::os::raw::c_int)>;
 pub type __sighandler_t = __signalfn_t;
@@ -4907,67 +3646,30 @@ pub union __kernel_sigaction__bindgen_ty_1 {
         ),
     >,
 }
-#[test]
-fn bindgen_test_layout___kernel_sigaction__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<__kernel_sigaction__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__kernel_sigaction__bindgen_ty_1>(),
-        4usize,
-        "Size of __kernel_sigaction__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__kernel_sigaction__bindgen_ty_1>(),
-        4usize,
-        "Alignment of __kernel_sigaction__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sa_handler) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_sigaction__bindgen_ty_1::_sa_handler"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sa_sigaction) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_sigaction__bindgen_ty_1::_sa_sigaction"
-    );
-}
-#[test]
-fn bindgen_test_layout___kernel_sigaction() {
-    const UNINIT: ::std::mem::MaybeUninit<__kernel_sigaction> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__kernel_sigaction>(),
-        16usize,
-        "Size of __kernel_sigaction"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__kernel_sigaction>(),
-        4usize,
-        "Alignment of __kernel_sigaction"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._u) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __kernel_sigaction::_u"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_mask) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __kernel_sigaction::sa_mask"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_flags) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __kernel_sigaction::sa_flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_restorer) as usize - ptr as usize },
-        12usize,
-        "Offset of field: __kernel_sigaction::sa_restorer"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __kernel_sigaction__bindgen_ty_1"]
+        [::std::mem::size_of::<__kernel_sigaction__bindgen_ty_1>() - 4usize];
+    ["Alignment of __kernel_sigaction__bindgen_ty_1"]
+        [::std::mem::align_of::<__kernel_sigaction__bindgen_ty_1>() - 4usize];
+    ["Offset of field: __kernel_sigaction__bindgen_ty_1::_sa_handler"]
+        [::std::mem::offset_of!(__kernel_sigaction__bindgen_ty_1, _sa_handler) - 0usize];
+    ["Offset of field: __kernel_sigaction__bindgen_ty_1::_sa_sigaction"]
+        [::std::mem::offset_of!(__kernel_sigaction__bindgen_ty_1, _sa_sigaction) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __kernel_sigaction"][::std::mem::size_of::<__kernel_sigaction>() - 16usize];
+    ["Alignment of __kernel_sigaction"][::std::mem::align_of::<__kernel_sigaction>() - 4usize];
+    ["Offset of field: __kernel_sigaction::_u"]
+        [::std::mem::offset_of!(__kernel_sigaction, _u) - 0usize];
+    ["Offset of field: __kernel_sigaction::sa_mask"]
+        [::std::mem::offset_of!(__kernel_sigaction, sa_mask) - 4usize];
+    ["Offset of field: __kernel_sigaction::sa_flags"]
+        [::std::mem::offset_of!(__kernel_sigaction, sa_flags) - 8usize];
+    ["Offset of field: __kernel_sigaction::sa_restorer"]
+        [::std::mem::offset_of!(__kernel_sigaction, sa_restorer) - 12usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct sigaltstack {
@@ -4975,36 +3677,16 @@ pub struct sigaltstack {
     pub ss_flags: ::std::os::raw::c_int,
     pub ss_size: __kernel_size_t,
 }
-#[test]
-fn bindgen_test_layout_sigaltstack() {
-    const UNINIT: ::std::mem::MaybeUninit<sigaltstack> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigaltstack>(),
-        12usize,
-        "Size of sigaltstack"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigaltstack>(),
-        4usize,
-        "Alignment of sigaltstack"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ss_sp) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigaltstack::ss_sp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ss_flags) as usize - ptr as usize },
-        4usize,
-        "Offset of field: sigaltstack::ss_flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ss_size) as usize - ptr as usize },
-        8usize,
-        "Offset of field: sigaltstack::ss_size"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigaltstack"][::std::mem::size_of::<sigaltstack>() - 12usize];
+    ["Alignment of sigaltstack"][::std::mem::align_of::<sigaltstack>() - 4usize];
+    ["Offset of field: sigaltstack::ss_sp"][::std::mem::offset_of!(sigaltstack, ss_sp) - 0usize];
+    ["Offset of field: sigaltstack::ss_flags"]
+        [::std::mem::offset_of!(sigaltstack, ss_flags) - 4usize];
+    ["Offset of field: sigaltstack::ss_size"]
+        [::std::mem::offset_of!(sigaltstack, ss_size) - 8usize];
+};
 pub type stack_t = sigaltstack;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -5012,27 +3694,13 @@ pub union sigval {
     pub sival_int: ::std::os::raw::c_int,
     pub sival_ptr: *mut ::std::os::raw::c_void,
 }
-#[test]
-fn bindgen_test_layout_sigval() {
-    const UNINIT: ::std::mem::MaybeUninit<sigval> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<sigval>(), 4usize, "Size of sigval");
-    assert_eq!(
-        ::std::mem::align_of::<sigval>(),
-        4usize,
-        "Alignment of sigval"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sival_int) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigval::sival_int"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sival_ptr) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigval::sival_ptr"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigval"][::std::mem::size_of::<sigval>() - 4usize];
+    ["Alignment of sigval"][::std::mem::align_of::<sigval>() - 4usize];
+    ["Offset of field: sigval::sival_int"][::std::mem::offset_of!(sigval, sival_int) - 0usize];
+    ["Offset of field: sigval::sival_ptr"][::std::mem::offset_of!(sigval, sival_ptr) - 0usize];
+};
 pub type sigval_t = sigval;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -5051,32 +3719,17 @@ pub struct __sifields__bindgen_ty_1 {
     pub _pid: __kernel_pid_t,
     pub _uid: __kernel_uid32_t,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_1>(),
-        8usize,
-        "Size of __sifields__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_1>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._pid) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_1::_pid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._uid) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_1::_uid"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_1"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_1>() - 8usize];
+    ["Alignment of __sifields__bindgen_ty_1"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_1>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_1::_pid"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_1, _pid) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_1::_uid"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_1, _uid) - 4usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct __sifields__bindgen_ty_2 {
@@ -5085,42 +3738,21 @@ pub struct __sifields__bindgen_ty_2 {
     pub _sigval: sigval_t,
     pub _sys_private: ::std::os::raw::c_int,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_2() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_2> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_2>(),
-        16usize,
-        "Size of __sifields__bindgen_ty_2"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_2>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_2"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._tid) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_2::_tid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._overrun) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_2::_overrun"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sigval) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __sifields__bindgen_ty_2::_sigval"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sys_private) as usize - ptr as usize },
-        12usize,
-        "Offset of field: __sifields__bindgen_ty_2::_sys_private"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_2"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_2>() - 16usize];
+    ["Alignment of __sifields__bindgen_ty_2"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_2>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_2::_tid"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_2, _tid) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_2::_overrun"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_2, _overrun) - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_2::_sigval"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_2, _sigval) - 8usize];
+    ["Offset of field: __sifields__bindgen_ty_2::_sys_private"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_2, _sys_private) - 12usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct __sifields__bindgen_ty_3 {
@@ -5128,37 +3760,19 @@ pub struct __sifields__bindgen_ty_3 {
     pub _uid: __kernel_uid32_t,
     pub _sigval: sigval_t,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_3() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_3> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_3>(),
-        12usize,
-        "Size of __sifields__bindgen_ty_3"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_3>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_3"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._pid) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_3::_pid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._uid) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_3::_uid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sigval) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __sifields__bindgen_ty_3::_sigval"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_3"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_3>() - 12usize];
+    ["Alignment of __sifields__bindgen_ty_3"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_3>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_3::_pid"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_3, _pid) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_3::_uid"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_3, _uid) - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_3::_sigval"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_3, _sigval) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __sifields__bindgen_ty_4 {
@@ -5168,47 +3782,23 @@ pub struct __sifields__bindgen_ty_4 {
     pub _utime: __kernel_clock_t,
     pub _stime: __kernel_clock_t,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_4() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_4> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_4>(),
-        20usize,
-        "Size of __sifields__bindgen_ty_4"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_4>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_4"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._pid) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_4::_pid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._uid) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_4::_uid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._status) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __sifields__bindgen_ty_4::_status"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._utime) as usize - ptr as usize },
-        12usize,
-        "Offset of field: __sifields__bindgen_ty_4::_utime"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._stime) as usize - ptr as usize },
-        16usize,
-        "Offset of field: __sifields__bindgen_ty_4::_stime"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_4"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_4>() - 20usize];
+    ["Alignment of __sifields__bindgen_ty_4"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_4>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_4::_pid"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_4, _pid) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_4::_uid"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_4, _uid) - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_4::_status"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_4, _status) - 8usize];
+    ["Offset of field: __sifields__bindgen_ty_4::_utime"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_4, _utime) - 12usize];
+    ["Offset of field: __sifields__bindgen_ty_4::_stime"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_4, _stime) - 16usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct __sifields__bindgen_ty_5 {
@@ -5231,69 +3821,48 @@ pub struct __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1 {
     pub _lower: *mut ::std::os::raw::c_void,
     pub _upper: *mut ::std::os::raw::c_void,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1>(),
-        12usize,
-        "Size of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._dummy_bnd) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1::_dummy_bnd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._lower) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1::_lower"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._upper) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1::_upper"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1>() - 12usize];
+    ["Alignment of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1::_dummy_bnd"][::std::mem::offset_of!(
+        __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1,
+        _dummy_bnd
+    )
+        - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1::_lower"][::std::mem::offset_of!(
+        __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1,
+        _lower
+    ) - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1::_upper"][::std::mem::offset_of!(
+        __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_1,
+        _upper
+    ) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2 {
     pub _dummy_pkey: [::std::os::raw::c_char; 4usize],
     pub _pkey: __u32,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2>(),
-        8usize,
-        "Size of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._dummy_pkey) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2::_dummy_pkey"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._pkey) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2::_pkey"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2>() - 8usize];
+    ["Alignment of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2::_dummy_pkey"][::std::mem::offset_of!(
+        __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2,
+        _dummy_pkey
+    )
+        - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2::_pkey"][::std::mem::offset_of!(
+        __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_2,
+        _pkey
+    ) - 4usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3 {
@@ -5301,131 +3870,68 @@ pub struct __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3 {
     pub _type: __u32,
     pub _flags: __u32,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3>(),
-        12usize,
-        "Size of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._data) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3::_data"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._type) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3::_type"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._flags) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3::_flags"
-    );
-}
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_5__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_5__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1>(),
-        12usize,
-        "Size of __sifields__bindgen_ty_5__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_5__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._trapno) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_trapno"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._addr_lsb) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_addr_lsb"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._addr_bnd) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_addr_bnd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._addr_pkey) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_addr_pkey"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._perf) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_perf"
-    );
-}
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_5() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_5> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_5>(),
-        16usize,
-        "Size of __sifields__bindgen_ty_5"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_5>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_5"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._addr) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_5::_addr"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3>() - 12usize];
+    ["Alignment of __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3::_data"][::std::mem::offset_of!(
+        __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3,
+        _data
+    ) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3::_type"][::std::mem::offset_of!(
+        __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3,
+        _type
+    ) - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3::_flags"][::std::mem::offset_of!(
+        __sifields__bindgen_ty_5__bindgen_ty_1__bindgen_ty_3,
+        _flags
+    ) - 8usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_5__bindgen_ty_1"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_5__bindgen_ty_1>() - 12usize];
+    ["Alignment of __sifields__bindgen_ty_5__bindgen_ty_1"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_5__bindgen_ty_1>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_trapno"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_5__bindgen_ty_1, _trapno) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_addr_lsb"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_5__bindgen_ty_1, _addr_lsb) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_addr_bnd"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_5__bindgen_ty_1, _addr_bnd) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_addr_pkey"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_5__bindgen_ty_1, _addr_pkey) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_5__bindgen_ty_1::_perf"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_5__bindgen_ty_1, _perf) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_5"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_5>() - 16usize];
+    ["Alignment of __sifields__bindgen_ty_5"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_5>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_5::_addr"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_5, _addr) - 0usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __sifields__bindgen_ty_6 {
     pub _band: ::std::os::raw::c_long,
     pub _fd: ::std::os::raw::c_int,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_6() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_6> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_6>(),
-        8usize,
-        "Size of __sifields__bindgen_ty_6"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_6>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_6"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._band) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_6::_band"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._fd) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_6::_fd"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_6"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_6>() - 8usize];
+    ["Alignment of __sifields__bindgen_ty_6"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_6>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_6::_band"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_6, _band) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_6::_fd"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_6, _fd) - 4usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct __sifields__bindgen_ty_7 {
@@ -5433,87 +3939,34 @@ pub struct __sifields__bindgen_ty_7 {
     pub _syscall: ::std::os::raw::c_int,
     pub _arch: ::std::os::raw::c_uint,
 }
-#[test]
-fn bindgen_test_layout___sifields__bindgen_ty_7() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields__bindgen_ty_7> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields__bindgen_ty_7>(),
-        12usize,
-        "Size of __sifields__bindgen_ty_7"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields__bindgen_ty_7>(),
-        4usize,
-        "Alignment of __sifields__bindgen_ty_7"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._call_addr) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields__bindgen_ty_7::_call_addr"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._syscall) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __sifields__bindgen_ty_7::_syscall"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._arch) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __sifields__bindgen_ty_7::_arch"
-    );
-}
-#[test]
-fn bindgen_test_layout___sifields() {
-    const UNINIT: ::std::mem::MaybeUninit<__sifields> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__sifields>(),
-        20usize,
-        "Size of __sifields"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__sifields>(),
-        4usize,
-        "Alignment of __sifields"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._kill) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields::_kill"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._timer) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields::_timer"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._rt) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields::_rt"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sigchld) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields::_sigchld"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sigfault) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields::_sigfault"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sigpoll) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields::_sigpoll"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sigsys) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __sifields::_sigsys"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields__bindgen_ty_7"]
+        [::std::mem::size_of::<__sifields__bindgen_ty_7>() - 12usize];
+    ["Alignment of __sifields__bindgen_ty_7"]
+        [::std::mem::align_of::<__sifields__bindgen_ty_7>() - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_7::_call_addr"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_7, _call_addr) - 0usize];
+    ["Offset of field: __sifields__bindgen_ty_7::_syscall"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_7, _syscall) - 4usize];
+    ["Offset of field: __sifields__bindgen_ty_7::_arch"]
+        [::std::mem::offset_of!(__sifields__bindgen_ty_7, _arch) - 8usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __sifields"][::std::mem::size_of::<__sifields>() - 20usize];
+    ["Alignment of __sifields"][::std::mem::align_of::<__sifields>() - 4usize];
+    ["Offset of field: __sifields::_kill"][::std::mem::offset_of!(__sifields, _kill) - 0usize];
+    ["Offset of field: __sifields::_timer"][::std::mem::offset_of!(__sifields, _timer) - 0usize];
+    ["Offset of field: __sifields::_rt"][::std::mem::offset_of!(__sifields, _rt) - 0usize];
+    ["Offset of field: __sifields::_sigchld"]
+        [::std::mem::offset_of!(__sifields, _sigchld) - 0usize];
+    ["Offset of field: __sifields::_sigfault"]
+        [::std::mem::offset_of!(__sifields, _sigfault) - 0usize];
+    ["Offset of field: __sifields::_sigpoll"]
+        [::std::mem::offset_of!(__sifields, _sigpoll) - 0usize];
+    ["Offset of field: __sifields::_sigsys"][::std::mem::offset_of!(__sifields, _sigsys) - 0usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct siginfo {
@@ -5533,76 +3986,34 @@ pub struct siginfo__bindgen_ty_1__bindgen_ty_1 {
     pub si_code: ::std::os::raw::c_int,
     pub _sifields: __sifields,
 }
-#[test]
-fn bindgen_test_layout_siginfo__bindgen_ty_1__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<siginfo__bindgen_ty_1__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<siginfo__bindgen_ty_1__bindgen_ty_1>(),
-        32usize,
-        "Size of siginfo__bindgen_ty_1__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<siginfo__bindgen_ty_1__bindgen_ty_1>(),
-        4usize,
-        "Alignment of siginfo__bindgen_ty_1__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).si_signo) as usize - ptr as usize },
-        0usize,
-        "Offset of field: siginfo__bindgen_ty_1__bindgen_ty_1::si_signo"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).si_errno) as usize - ptr as usize },
-        4usize,
-        "Offset of field: siginfo__bindgen_ty_1__bindgen_ty_1::si_errno"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).si_code) as usize - ptr as usize },
-        8usize,
-        "Offset of field: siginfo__bindgen_ty_1__bindgen_ty_1::si_code"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sifields) as usize - ptr as usize },
-        12usize,
-        "Offset of field: siginfo__bindgen_ty_1__bindgen_ty_1::_sifields"
-    );
-}
-#[test]
-fn bindgen_test_layout_siginfo__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<siginfo__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<siginfo__bindgen_ty_1>(),
-        128usize,
-        "Size of siginfo__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<siginfo__bindgen_ty_1>(),
-        4usize,
-        "Alignment of siginfo__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._si_pad) as usize - ptr as usize },
-        0usize,
-        "Offset of field: siginfo__bindgen_ty_1::_si_pad"
-    );
-}
-#[test]
-fn bindgen_test_layout_siginfo() {
-    assert_eq!(
-        ::std::mem::size_of::<siginfo>(),
-        128usize,
-        "Size of siginfo"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<siginfo>(),
-        4usize,
-        "Alignment of siginfo"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of siginfo__bindgen_ty_1__bindgen_ty_1"]
+        [::std::mem::size_of::<siginfo__bindgen_ty_1__bindgen_ty_1>() - 32usize];
+    ["Alignment of siginfo__bindgen_ty_1__bindgen_ty_1"]
+        [::std::mem::align_of::<siginfo__bindgen_ty_1__bindgen_ty_1>() - 4usize];
+    ["Offset of field: siginfo__bindgen_ty_1__bindgen_ty_1::si_signo"]
+        [::std::mem::offset_of!(siginfo__bindgen_ty_1__bindgen_ty_1, si_signo) - 0usize];
+    ["Offset of field: siginfo__bindgen_ty_1__bindgen_ty_1::si_errno"]
+        [::std::mem::offset_of!(siginfo__bindgen_ty_1__bindgen_ty_1, si_errno) - 4usize];
+    ["Offset of field: siginfo__bindgen_ty_1__bindgen_ty_1::si_code"]
+        [::std::mem::offset_of!(siginfo__bindgen_ty_1__bindgen_ty_1, si_code) - 8usize];
+    ["Offset of field: siginfo__bindgen_ty_1__bindgen_ty_1::_sifields"]
+        [::std::mem::offset_of!(siginfo__bindgen_ty_1__bindgen_ty_1, _sifields) - 12usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of siginfo__bindgen_ty_1"][::std::mem::size_of::<siginfo__bindgen_ty_1>() - 128usize];
+    ["Alignment of siginfo__bindgen_ty_1"]
+        [::std::mem::align_of::<siginfo__bindgen_ty_1>() - 4usize];
+    ["Offset of field: siginfo__bindgen_ty_1::_si_pad"]
+        [::std::mem::offset_of!(siginfo__bindgen_ty_1, _si_pad) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of siginfo"][::std::mem::size_of::<siginfo>() - 128usize];
+    ["Alignment of siginfo"][::std::mem::align_of::<siginfo>() - 4usize];
+};
 pub type siginfo_t = siginfo;
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -5625,98 +4036,41 @@ pub struct sigevent__bindgen_ty_1__bindgen_ty_1 {
     pub _function: ::std::option::Option<unsafe extern "C" fn(arg1: sigval_t)>,
     pub _attribute: *mut ::std::os::raw::c_void,
 }
-#[test]
-fn bindgen_test_layout_sigevent__bindgen_ty_1__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<sigevent__bindgen_ty_1__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigevent__bindgen_ty_1__bindgen_ty_1>(),
-        8usize,
-        "Size of sigevent__bindgen_ty_1__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigevent__bindgen_ty_1__bindgen_ty_1>(),
-        4usize,
-        "Alignment of sigevent__bindgen_ty_1__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._function) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigevent__bindgen_ty_1__bindgen_ty_1::_function"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._attribute) as usize - ptr as usize },
-        4usize,
-        "Offset of field: sigevent__bindgen_ty_1__bindgen_ty_1::_attribute"
-    );
-}
-#[test]
-fn bindgen_test_layout_sigevent__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<sigevent__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigevent__bindgen_ty_1>(),
-        52usize,
-        "Size of sigevent__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigevent__bindgen_ty_1>(),
-        4usize,
-        "Alignment of sigevent__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._pad) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigevent__bindgen_ty_1::_pad"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._tid) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigevent__bindgen_ty_1::_tid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sigev_thread) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigevent__bindgen_ty_1::_sigev_thread"
-    );
-}
-#[test]
-fn bindgen_test_layout_sigevent() {
-    const UNINIT: ::std::mem::MaybeUninit<sigevent> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigevent>(),
-        64usize,
-        "Size of sigevent"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigevent>(),
-        4usize,
-        "Alignment of sigevent"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sigev_value) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigevent::sigev_value"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sigev_signo) as usize - ptr as usize },
-        4usize,
-        "Offset of field: sigevent::sigev_signo"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sigev_notify) as usize - ptr as usize },
-        8usize,
-        "Offset of field: sigevent::sigev_notify"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._sigev_un) as usize - ptr as usize },
-        12usize,
-        "Offset of field: sigevent::_sigev_un"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigevent__bindgen_ty_1__bindgen_ty_1"]
+        [::std::mem::size_of::<sigevent__bindgen_ty_1__bindgen_ty_1>() - 8usize];
+    ["Alignment of sigevent__bindgen_ty_1__bindgen_ty_1"]
+        [::std::mem::align_of::<sigevent__bindgen_ty_1__bindgen_ty_1>() - 4usize];
+    ["Offset of field: sigevent__bindgen_ty_1__bindgen_ty_1::_function"]
+        [::std::mem::offset_of!(sigevent__bindgen_ty_1__bindgen_ty_1, _function) - 0usize];
+    ["Offset of field: sigevent__bindgen_ty_1__bindgen_ty_1::_attribute"]
+        [::std::mem::offset_of!(sigevent__bindgen_ty_1__bindgen_ty_1, _attribute) - 4usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigevent__bindgen_ty_1"][::std::mem::size_of::<sigevent__bindgen_ty_1>() - 52usize];
+    ["Alignment of sigevent__bindgen_ty_1"]
+        [::std::mem::align_of::<sigevent__bindgen_ty_1>() - 4usize];
+    ["Offset of field: sigevent__bindgen_ty_1::_pad"]
+        [::std::mem::offset_of!(sigevent__bindgen_ty_1, _pad) - 0usize];
+    ["Offset of field: sigevent__bindgen_ty_1::_tid"]
+        [::std::mem::offset_of!(sigevent__bindgen_ty_1, _tid) - 0usize];
+    ["Offset of field: sigevent__bindgen_ty_1::_sigev_thread"]
+        [::std::mem::offset_of!(sigevent__bindgen_ty_1, _sigev_thread) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigevent"][::std::mem::size_of::<sigevent>() - 64usize];
+    ["Alignment of sigevent"][::std::mem::align_of::<sigevent>() - 4usize];
+    ["Offset of field: sigevent::sigev_value"]
+        [::std::mem::offset_of!(sigevent, sigev_value) - 0usize];
+    ["Offset of field: sigevent::sigev_signo"]
+        [::std::mem::offset_of!(sigevent, sigev_signo) - 4usize];
+    ["Offset of field: sigevent::sigev_notify"]
+        [::std::mem::offset_of!(sigevent, sigev_notify) - 8usize];
+    ["Offset of field: sigevent::_sigev_un"][::std::mem::offset_of!(sigevent, _sigev_un) - 12usize];
+};
 pub type sigevent_t = sigevent;
 pub type sig_atomic_t = ::std::os::raw::c_int;
 pub type sig_t = __sighandler_t;
@@ -5726,26 +4080,12 @@ pub type sighandler_t = __sighandler_t;
 pub struct sigset64_t {
     pub __bits: [::std::os::raw::c_ulong; 2usize],
 }
-#[test]
-fn bindgen_test_layout_sigset64_t() {
-    const UNINIT: ::std::mem::MaybeUninit<sigset64_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigset64_t>(),
-        8usize,
-        "Size of sigset64_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigset64_t>(),
-        4usize,
-        "Alignment of sigset64_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__bits) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigset64_t::__bits"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigset64_t"][::std::mem::size_of::<sigset64_t>() - 8usize];
+    ["Alignment of sigset64_t"][::std::mem::align_of::<sigset64_t>() - 4usize];
+    ["Offset of field: sigset64_t::__bits"][::std::mem::offset_of!(sigset64_t, __bits) - 0usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct sigaction {
@@ -5766,62 +4106,25 @@ pub union sigaction__bindgen_ty_1 {
         ),
     >,
 }
-#[test]
-fn bindgen_test_layout_sigaction__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<sigaction__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigaction__bindgen_ty_1>(),
-        4usize,
-        "Size of sigaction__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigaction__bindgen_ty_1>(),
-        4usize,
-        "Alignment of sigaction__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_handler) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigaction__bindgen_ty_1::sa_handler"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_sigaction) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigaction__bindgen_ty_1::sa_sigaction"
-    );
-}
-#[test]
-fn bindgen_test_layout_sigaction() {
-    const UNINIT: ::std::mem::MaybeUninit<sigaction> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigaction>(),
-        16usize,
-        "Size of sigaction"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigaction>(),
-        4usize,
-        "Alignment of sigaction"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_mask) as usize - ptr as usize },
-        4usize,
-        "Offset of field: sigaction::sa_mask"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_flags) as usize - ptr as usize },
-        8usize,
-        "Offset of field: sigaction::sa_flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_restorer) as usize - ptr as usize },
-        12usize,
-        "Offset of field: sigaction::sa_restorer"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigaction__bindgen_ty_1"][::std::mem::size_of::<sigaction__bindgen_ty_1>() - 4usize];
+    ["Alignment of sigaction__bindgen_ty_1"]
+        [::std::mem::align_of::<sigaction__bindgen_ty_1>() - 4usize];
+    ["Offset of field: sigaction__bindgen_ty_1::sa_handler"]
+        [::std::mem::offset_of!(sigaction__bindgen_ty_1, sa_handler) - 0usize];
+    ["Offset of field: sigaction__bindgen_ty_1::sa_sigaction"]
+        [::std::mem::offset_of!(sigaction__bindgen_ty_1, sa_sigaction) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigaction"][::std::mem::size_of::<sigaction>() - 16usize];
+    ["Alignment of sigaction"][::std::mem::align_of::<sigaction>() - 4usize];
+    ["Offset of field: sigaction::sa_mask"][::std::mem::offset_of!(sigaction, sa_mask) - 4usize];
+    ["Offset of field: sigaction::sa_flags"][::std::mem::offset_of!(sigaction, sa_flags) - 8usize];
+    ["Offset of field: sigaction::sa_restorer"]
+        [::std::mem::offset_of!(sigaction, sa_restorer) - 12usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct sigaction64 {
@@ -5842,62 +4145,28 @@ pub union sigaction64__bindgen_ty_1 {
         ),
     >,
 }
-#[test]
-fn bindgen_test_layout_sigaction64__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<sigaction64__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigaction64__bindgen_ty_1>(),
-        4usize,
-        "Size of sigaction64__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigaction64__bindgen_ty_1>(),
-        4usize,
-        "Alignment of sigaction64__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_handler) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigaction64__bindgen_ty_1::sa_handler"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_sigaction) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sigaction64__bindgen_ty_1::sa_sigaction"
-    );
-}
-#[test]
-fn bindgen_test_layout_sigaction64() {
-    const UNINIT: ::std::mem::MaybeUninit<sigaction64> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sigaction64>(),
-        20usize,
-        "Size of sigaction64"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sigaction64>(),
-        4usize,
-        "Alignment of sigaction64"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_flags) as usize - ptr as usize },
-        4usize,
-        "Offset of field: sigaction64::sa_flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_restorer) as usize - ptr as usize },
-        8usize,
-        "Offset of field: sigaction64::sa_restorer"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sa_mask) as usize - ptr as usize },
-        12usize,
-        "Offset of field: sigaction64::sa_mask"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigaction64__bindgen_ty_1"]
+        [::std::mem::size_of::<sigaction64__bindgen_ty_1>() - 4usize];
+    ["Alignment of sigaction64__bindgen_ty_1"]
+        [::std::mem::align_of::<sigaction64__bindgen_ty_1>() - 4usize];
+    ["Offset of field: sigaction64__bindgen_ty_1::sa_handler"]
+        [::std::mem::offset_of!(sigaction64__bindgen_ty_1, sa_handler) - 0usize];
+    ["Offset of field: sigaction64__bindgen_ty_1::sa_sigaction"]
+        [::std::mem::offset_of!(sigaction64__bindgen_ty_1, sa_sigaction) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sigaction64"][::std::mem::size_of::<sigaction64>() - 20usize];
+    ["Alignment of sigaction64"][::std::mem::align_of::<sigaction64>() - 4usize];
+    ["Offset of field: sigaction64::sa_flags"]
+        [::std::mem::offset_of!(sigaction64, sa_flags) - 4usize];
+    ["Offset of field: sigaction64::sa_restorer"]
+        [::std::mem::offset_of!(sigaction64, sa_restorer) - 8usize];
+    ["Offset of field: sigaction64::sa_mask"]
+        [::std::mem::offset_of!(sigaction64, sa_mask) - 12usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct user_fpregs_struct {
@@ -5910,61 +4179,27 @@ pub struct user_fpregs_struct {
     pub fos: ::std::os::raw::c_long,
     pub st_space: [::std::os::raw::c_long; 20usize],
 }
-#[test]
-fn bindgen_test_layout_user_fpregs_struct() {
-    const UNINIT: ::std::mem::MaybeUninit<user_fpregs_struct> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<user_fpregs_struct>(),
-        108usize,
-        "Size of user_fpregs_struct"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<user_fpregs_struct>(),
-        4usize,
-        "Alignment of user_fpregs_struct"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cwd) as usize - ptr as usize },
-        0usize,
-        "Offset of field: user_fpregs_struct::cwd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).swd) as usize - ptr as usize },
-        4usize,
-        "Offset of field: user_fpregs_struct::swd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).twd) as usize - ptr as usize },
-        8usize,
-        "Offset of field: user_fpregs_struct::twd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fip) as usize - ptr as usize },
-        12usize,
-        "Offset of field: user_fpregs_struct::fip"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fcs) as usize - ptr as usize },
-        16usize,
-        "Offset of field: user_fpregs_struct::fcs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).foo) as usize - ptr as usize },
-        20usize,
-        "Offset of field: user_fpregs_struct::foo"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fos) as usize - ptr as usize },
-        24usize,
-        "Offset of field: user_fpregs_struct::fos"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).st_space) as usize - ptr as usize },
-        28usize,
-        "Offset of field: user_fpregs_struct::st_space"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of user_fpregs_struct"][::std::mem::size_of::<user_fpregs_struct>() - 108usize];
+    ["Alignment of user_fpregs_struct"][::std::mem::align_of::<user_fpregs_struct>() - 4usize];
+    ["Offset of field: user_fpregs_struct::cwd"]
+        [::std::mem::offset_of!(user_fpregs_struct, cwd) - 0usize];
+    ["Offset of field: user_fpregs_struct::swd"]
+        [::std::mem::offset_of!(user_fpregs_struct, swd) - 4usize];
+    ["Offset of field: user_fpregs_struct::twd"]
+        [::std::mem::offset_of!(user_fpregs_struct, twd) - 8usize];
+    ["Offset of field: user_fpregs_struct::fip"]
+        [::std::mem::offset_of!(user_fpregs_struct, fip) - 12usize];
+    ["Offset of field: user_fpregs_struct::fcs"]
+        [::std::mem::offset_of!(user_fpregs_struct, fcs) - 16usize];
+    ["Offset of field: user_fpregs_struct::foo"]
+        [::std::mem::offset_of!(user_fpregs_struct, foo) - 20usize];
+    ["Offset of field: user_fpregs_struct::fos"]
+        [::std::mem::offset_of!(user_fpregs_struct, fos) - 24usize];
+    ["Offset of field: user_fpregs_struct::st_space"]
+        [::std::mem::offset_of!(user_fpregs_struct, st_space) - 28usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct user_fpxregs_struct {
@@ -5982,86 +4217,37 @@ pub struct user_fpxregs_struct {
     pub xmm_space: [::std::os::raw::c_long; 32usize],
     pub padding: [::std::os::raw::c_long; 56usize],
 }
-#[test]
-fn bindgen_test_layout_user_fpxregs_struct() {
-    const UNINIT: ::std::mem::MaybeUninit<user_fpxregs_struct> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<user_fpxregs_struct>(),
-        512usize,
-        "Size of user_fpxregs_struct"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<user_fpxregs_struct>(),
-        4usize,
-        "Alignment of user_fpxregs_struct"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cwd) as usize - ptr as usize },
-        0usize,
-        "Offset of field: user_fpxregs_struct::cwd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).swd) as usize - ptr as usize },
-        2usize,
-        "Offset of field: user_fpxregs_struct::swd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).twd) as usize - ptr as usize },
-        4usize,
-        "Offset of field: user_fpxregs_struct::twd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fop) as usize - ptr as usize },
-        6usize,
-        "Offset of field: user_fpxregs_struct::fop"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fip) as usize - ptr as usize },
-        8usize,
-        "Offset of field: user_fpxregs_struct::fip"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fcs) as usize - ptr as usize },
-        12usize,
-        "Offset of field: user_fpxregs_struct::fcs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).foo) as usize - ptr as usize },
-        16usize,
-        "Offset of field: user_fpxregs_struct::foo"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fos) as usize - ptr as usize },
-        20usize,
-        "Offset of field: user_fpxregs_struct::fos"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).mxcsr) as usize - ptr as usize },
-        24usize,
-        "Offset of field: user_fpxregs_struct::mxcsr"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
-        28usize,
-        "Offset of field: user_fpxregs_struct::reserved"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).st_space) as usize - ptr as usize },
-        32usize,
-        "Offset of field: user_fpxregs_struct::st_space"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xmm_space) as usize - ptr as usize },
-        160usize,
-        "Offset of field: user_fpxregs_struct::xmm_space"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).padding) as usize - ptr as usize },
-        288usize,
-        "Offset of field: user_fpxregs_struct::padding"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of user_fpxregs_struct"][::std::mem::size_of::<user_fpxregs_struct>() - 512usize];
+    ["Alignment of user_fpxregs_struct"][::std::mem::align_of::<user_fpxregs_struct>() - 4usize];
+    ["Offset of field: user_fpxregs_struct::cwd"]
+        [::std::mem::offset_of!(user_fpxregs_struct, cwd) - 0usize];
+    ["Offset of field: user_fpxregs_struct::swd"]
+        [::std::mem::offset_of!(user_fpxregs_struct, swd) - 2usize];
+    ["Offset of field: user_fpxregs_struct::twd"]
+        [::std::mem::offset_of!(user_fpxregs_struct, twd) - 4usize];
+    ["Offset of field: user_fpxregs_struct::fop"]
+        [::std::mem::offset_of!(user_fpxregs_struct, fop) - 6usize];
+    ["Offset of field: user_fpxregs_struct::fip"]
+        [::std::mem::offset_of!(user_fpxregs_struct, fip) - 8usize];
+    ["Offset of field: user_fpxregs_struct::fcs"]
+        [::std::mem::offset_of!(user_fpxregs_struct, fcs) - 12usize];
+    ["Offset of field: user_fpxregs_struct::foo"]
+        [::std::mem::offset_of!(user_fpxregs_struct, foo) - 16usize];
+    ["Offset of field: user_fpxregs_struct::fos"]
+        [::std::mem::offset_of!(user_fpxregs_struct, fos) - 20usize];
+    ["Offset of field: user_fpxregs_struct::mxcsr"]
+        [::std::mem::offset_of!(user_fpxregs_struct, mxcsr) - 24usize];
+    ["Offset of field: user_fpxregs_struct::reserved"]
+        [::std::mem::offset_of!(user_fpxregs_struct, reserved) - 28usize];
+    ["Offset of field: user_fpxregs_struct::st_space"]
+        [::std::mem::offset_of!(user_fpxregs_struct, st_space) - 32usize];
+    ["Offset of field: user_fpxregs_struct::xmm_space"]
+        [::std::mem::offset_of!(user_fpxregs_struct, xmm_space) - 160usize];
+    ["Offset of field: user_fpxregs_struct::padding"]
+        [::std::mem::offset_of!(user_fpxregs_struct, padding) - 288usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct user_regs_struct {
@@ -6083,106 +4269,45 @@ pub struct user_regs_struct {
     pub esp: ::std::os::raw::c_long,
     pub xss: ::std::os::raw::c_long,
 }
-#[test]
-fn bindgen_test_layout_user_regs_struct() {
-    const UNINIT: ::std::mem::MaybeUninit<user_regs_struct> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<user_regs_struct>(),
-        68usize,
-        "Size of user_regs_struct"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<user_regs_struct>(),
-        4usize,
-        "Alignment of user_regs_struct"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ebx) as usize - ptr as usize },
-        0usize,
-        "Offset of field: user_regs_struct::ebx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ecx) as usize - ptr as usize },
-        4usize,
-        "Offset of field: user_regs_struct::ecx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).edx) as usize - ptr as usize },
-        8usize,
-        "Offset of field: user_regs_struct::edx"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).esi) as usize - ptr as usize },
-        12usize,
-        "Offset of field: user_regs_struct::esi"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).edi) as usize - ptr as usize },
-        16usize,
-        "Offset of field: user_regs_struct::edi"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ebp) as usize - ptr as usize },
-        20usize,
-        "Offset of field: user_regs_struct::ebp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).eax) as usize - ptr as usize },
-        24usize,
-        "Offset of field: user_regs_struct::eax"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xds) as usize - ptr as usize },
-        28usize,
-        "Offset of field: user_regs_struct::xds"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xes) as usize - ptr as usize },
-        32usize,
-        "Offset of field: user_regs_struct::xes"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xfs) as usize - ptr as usize },
-        36usize,
-        "Offset of field: user_regs_struct::xfs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xgs) as usize - ptr as usize },
-        40usize,
-        "Offset of field: user_regs_struct::xgs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).orig_eax) as usize - ptr as usize },
-        44usize,
-        "Offset of field: user_regs_struct::orig_eax"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).eip) as usize - ptr as usize },
-        48usize,
-        "Offset of field: user_regs_struct::eip"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xcs) as usize - ptr as usize },
-        52usize,
-        "Offset of field: user_regs_struct::xcs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).eflags) as usize - ptr as usize },
-        56usize,
-        "Offset of field: user_regs_struct::eflags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).esp) as usize - ptr as usize },
-        60usize,
-        "Offset of field: user_regs_struct::esp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).xss) as usize - ptr as usize },
-        64usize,
-        "Offset of field: user_regs_struct::xss"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of user_regs_struct"][::std::mem::size_of::<user_regs_struct>() - 68usize];
+    ["Alignment of user_regs_struct"][::std::mem::align_of::<user_regs_struct>() - 4usize];
+    ["Offset of field: user_regs_struct::ebx"]
+        [::std::mem::offset_of!(user_regs_struct, ebx) - 0usize];
+    ["Offset of field: user_regs_struct::ecx"]
+        [::std::mem::offset_of!(user_regs_struct, ecx) - 4usize];
+    ["Offset of field: user_regs_struct::edx"]
+        [::std::mem::offset_of!(user_regs_struct, edx) - 8usize];
+    ["Offset of field: user_regs_struct::esi"]
+        [::std::mem::offset_of!(user_regs_struct, esi) - 12usize];
+    ["Offset of field: user_regs_struct::edi"]
+        [::std::mem::offset_of!(user_regs_struct, edi) - 16usize];
+    ["Offset of field: user_regs_struct::ebp"]
+        [::std::mem::offset_of!(user_regs_struct, ebp) - 20usize];
+    ["Offset of field: user_regs_struct::eax"]
+        [::std::mem::offset_of!(user_regs_struct, eax) - 24usize];
+    ["Offset of field: user_regs_struct::xds"]
+        [::std::mem::offset_of!(user_regs_struct, xds) - 28usize];
+    ["Offset of field: user_regs_struct::xes"]
+        [::std::mem::offset_of!(user_regs_struct, xes) - 32usize];
+    ["Offset of field: user_regs_struct::xfs"]
+        [::std::mem::offset_of!(user_regs_struct, xfs) - 36usize];
+    ["Offset of field: user_regs_struct::xgs"]
+        [::std::mem::offset_of!(user_regs_struct, xgs) - 40usize];
+    ["Offset of field: user_regs_struct::orig_eax"]
+        [::std::mem::offset_of!(user_regs_struct, orig_eax) - 44usize];
+    ["Offset of field: user_regs_struct::eip"]
+        [::std::mem::offset_of!(user_regs_struct, eip) - 48usize];
+    ["Offset of field: user_regs_struct::xcs"]
+        [::std::mem::offset_of!(user_regs_struct, xcs) - 52usize];
+    ["Offset of field: user_regs_struct::eflags"]
+        [::std::mem::offset_of!(user_regs_struct, eflags) - 56usize];
+    ["Offset of field: user_regs_struct::esp"]
+        [::std::mem::offset_of!(user_regs_struct, esp) - 60usize];
+    ["Offset of field: user_regs_struct::xss"]
+        [::std::mem::offset_of!(user_regs_struct, xss) - 64usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct user {
@@ -6202,88 +4327,26 @@ pub struct user {
     pub u_comm: [::std::os::raw::c_char; 32usize],
     pub u_debugreg: [::std::os::raw::c_int; 8usize],
 }
-#[test]
-fn bindgen_test_layout_user() {
-    const UNINIT: ::std::mem::MaybeUninit<user> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<user>(), 284usize, "Size of user");
-    assert_eq!(::std::mem::align_of::<user>(), 4usize, "Alignment of user");
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).regs) as usize - ptr as usize },
-        0usize,
-        "Offset of field: user::regs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).u_fpvalid) as usize - ptr as usize },
-        68usize,
-        "Offset of field: user::u_fpvalid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).i387) as usize - ptr as usize },
-        72usize,
-        "Offset of field: user::i387"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).u_tsize) as usize - ptr as usize },
-        180usize,
-        "Offset of field: user::u_tsize"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).u_dsize) as usize - ptr as usize },
-        184usize,
-        "Offset of field: user::u_dsize"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).u_ssize) as usize - ptr as usize },
-        188usize,
-        "Offset of field: user::u_ssize"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).start_code) as usize - ptr as usize },
-        192usize,
-        "Offset of field: user::start_code"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).start_stack) as usize - ptr as usize },
-        196usize,
-        "Offset of field: user::start_stack"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).signal) as usize - ptr as usize },
-        200usize,
-        "Offset of field: user::signal"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
-        204usize,
-        "Offset of field: user::reserved"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).u_ar0) as usize - ptr as usize },
-        208usize,
-        "Offset of field: user::u_ar0"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).u_fpstate) as usize - ptr as usize },
-        212usize,
-        "Offset of field: user::u_fpstate"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).magic) as usize - ptr as usize },
-        216usize,
-        "Offset of field: user::magic"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).u_comm) as usize - ptr as usize },
-        220usize,
-        "Offset of field: user::u_comm"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).u_debugreg) as usize - ptr as usize },
-        252usize,
-        "Offset of field: user::u_debugreg"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of user"][::std::mem::size_of::<user>() - 284usize];
+    ["Alignment of user"][::std::mem::align_of::<user>() - 4usize];
+    ["Offset of field: user::regs"][::std::mem::offset_of!(user, regs) - 0usize];
+    ["Offset of field: user::u_fpvalid"][::std::mem::offset_of!(user, u_fpvalid) - 68usize];
+    ["Offset of field: user::i387"][::std::mem::offset_of!(user, i387) - 72usize];
+    ["Offset of field: user::u_tsize"][::std::mem::offset_of!(user, u_tsize) - 180usize];
+    ["Offset of field: user::u_dsize"][::std::mem::offset_of!(user, u_dsize) - 184usize];
+    ["Offset of field: user::u_ssize"][::std::mem::offset_of!(user, u_ssize) - 188usize];
+    ["Offset of field: user::start_code"][::std::mem::offset_of!(user, start_code) - 192usize];
+    ["Offset of field: user::start_stack"][::std::mem::offset_of!(user, start_stack) - 196usize];
+    ["Offset of field: user::signal"][::std::mem::offset_of!(user, signal) - 200usize];
+    ["Offset of field: user::reserved"][::std::mem::offset_of!(user, reserved) - 204usize];
+    ["Offset of field: user::u_ar0"][::std::mem::offset_of!(user, u_ar0) - 208usize];
+    ["Offset of field: user::u_fpstate"][::std::mem::offset_of!(user, u_fpstate) - 212usize];
+    ["Offset of field: user::magic"][::std::mem::offset_of!(user, magic) - 216usize];
+    ["Offset of field: user::u_comm"][::std::mem::offset_of!(user, u_comm) - 220usize];
+    ["Offset of field: user::u_debugreg"][::std::mem::offset_of!(user, u_debugreg) - 252usize];
+};
 pub const REG_GS: _bindgen_ty_22 = 0;
 pub const REG_FS: _bindgen_ty_22 = 1;
 pub const REG_ES: _bindgen_ty_22 = 2;
@@ -6313,31 +4376,15 @@ pub struct _libc_fpreg {
     pub significand: [::std::os::raw::c_ushort; 4usize],
     pub exponent: ::std::os::raw::c_ushort,
 }
-#[test]
-fn bindgen_test_layout__libc_fpreg() {
-    const UNINIT: ::std::mem::MaybeUninit<_libc_fpreg> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_libc_fpreg>(),
-        10usize,
-        "Size of _libc_fpreg"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_libc_fpreg>(),
-        2usize,
-        "Alignment of _libc_fpreg"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).significand) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _libc_fpreg::significand"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).exponent) as usize - ptr as usize },
-        8usize,
-        "Offset of field: _libc_fpreg::exponent"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _libc_fpreg"][::std::mem::size_of::<_libc_fpreg>() - 10usize];
+    ["Alignment of _libc_fpreg"][::std::mem::align_of::<_libc_fpreg>() - 2usize];
+    ["Offset of field: _libc_fpreg::significand"]
+        [::std::mem::offset_of!(_libc_fpreg, significand) - 0usize];
+    ["Offset of field: _libc_fpreg::exponent"]
+        [::std::mem::offset_of!(_libc_fpreg, exponent) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct _libc_fpstate {
@@ -6351,66 +4398,25 @@ pub struct _libc_fpstate {
     pub _st: [_libc_fpreg; 8usize],
     pub status: ::std::os::raw::c_ulong,
 }
-#[test]
-fn bindgen_test_layout__libc_fpstate() {
-    const UNINIT: ::std::mem::MaybeUninit<_libc_fpstate> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<_libc_fpstate>(),
-        112usize,
-        "Size of _libc_fpstate"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<_libc_fpstate>(),
-        4usize,
-        "Alignment of _libc_fpstate"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cw) as usize - ptr as usize },
-        0usize,
-        "Offset of field: _libc_fpstate::cw"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sw) as usize - ptr as usize },
-        4usize,
-        "Offset of field: _libc_fpstate::sw"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tag) as usize - ptr as usize },
-        8usize,
-        "Offset of field: _libc_fpstate::tag"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ipoff) as usize - ptr as usize },
-        12usize,
-        "Offset of field: _libc_fpstate::ipoff"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cssel) as usize - ptr as usize },
-        16usize,
-        "Offset of field: _libc_fpstate::cssel"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).dataoff) as usize - ptr as usize },
-        20usize,
-        "Offset of field: _libc_fpstate::dataoff"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).datasel) as usize - ptr as usize },
-        24usize,
-        "Offset of field: _libc_fpstate::datasel"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr)._st) as usize - ptr as usize },
-        28usize,
-        "Offset of field: _libc_fpstate::_st"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).status) as usize - ptr as usize },
-        108usize,
-        "Offset of field: _libc_fpstate::status"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of _libc_fpstate"][::std::mem::size_of::<_libc_fpstate>() - 112usize];
+    ["Alignment of _libc_fpstate"][::std::mem::align_of::<_libc_fpstate>() - 4usize];
+    ["Offset of field: _libc_fpstate::cw"][::std::mem::offset_of!(_libc_fpstate, cw) - 0usize];
+    ["Offset of field: _libc_fpstate::sw"][::std::mem::offset_of!(_libc_fpstate, sw) - 4usize];
+    ["Offset of field: _libc_fpstate::tag"][::std::mem::offset_of!(_libc_fpstate, tag) - 8usize];
+    ["Offset of field: _libc_fpstate::ipoff"]
+        [::std::mem::offset_of!(_libc_fpstate, ipoff) - 12usize];
+    ["Offset of field: _libc_fpstate::cssel"]
+        [::std::mem::offset_of!(_libc_fpstate, cssel) - 16usize];
+    ["Offset of field: _libc_fpstate::dataoff"]
+        [::std::mem::offset_of!(_libc_fpstate, dataoff) - 20usize];
+    ["Offset of field: _libc_fpstate::datasel"]
+        [::std::mem::offset_of!(_libc_fpstate, datasel) - 24usize];
+    ["Offset of field: _libc_fpstate::_st"][::std::mem::offset_of!(_libc_fpstate, _st) - 28usize];
+    ["Offset of field: _libc_fpstate::status"]
+        [::std::mem::offset_of!(_libc_fpstate, status) - 108usize];
+};
 pub type fpregset_t = *mut _libc_fpstate;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -6420,41 +4426,15 @@ pub struct mcontext_t {
     pub oldmask: ::std::os::raw::c_ulong,
     pub cr2: ::std::os::raw::c_ulong,
 }
-#[test]
-fn bindgen_test_layout_mcontext_t() {
-    const UNINIT: ::std::mem::MaybeUninit<mcontext_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<mcontext_t>(),
-        88usize,
-        "Size of mcontext_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<mcontext_t>(),
-        4usize,
-        "Alignment of mcontext_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).gregs) as usize - ptr as usize },
-        0usize,
-        "Offset of field: mcontext_t::gregs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fpregs) as usize - ptr as usize },
-        76usize,
-        "Offset of field: mcontext_t::fpregs"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).oldmask) as usize - ptr as usize },
-        80usize,
-        "Offset of field: mcontext_t::oldmask"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cr2) as usize - ptr as usize },
-        84usize,
-        "Offset of field: mcontext_t::cr2"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of mcontext_t"][::std::mem::size_of::<mcontext_t>() - 88usize];
+    ["Alignment of mcontext_t"][::std::mem::align_of::<mcontext_t>() - 4usize];
+    ["Offset of field: mcontext_t::gregs"][::std::mem::offset_of!(mcontext_t, gregs) - 0usize];
+    ["Offset of field: mcontext_t::fpregs"][::std::mem::offset_of!(mcontext_t, fpregs) - 76usize];
+    ["Offset of field: mcontext_t::oldmask"][::std::mem::offset_of!(mcontext_t, oldmask) - 80usize];
+    ["Offset of field: mcontext_t::cr2"][::std::mem::offset_of!(mcontext_t, cr2) - 84usize];
+};
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ucontext {
@@ -6477,286 +4457,232 @@ pub struct ucontext__bindgen_ty_1__bindgen_ty_1 {
     pub uc_sigmask: sigset_t,
     pub __padding_rt_sigset: u32,
 }
-#[test]
-fn bindgen_test_layout_ucontext__bindgen_ty_1__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<ucontext__bindgen_ty_1__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<ucontext__bindgen_ty_1__bindgen_ty_1>(),
-        8usize,
-        "Size of ucontext__bindgen_ty_1__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<ucontext__bindgen_ty_1__bindgen_ty_1>(),
-        4usize,
-        "Alignment of ucontext__bindgen_ty_1__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).uc_sigmask) as usize - ptr as usize },
-        0usize,
-        "Offset of field: ucontext__bindgen_ty_1__bindgen_ty_1::uc_sigmask"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__padding_rt_sigset) as usize - ptr as usize },
-        4usize,
-        "Offset of field: ucontext__bindgen_ty_1__bindgen_ty_1::__padding_rt_sigset"
-    );
-}
-#[test]
-fn bindgen_test_layout_ucontext__bindgen_ty_1() {
-    const UNINIT: ::std::mem::MaybeUninit<ucontext__bindgen_ty_1> =
-        ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<ucontext__bindgen_ty_1>(),
-        8usize,
-        "Size of ucontext__bindgen_ty_1"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<ucontext__bindgen_ty_1>(),
-        4usize,
-        "Alignment of ucontext__bindgen_ty_1"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).uc_sigmask64) as usize - ptr as usize },
-        0usize,
-        "Offset of field: ucontext__bindgen_ty_1::uc_sigmask64"
-    );
-}
-#[test]
-fn bindgen_test_layout_ucontext() {
-    const UNINIT: ::std::mem::MaybeUninit<ucontext> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<ucontext>(),
-        228usize,
-        "Size of ucontext"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<ucontext>(),
-        4usize,
-        "Alignment of ucontext"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).uc_flags) as usize - ptr as usize },
-        0usize,
-        "Offset of field: ucontext::uc_flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).uc_link) as usize - ptr as usize },
-        4usize,
-        "Offset of field: ucontext::uc_link"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).uc_stack) as usize - ptr as usize },
-        8usize,
-        "Offset of field: ucontext::uc_stack"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).uc_mcontext) as usize - ptr as usize },
-        20usize,
-        "Offset of field: ucontext::uc_mcontext"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__fpregs_mem) as usize - ptr as usize },
-        116usize,
-        "Offset of field: ucontext::__fpregs_mem"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of ucontext__bindgen_ty_1__bindgen_ty_1"]
+        [::std::mem::size_of::<ucontext__bindgen_ty_1__bindgen_ty_1>() - 8usize];
+    ["Alignment of ucontext__bindgen_ty_1__bindgen_ty_1"]
+        [::std::mem::align_of::<ucontext__bindgen_ty_1__bindgen_ty_1>() - 4usize];
+    ["Offset of field: ucontext__bindgen_ty_1__bindgen_ty_1::uc_sigmask"]
+        [::std::mem::offset_of!(ucontext__bindgen_ty_1__bindgen_ty_1, uc_sigmask) - 0usize];
+    ["Offset of field: ucontext__bindgen_ty_1__bindgen_ty_1::__padding_rt_sigset"][::std::mem::offset_of!(
+        ucontext__bindgen_ty_1__bindgen_ty_1,
+        __padding_rt_sigset
+    ) - 4usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of ucontext__bindgen_ty_1"][::std::mem::size_of::<ucontext__bindgen_ty_1>() - 8usize];
+    ["Alignment of ucontext__bindgen_ty_1"]
+        [::std::mem::align_of::<ucontext__bindgen_ty_1>() - 4usize];
+    ["Offset of field: ucontext__bindgen_ty_1::uc_sigmask64"]
+        [::std::mem::offset_of!(ucontext__bindgen_ty_1, uc_sigmask64) - 0usize];
+};
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of ucontext"][::std::mem::size_of::<ucontext>() - 228usize];
+    ["Alignment of ucontext"][::std::mem::align_of::<ucontext>() - 4usize];
+    ["Offset of field: ucontext::uc_flags"][::std::mem::offset_of!(ucontext, uc_flags) - 0usize];
+    ["Offset of field: ucontext::uc_link"][::std::mem::offset_of!(ucontext, uc_link) - 4usize];
+    ["Offset of field: ucontext::uc_stack"][::std::mem::offset_of!(ucontext, uc_stack) - 8usize];
+    ["Offset of field: ucontext::uc_mcontext"]
+        [::std::mem::offset_of!(ucontext, uc_mcontext) - 20usize];
+    ["Offset of field: ucontext::__fpregs_mem"]
+        [::std::mem::offset_of!(ucontext, __fpregs_mem) - 116usize];
+};
 pub type ucontext_t = ucontext;
-extern "C" {
+unsafe extern "C" {
     pub fn __libc_current_sigrtmin() -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn __libc_current_sigrtmax() -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub static sys_siglist: [*const ::std::os::raw::c_char; 65usize];
 }
-extern "C" {
+unsafe extern "C" {
     pub static sys_signame: [*const ::std::os::raw::c_char; 65usize];
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigaction(
         __signal: ::std::os::raw::c_int,
         __new_action: *const sigaction,
         __old_action: *mut sigaction,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigaction64(
         __signal: ::std::os::raw::c_int,
         __new_action: *const sigaction64,
         __old_action: *mut sigaction64,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn siginterrupt(
         __signal: ::std::os::raw::c_int,
         __flag: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn signal(__signal: ::std::os::raw::c_int, __handler: sighandler_t) -> sighandler_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigaddset(
         __set: *mut sigset_t,
         __signal: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigaddset64(
         __set: *mut sigset64_t,
         __signal: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigdelset(
         __set: *mut sigset_t,
         __signal: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigdelset64(
         __set: *mut sigset64_t,
         __signal: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigemptyset(__set: *mut sigset_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigemptyset64(__set: *mut sigset64_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigfillset(__set: *mut sigset_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigfillset64(__set: *mut sigset64_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigismember(
         __set: *const sigset_t,
         __signal: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigismember64(
         __set: *const sigset64_t,
         __signal: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigpending(__set: *mut sigset_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigpending64(__set: *mut sigset64_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigprocmask(
         __how: ::std::os::raw::c_int,
         __new_set: *const sigset_t,
         __old_set: *mut sigset_t,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigprocmask64(
         __how: ::std::os::raw::c_int,
         __new_set: *const sigset64_t,
         __old_set: *mut sigset64_t,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigsuspend(__mask: *const sigset_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigsuspend64(__mask: *const sigset64_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigwait(
         __set: *const sigset_t,
         __signal: *mut ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigwait64(
         __set: *const sigset64_t,
         __signal: *mut ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sighold(__signal: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigignore(__signal: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigpause(__signal: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigrelse(__signal: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigset(__signal: ::std::os::raw::c_int, __handler: sighandler_t) -> sighandler_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn raise(__signal: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn kill(__pid: pid_t, __signal: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn killpg(
         __pgrp: ::std::os::raw::c_int,
         __signal: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn tgkill(
         __tgid: ::std::os::raw::c_int,
         __tid: ::std::os::raw::c_int,
         __signal: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigaltstack(
         __new_signal_stack: *const stack_t,
         __old_signal_stack: *mut stack_t,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn psiginfo(__info: *const siginfo_t, __msg: *const ::std::os::raw::c_char);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn psignal(__signal: ::std::os::raw::c_int, __msg: *const ::std::os::raw::c_char);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigqueue(
         __pid: pid_t,
         __signal: ::std::os::raw::c_int,
         __value: sigval,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigtimedwait(
         __set: *const sigset_t,
         __info: *mut siginfo_t,
         __timeout: *const timespec,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigtimedwait64(
         __set: *const sigset64_t,
         __info: *mut siginfo_t,
         __timeout: *const timespec,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigwaitinfo(__set: *const sigset_t, __info: *mut siginfo_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sigwaitinfo64(__set: *const sigset64_t, __info: *mut siginfo_t)
         -> ::std::os::raw::c_int;
 }
@@ -6766,36 +4692,26 @@ pub type fd_mask = ::std::os::raw::c_ulong;
 pub struct fd_set {
     pub fds_bits: [fd_mask; 32usize],
 }
-#[test]
-fn bindgen_test_layout_fd_set() {
-    const UNINIT: ::std::mem::MaybeUninit<fd_set> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<fd_set>(), 128usize, "Size of fd_set");
-    assert_eq!(
-        ::std::mem::align_of::<fd_set>(),
-        4usize,
-        "Alignment of fd_set"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).fds_bits) as usize - ptr as usize },
-        0usize,
-        "Offset of field: fd_set::fds_bits"
-    );
-}
-extern "C" {
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of fd_set"][::std::mem::size_of::<fd_set>() - 128usize];
+    ["Alignment of fd_set"][::std::mem::align_of::<fd_set>() - 4usize];
+    ["Offset of field: fd_set::fds_bits"][::std::mem::offset_of!(fd_set, fds_bits) - 0usize];
+};
+unsafe extern "C" {
     pub fn __FD_CLR_chk(arg1: ::std::os::raw::c_int, arg2: *mut fd_set, arg3: usize);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn __FD_SET_chk(arg1: ::std::os::raw::c_int, arg2: *mut fd_set, arg3: usize);
 }
-extern "C" {
+unsafe extern "C" {
     pub fn __FD_ISSET_chk(
         arg1: ::std::os::raw::c_int,
         arg2: *const fd_set,
         arg3: usize,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn select(
         __max_fd_plus_one: ::std::os::raw::c_int,
         __read_fds: *mut fd_set,
@@ -6804,7 +4720,7 @@ extern "C" {
         __timeout: *mut timeval,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn pselect(
         __max_fd_plus_one: ::std::os::raw::c_int,
         __read_fds: *mut fd_set,
@@ -6814,7 +4730,7 @@ extern "C" {
         __mask: *const sigset_t,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn pselect64(
         __max_fd_plus_one: ::std::os::raw::c_int,
         __read_fds: *mut fd_set,
@@ -6824,26 +4740,26 @@ extern "C" {
         __mask: *const sigset64_t,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn gettimeofday(__tv: *mut timeval, __tz: *mut timezone) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn settimeofday(__tv: *const timeval, __tz: *const timezone) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn getitimer(
         __which: ::std::os::raw::c_int,
         __current_value: *mut itimerval,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn setitimer(
         __which: ::std::os::raw::c_int,
         __new_value: *const itimerval,
         __old_value: *mut itimerval,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn utimes(
         __path: *const ::std::os::raw::c_char,
         __times: *const timeval,
@@ -6855,13 +4771,13 @@ pub struct __locale_t {
     _unused: [u8; 0],
 }
 pub type locale_t = *mut __locale_t;
-extern "C" {
+unsafe extern "C" {
     pub static mut tzname: [*mut ::std::os::raw::c_char; 0usize];
 }
-extern "C" {
+unsafe extern "C" {
     pub static mut daylight: ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub static mut timezone: ::std::os::raw::c_long;
 }
 #[repr(C)]
@@ -6879,118 +4795,72 @@ pub struct tm {
     pub tm_gmtoff: ::std::os::raw::c_long,
     pub tm_zone: *const ::std::os::raw::c_char,
 }
-#[test]
-fn bindgen_test_layout_tm() {
-    const UNINIT: ::std::mem::MaybeUninit<tm> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(::std::mem::size_of::<tm>(), 44usize, "Size of tm");
-    assert_eq!(::std::mem::align_of::<tm>(), 4usize, "Alignment of tm");
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_sec) as usize - ptr as usize },
-        0usize,
-        "Offset of field: tm::tm_sec"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_min) as usize - ptr as usize },
-        4usize,
-        "Offset of field: tm::tm_min"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_hour) as usize - ptr as usize },
-        8usize,
-        "Offset of field: tm::tm_hour"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_mday) as usize - ptr as usize },
-        12usize,
-        "Offset of field: tm::tm_mday"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_mon) as usize - ptr as usize },
-        16usize,
-        "Offset of field: tm::tm_mon"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_year) as usize - ptr as usize },
-        20usize,
-        "Offset of field: tm::tm_year"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_wday) as usize - ptr as usize },
-        24usize,
-        "Offset of field: tm::tm_wday"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_yday) as usize - ptr as usize },
-        28usize,
-        "Offset of field: tm::tm_yday"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_isdst) as usize - ptr as usize },
-        32usize,
-        "Offset of field: tm::tm_isdst"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_gmtoff) as usize - ptr as usize },
-        36usize,
-        "Offset of field: tm::tm_gmtoff"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tm_zone) as usize - ptr as usize },
-        40usize,
-        "Offset of field: tm::tm_zone"
-    );
-}
-extern "C" {
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of tm"][::std::mem::size_of::<tm>() - 44usize];
+    ["Alignment of tm"][::std::mem::align_of::<tm>() - 4usize];
+    ["Offset of field: tm::tm_sec"][::std::mem::offset_of!(tm, tm_sec) - 0usize];
+    ["Offset of field: tm::tm_min"][::std::mem::offset_of!(tm, tm_min) - 4usize];
+    ["Offset of field: tm::tm_hour"][::std::mem::offset_of!(tm, tm_hour) - 8usize];
+    ["Offset of field: tm::tm_mday"][::std::mem::offset_of!(tm, tm_mday) - 12usize];
+    ["Offset of field: tm::tm_mon"][::std::mem::offset_of!(tm, tm_mon) - 16usize];
+    ["Offset of field: tm::tm_year"][::std::mem::offset_of!(tm, tm_year) - 20usize];
+    ["Offset of field: tm::tm_wday"][::std::mem::offset_of!(tm, tm_wday) - 24usize];
+    ["Offset of field: tm::tm_yday"][::std::mem::offset_of!(tm, tm_yday) - 28usize];
+    ["Offset of field: tm::tm_isdst"][::std::mem::offset_of!(tm, tm_isdst) - 32usize];
+    ["Offset of field: tm::tm_gmtoff"][::std::mem::offset_of!(tm, tm_gmtoff) - 36usize];
+    ["Offset of field: tm::tm_zone"][::std::mem::offset_of!(tm, tm_zone) - 40usize];
+};
+unsafe extern "C" {
     pub fn time(__t: *mut time_t) -> time_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn nanosleep(
         __request: *const timespec,
         __remainder: *mut timespec,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn asctime(__tm: *const tm) -> *mut ::std::os::raw::c_char;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn asctime_r(
         __tm: *const tm,
         __buf: *mut ::std::os::raw::c_char,
     ) -> *mut ::std::os::raw::c_char;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn difftime(__lhs: time_t, __rhs: time_t) -> f64;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn mktime(__tm: *mut tm) -> time_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn localtime(__t: *const time_t) -> *mut tm;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn localtime_r(__t: *const time_t, __tm: *mut tm) -> *mut tm;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timelocal(__tm: *mut tm) -> time_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn gmtime(__t: *const time_t) -> *mut tm;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn gmtime_r(__t: *const time_t, __tm: *mut tm) -> *mut tm;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timegm(__tm: *mut tm) -> time_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn strptime(
         __s: *const ::std::os::raw::c_char,
         __fmt: *const ::std::os::raw::c_char,
         __tm: *mut tm,
     ) -> *mut ::std::os::raw::c_char;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn strptime_l(
         __s: *const ::std::os::raw::c_char,
         __fmt: *const ::std::os::raw::c_char,
@@ -6998,7 +4868,7 @@ extern "C" {
         __l: locale_t,
     ) -> *mut ::std::os::raw::c_char;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn strftime(
         __buf: *mut ::std::os::raw::c_char,
         __n: usize,
@@ -7006,7 +4876,7 @@ extern "C" {
         __tm: *const tm,
     ) -> usize;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn strftime_l(
         __buf: *mut ::std::os::raw::c_char,
         __n: usize,
@@ -7015,31 +4885,31 @@ extern "C" {
         __l: locale_t,
     ) -> usize;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn ctime(__t: *const time_t) -> *mut ::std::os::raw::c_char;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn ctime_r(
         __t: *const time_t,
         __buf: *mut ::std::os::raw::c_char,
     ) -> *mut ::std::os::raw::c_char;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn tzset();
 }
-extern "C" {
+unsafe extern "C" {
     pub fn clock() -> clock_t;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn clock_getcpuclockid(__pid: pid_t, __clock: *mut clockid_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn clock_getres(__clock: clockid_t, __resolution: *mut timespec) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn clock_gettime(__clock: clockid_t, __ts: *mut timespec) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn clock_nanosleep(
         __clock: clockid_t,
         __flags: ::std::os::raw::c_int,
@@ -7047,20 +4917,20 @@ extern "C" {
         __remainder: *mut timespec,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn clock_settime(__clock: clockid_t, __ts: *const timespec) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timer_create(
         __clock: clockid_t,
         __event: *mut sigevent,
         __timer_ptr: *mut timer_t,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timer_delete(__timer: timer_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timer_settime(
         __timer: timer_t,
         __flags: ::std::os::raw::c_int,
@@ -7068,33 +4938,33 @@ extern "C" {
         __old_value: *mut itimerspec,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timer_gettime(_timer: timer_t, __ts: *mut itimerspec) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timer_getoverrun(__timer: timer_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timespec_get(
         __ts: *mut timespec,
         __base: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn timespec_getres(
         __ts: *mut timespec,
         __base: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
 pub type nfds_t = ::std::os::raw::c_uint;
-extern "C" {
+unsafe extern "C" {
     pub fn poll(
         __fds: *mut pollfd,
         __count: nfds_t,
         __timeout_ms: ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn ppoll(
         __fds: *mut pollfd,
         __count: nfds_t,
@@ -7102,7 +4972,7 @@ extern "C" {
         __mask: *const sigset_t,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn ppoll64(
         __fds: *mut pollfd,
         __count: nfds_t,
@@ -7126,127 +4996,65 @@ pub struct clone_args {
     pub set_tid_size: __u64,
     pub cgroup: __u64,
 }
-#[test]
-fn bindgen_test_layout_clone_args() {
-    const UNINIT: ::std::mem::MaybeUninit<clone_args> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<clone_args>(),
-        88usize,
-        "Size of clone_args"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<clone_args>(),
-        8usize,
-        "Alignment of clone_args"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).flags) as usize - ptr as usize },
-        0usize,
-        "Offset of field: clone_args::flags"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).pidfd) as usize - ptr as usize },
-        8usize,
-        "Offset of field: clone_args::pidfd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).child_tid) as usize - ptr as usize },
-        16usize,
-        "Offset of field: clone_args::child_tid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).parent_tid) as usize - ptr as usize },
-        24usize,
-        "Offset of field: clone_args::parent_tid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).exit_signal) as usize - ptr as usize },
-        32usize,
-        "Offset of field: clone_args::exit_signal"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).stack) as usize - ptr as usize },
-        40usize,
-        "Offset of field: clone_args::stack"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).stack_size) as usize - ptr as usize },
-        48usize,
-        "Offset of field: clone_args::stack_size"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).tls) as usize - ptr as usize },
-        56usize,
-        "Offset of field: clone_args::tls"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).set_tid) as usize - ptr as usize },
-        64usize,
-        "Offset of field: clone_args::set_tid"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).set_tid_size) as usize - ptr as usize },
-        72usize,
-        "Offset of field: clone_args::set_tid_size"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cgroup) as usize - ptr as usize },
-        80usize,
-        "Offset of field: clone_args::cgroup"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of clone_args"][::std::mem::size_of::<clone_args>() - 88usize];
+    ["Alignment of clone_args"][::std::mem::align_of::<clone_args>() - 8usize];
+    ["Offset of field: clone_args::flags"][::std::mem::offset_of!(clone_args, flags) - 0usize];
+    ["Offset of field: clone_args::pidfd"][::std::mem::offset_of!(clone_args, pidfd) - 8usize];
+    ["Offset of field: clone_args::child_tid"]
+        [::std::mem::offset_of!(clone_args, child_tid) - 16usize];
+    ["Offset of field: clone_args::parent_tid"]
+        [::std::mem::offset_of!(clone_args, parent_tid) - 24usize];
+    ["Offset of field: clone_args::exit_signal"]
+        [::std::mem::offset_of!(clone_args, exit_signal) - 32usize];
+    ["Offset of field: clone_args::stack"][::std::mem::offset_of!(clone_args, stack) - 40usize];
+    ["Offset of field: clone_args::stack_size"]
+        [::std::mem::offset_of!(clone_args, stack_size) - 48usize];
+    ["Offset of field: clone_args::tls"][::std::mem::offset_of!(clone_args, tls) - 56usize];
+    ["Offset of field: clone_args::set_tid"][::std::mem::offset_of!(clone_args, set_tid) - 64usize];
+    ["Offset of field: clone_args::set_tid_size"]
+        [::std::mem::offset_of!(clone_args, set_tid_size) - 72usize];
+    ["Offset of field: clone_args::cgroup"][::std::mem::offset_of!(clone_args, cgroup) - 80usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct sched_param {
     pub sched_priority: ::std::os::raw::c_int,
 }
-#[test]
-fn bindgen_test_layout_sched_param() {
-    const UNINIT: ::std::mem::MaybeUninit<sched_param> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<sched_param>(),
-        4usize,
-        "Size of sched_param"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<sched_param>(),
-        4usize,
-        "Alignment of sched_param"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sched_priority) as usize - ptr as usize },
-        0usize,
-        "Offset of field: sched_param::sched_priority"
-    );
-}
-extern "C" {
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of sched_param"][::std::mem::size_of::<sched_param>() - 4usize];
+    ["Alignment of sched_param"][::std::mem::align_of::<sched_param>() - 4usize];
+    ["Offset of field: sched_param::sched_priority"]
+        [::std::mem::offset_of!(sched_param, sched_priority) - 0usize];
+};
+unsafe extern "C" {
     pub fn sched_setscheduler(
         __pid: pid_t,
         __policy: ::std::os::raw::c_int,
         __param: *const sched_param,
     ) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sched_getscheduler(__pid: pid_t) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sched_yield() -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sched_get_priority_max(__policy: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sched_get_priority_min(__policy: ::std::os::raw::c_int) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sched_setparam(__pid: pid_t, __param: *const sched_param) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sched_getparam(__pid: pid_t, __param: *mut sched_param) -> ::std::os::raw::c_int;
 }
-extern "C" {
+unsafe extern "C" {
     pub fn sched_rr_get_interval(__pid: pid_t, __quantum: *mut timespec) -> ::std::os::raw::c_int;
 }
 pub const PTHREAD_MUTEX_NORMAL: _bindgen_ty_23 = 0;
@@ -7267,44 +5075,25 @@ pub struct __pthread_cleanup_t {
         ::std::option::Option<unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void)>,
     pub __cleanup_arg: *mut ::std::os::raw::c_void,
 }
-#[test]
-fn bindgen_test_layout___pthread_cleanup_t() {
-    const UNINIT: ::std::mem::MaybeUninit<__pthread_cleanup_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<__pthread_cleanup_t>(),
-        12usize,
-        "Size of __pthread_cleanup_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<__pthread_cleanup_t>(),
-        4usize,
-        "Alignment of __pthread_cleanup_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__cleanup_prev) as usize - ptr as usize },
-        0usize,
-        "Offset of field: __pthread_cleanup_t::__cleanup_prev"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__cleanup_routine) as usize - ptr as usize },
-        4usize,
-        "Offset of field: __pthread_cleanup_t::__cleanup_routine"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).__cleanup_arg) as usize - ptr as usize },
-        8usize,
-        "Offset of field: __pthread_cleanup_t::__cleanup_arg"
-    );
-}
-extern "C" {
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of __pthread_cleanup_t"][::std::mem::size_of::<__pthread_cleanup_t>() - 12usize];
+    ["Alignment of __pthread_cleanup_t"][::std::mem::align_of::<__pthread_cleanup_t>() - 4usize];
+    ["Offset of field: __pthread_cleanup_t::__cleanup_prev"]
+        [::std::mem::offset_of!(__pthread_cleanup_t, __cleanup_prev) - 0usize];
+    ["Offset of field: __pthread_cleanup_t::__cleanup_routine"]
+        [::std::mem::offset_of!(__pthread_cleanup_t, __cleanup_routine) - 4usize];
+    ["Offset of field: __pthread_cleanup_t::__cleanup_arg"]
+        [::std::mem::offset_of!(__pthread_cleanup_t, __cleanup_arg) - 8usize];
+};
+unsafe extern "C" {
     pub fn __pthread_cleanup_push(
         c: *mut __pthread_cleanup_t,
         arg1: ::std::option::Option<unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void)>,
         arg2: *mut ::std::os::raw::c_void,
     );
 }
-extern "C" {
+unsafe extern "C" {
     pub fn __pthread_cleanup_pop(arg1: *mut __pthread_cleanup_t, arg2: ::std::os::raw::c_int);
 }
 #[doc = " Data associated with an ALooper fd that will be returned as the \"outData\"\n when that source has data ready."]
@@ -7320,36 +5109,17 @@ pub struct android_poll_source {
         unsafe extern "C" fn(app: *mut android_app, source: *mut android_poll_source),
     >,
 }
-#[test]
-fn bindgen_test_layout_android_poll_source() {
-    const UNINIT: ::std::mem::MaybeUninit<android_poll_source> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<android_poll_source>(),
-        12usize,
-        "Size of android_poll_source"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<android_poll_source>(),
-        4usize,
-        "Alignment of android_poll_source"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).id) as usize - ptr as usize },
-        0usize,
-        "Offset of field: android_poll_source::id"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).app) as usize - ptr as usize },
-        4usize,
-        "Offset of field: android_poll_source::app"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).process) as usize - ptr as usize },
-        8usize,
-        "Offset of field: android_poll_source::process"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of android_poll_source"][::std::mem::size_of::<android_poll_source>() - 12usize];
+    ["Alignment of android_poll_source"][::std::mem::align_of::<android_poll_source>() - 4usize];
+    ["Offset of field: android_poll_source::id"]
+        [::std::mem::offset_of!(android_poll_source, id) - 0usize];
+    ["Offset of field: android_poll_source::app"]
+        [::std::mem::offset_of!(android_poll_source, app) - 4usize];
+    ["Offset of field: android_poll_source::process"]
+        [::std::mem::offset_of!(android_poll_source, process) - 8usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct android_input_buffer {
@@ -7366,51 +5136,23 @@ pub struct android_input_buffer {
     #[doc = " The size of the `keyEvents` buffer."]
     pub keyEventsBufferSize: u64,
 }
-#[test]
-fn bindgen_test_layout_android_input_buffer() {
-    const UNINIT: ::std::mem::MaybeUninit<android_input_buffer> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<android_input_buffer>(),
-        40usize,
-        "Size of android_input_buffer"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<android_input_buffer>(),
-        4usize,
-        "Alignment of android_input_buffer"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).motionEvents) as usize - ptr as usize },
-        0usize,
-        "Offset of field: android_input_buffer::motionEvents"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).motionEventsCount) as usize - ptr as usize },
-        4usize,
-        "Offset of field: android_input_buffer::motionEventsCount"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).motionEventsBufferSize) as usize - ptr as usize },
-        12usize,
-        "Offset of field: android_input_buffer::motionEventsBufferSize"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).keyEvents) as usize - ptr as usize },
-        20usize,
-        "Offset of field: android_input_buffer::keyEvents"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).keyEventsCount) as usize - ptr as usize },
-        24usize,
-        "Offset of field: android_input_buffer::keyEventsCount"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).keyEventsBufferSize) as usize - ptr as usize },
-        32usize,
-        "Offset of field: android_input_buffer::keyEventsBufferSize"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of android_input_buffer"][::std::mem::size_of::<android_input_buffer>() - 40usize];
+    ["Alignment of android_input_buffer"][::std::mem::align_of::<android_input_buffer>() - 4usize];
+    ["Offset of field: android_input_buffer::motionEvents"]
+        [::std::mem::offset_of!(android_input_buffer, motionEvents) - 0usize];
+    ["Offset of field: android_input_buffer::motionEventsCount"]
+        [::std::mem::offset_of!(android_input_buffer, motionEventsCount) - 4usize];
+    ["Offset of field: android_input_buffer::motionEventsBufferSize"]
+        [::std::mem::offset_of!(android_input_buffer, motionEventsBufferSize) - 12usize];
+    ["Offset of field: android_input_buffer::keyEvents"]
+        [::std::mem::offset_of!(android_input_buffer, keyEvents) - 20usize];
+    ["Offset of field: android_input_buffer::keyEventsCount"]
+        [::std::mem::offset_of!(android_input_buffer, keyEventsCount) - 24usize];
+    ["Offset of field: android_input_buffer::keyEventsBufferSize"]
+        [::std::mem::offset_of!(android_input_buffer, keyEventsBufferSize) - 32usize];
+};
 #[doc = " Function pointer declaration for the filtering of key events.\n A function with this signature should be passed to\n android_app_set_key_event_filter and return false for any events that should\n not be handled by android_native_app_glue. These events will be handled by\n the system instead."]
 pub type android_key_event_filter =
     ::std::option::Option<unsafe extern "C" fn(arg1: *const GameActivityKeyEvent) -> bool>;
@@ -7469,181 +5211,70 @@ pub struct android_app {
     pub inputAvailableWakeUp: bool,
     pub inputSwapPending: bool,
 }
-#[test]
-fn bindgen_test_layout_android_app() {
-    const UNINIT: ::std::mem::MaybeUninit<android_app> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<android_app>(),
-        232usize,
-        "Size of android_app"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<android_app>(),
-        4usize,
-        "Alignment of android_app"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).userData) as usize - ptr as usize },
-        0usize,
-        "Offset of field: android_app::userData"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).onAppCmd) as usize - ptr as usize },
-        4usize,
-        "Offset of field: android_app::onAppCmd"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).activity) as usize - ptr as usize },
-        8usize,
-        "Offset of field: android_app::activity"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).config) as usize - ptr as usize },
-        12usize,
-        "Offset of field: android_app::config"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).savedState) as usize - ptr as usize },
-        16usize,
-        "Offset of field: android_app::savedState"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).savedStateSize) as usize - ptr as usize },
-        20usize,
-        "Offset of field: android_app::savedStateSize"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).looper) as usize - ptr as usize },
-        24usize,
-        "Offset of field: android_app::looper"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).window) as usize - ptr as usize },
-        28usize,
-        "Offset of field: android_app::window"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).contentRect) as usize - ptr as usize },
-        32usize,
-        "Offset of field: android_app::contentRect"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).softwareKeyboardVisible) as usize - ptr as usize },
-        48usize,
-        "Offset of field: android_app::softwareKeyboardVisible"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).editorAction) as usize - ptr as usize },
-        52usize,
-        "Offset of field: android_app::editorAction"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).activityState) as usize - ptr as usize },
-        56usize,
-        "Offset of field: android_app::activityState"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).destroyRequested) as usize - ptr as usize },
-        60usize,
-        "Offset of field: android_app::destroyRequested"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).inputBuffers) as usize - ptr as usize },
-        64usize,
-        "Offset of field: android_app::inputBuffers"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).currentInputBuffer) as usize - ptr as usize },
-        144usize,
-        "Offset of field: android_app::currentInputBuffer"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).textInputState) as usize - ptr as usize },
-        148usize,
-        "Offset of field: android_app::textInputState"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).mutex) as usize - ptr as usize },
-        152usize,
-        "Offset of field: android_app::mutex"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cond) as usize - ptr as usize },
-        156usize,
-        "Offset of field: android_app::cond"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).msgread) as usize - ptr as usize },
-        160usize,
-        "Offset of field: android_app::msgread"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).msgwrite) as usize - ptr as usize },
-        164usize,
-        "Offset of field: android_app::msgwrite"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).thread) as usize - ptr as usize },
-        168usize,
-        "Offset of field: android_app::thread"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).cmdPollSource) as usize - ptr as usize },
-        172usize,
-        "Offset of field: android_app::cmdPollSource"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).running) as usize - ptr as usize },
-        184usize,
-        "Offset of field: android_app::running"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).stateSaved) as usize - ptr as usize },
-        188usize,
-        "Offset of field: android_app::stateSaved"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).destroyed) as usize - ptr as usize },
-        192usize,
-        "Offset of field: android_app::destroyed"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).redrawNeeded) as usize - ptr as usize },
-        196usize,
-        "Offset of field: android_app::redrawNeeded"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).pendingWindow) as usize - ptr as usize },
-        200usize,
-        "Offset of field: android_app::pendingWindow"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).pendingContentRect) as usize - ptr as usize },
-        204usize,
-        "Offset of field: android_app::pendingContentRect"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).keyEventFilter) as usize - ptr as usize },
-        220usize,
-        "Offset of field: android_app::keyEventFilter"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).motionEventFilter) as usize - ptr as usize },
-        224usize,
-        "Offset of field: android_app::motionEventFilter"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).inputAvailableWakeUp) as usize - ptr as usize },
-        228usize,
-        "Offset of field: android_app::inputAvailableWakeUp"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).inputSwapPending) as usize - ptr as usize },
-        229usize,
-        "Offset of field: android_app::inputSwapPending"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of android_app"][::std::mem::size_of::<android_app>() - 232usize];
+    ["Alignment of android_app"][::std::mem::align_of::<android_app>() - 4usize];
+    ["Offset of field: android_app::userData"]
+        [::std::mem::offset_of!(android_app, userData) - 0usize];
+    ["Offset of field: android_app::onAppCmd"]
+        [::std::mem::offset_of!(android_app, onAppCmd) - 4usize];
+    ["Offset of field: android_app::activity"]
+        [::std::mem::offset_of!(android_app, activity) - 8usize];
+    ["Offset of field: android_app::config"][::std::mem::offset_of!(android_app, config) - 12usize];
+    ["Offset of field: android_app::savedState"]
+        [::std::mem::offset_of!(android_app, savedState) - 16usize];
+    ["Offset of field: android_app::savedStateSize"]
+        [::std::mem::offset_of!(android_app, savedStateSize) - 20usize];
+    ["Offset of field: android_app::looper"][::std::mem::offset_of!(android_app, looper) - 24usize];
+    ["Offset of field: android_app::window"][::std::mem::offset_of!(android_app, window) - 28usize];
+    ["Offset of field: android_app::contentRect"]
+        [::std::mem::offset_of!(android_app, contentRect) - 32usize];
+    ["Offset of field: android_app::softwareKeyboardVisible"]
+        [::std::mem::offset_of!(android_app, softwareKeyboardVisible) - 48usize];
+    ["Offset of field: android_app::editorAction"]
+        [::std::mem::offset_of!(android_app, editorAction) - 52usize];
+    ["Offset of field: android_app::activityState"]
+        [::std::mem::offset_of!(android_app, activityState) - 56usize];
+    ["Offset of field: android_app::destroyRequested"]
+        [::std::mem::offset_of!(android_app, destroyRequested) - 60usize];
+    ["Offset of field: android_app::inputBuffers"]
+        [::std::mem::offset_of!(android_app, inputBuffers) - 64usize];
+    ["Offset of field: android_app::currentInputBuffer"]
+        [::std::mem::offset_of!(android_app, currentInputBuffer) - 144usize];
+    ["Offset of field: android_app::textInputState"]
+        [::std::mem::offset_of!(android_app, textInputState) - 148usize];
+    ["Offset of field: android_app::mutex"][::std::mem::offset_of!(android_app, mutex) - 152usize];
+    ["Offset of field: android_app::cond"][::std::mem::offset_of!(android_app, cond) - 156usize];
+    ["Offset of field: android_app::msgread"]
+        [::std::mem::offset_of!(android_app, msgread) - 160usize];
+    ["Offset of field: android_app::msgwrite"]
+        [::std::mem::offset_of!(android_app, msgwrite) - 164usize];
+    ["Offset of field: android_app::thread"]
+        [::std::mem::offset_of!(android_app, thread) - 168usize];
+    ["Offset of field: android_app::cmdPollSource"]
+        [::std::mem::offset_of!(android_app, cmdPollSource) - 172usize];
+    ["Offset of field: android_app::running"]
+        [::std::mem::offset_of!(android_app, running) - 184usize];
+    ["Offset of field: android_app::stateSaved"]
+        [::std::mem::offset_of!(android_app, stateSaved) - 188usize];
+    ["Offset of field: android_app::destroyed"]
+        [::std::mem::offset_of!(android_app, destroyed) - 192usize];
+    ["Offset of field: android_app::redrawNeeded"]
+        [::std::mem::offset_of!(android_app, redrawNeeded) - 196usize];
+    ["Offset of field: android_app::pendingWindow"]
+        [::std::mem::offset_of!(android_app, pendingWindow) - 200usize];
+    ["Offset of field: android_app::pendingContentRect"]
+        [::std::mem::offset_of!(android_app, pendingContentRect) - 204usize];
+    ["Offset of field: android_app::keyEventFilter"]
+        [::std::mem::offset_of!(android_app, keyEventFilter) - 220usize];
+    ["Offset of field: android_app::motionEventFilter"]
+        [::std::mem::offset_of!(android_app, motionEventFilter) - 224usize];
+    ["Offset of field: android_app::inputAvailableWakeUp"]
+        [::std::mem::offset_of!(android_app, inputAvailableWakeUp) - 228usize];
+    ["Offset of field: android_app::inputSwapPending"]
+        [::std::mem::offset_of!(android_app, inputSwapPending) - 229usize];
+};
 #[doc = " Looper data ID of commands coming from the app's main thread, which\n is returned as an identifier from ALooper_pollOnce().  The data for this\n identifier is a pointer to an android_poll_source structure.\n These can be retrieved and processed with android_app_read_cmd()\n and android_app_exec_cmd()."]
 pub const NativeAppGlueLooperId_LOOPER_ID_MAIN: NativeAppGlueLooperId = 1;
 #[doc = " Unused. Reserved for future use when usage of AInputQueue will be\n supported."]
@@ -7690,55 +5321,55 @@ pub const NativeAppGlueAppCmd_APP_CMD_DESTROY: NativeAppGlueAppCmd = 16;
 pub const NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED: NativeAppGlueAppCmd = 17;
 #[doc = " Commands passed from the application's main Java thread to the game's thread.\n\n Values from 0 to 127 are reserved for this library; values from -128 to -1\n can be used for custom user's events."]
 pub type NativeAppGlueAppCmd = i8;
-extern "C" {
+unsafe extern "C" {
     #[doc = " Call when ALooper_pollAll() returns LOOPER_ID_MAIN, reading the next\n app command message."]
     pub fn android_app_read_cmd(android_app: *mut android_app) -> i8;
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Call with the command returned by android_app_read_cmd() to do the\n initial pre-processing of the given command.  You can perform your own\n actions for the command after calling this function."]
     pub fn android_app_pre_exec_cmd(android_app: *mut android_app, cmd: i8);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Call with the command returned by android_app_read_cmd() to do the\n final post-processing of the given command.  You must have done your own\n actions for the command before calling this function."]
     pub fn android_app_post_exec_cmd(android_app: *mut android_app, cmd: i8);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Call this before processing input events to get the events buffer.\n The function returns NULL if there are no events to process."]
     pub fn android_app_swap_input_buffers(
         android_app: *mut android_app,
     ) -> *mut android_input_buffer;
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Clear the array of motion events that were waiting to be handled, and release\n each of them.\n\n This method should be called after you have processed the motion events in\n your game loop. You should handle events at each iteration of your game loop."]
     pub fn android_app_clear_motion_events(inputBuffer: *mut android_input_buffer);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Clear the array of key events that were waiting to be handled, and release\n each of them.\n\n This method should be called after you have processed the key up events in\n your game loop. You should handle events at each iteration of your game loop."]
     pub fn android_app_clear_key_events(inputBuffer: *mut android_input_buffer);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " This is a springboard into the Rust glue layer that wraps calling the\n main entry for the app itself."]
     pub fn _rust_glue_entry(app: *mut android_app);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Set the filter to use when processing key events.\n Any events for which the filter returns false will be ignored by\n android_native_app_glue. If filter is set to NULL, no filtering is done.\n\n The default key filter will filter out volume and camera button presses."]
     pub fn android_app_set_key_event_filter(
         app: *mut android_app,
         filter: android_key_event_filter,
     );
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Set the filter to use when processing touch and motion events.\n Any events for which the filter returns false will be ignored by\n android_native_app_glue. If filter is set to NULL, no filtering is done.\n\n Note that the default motion event filter will only allow touchscreen events\n through, in order to mimic NativeActivity's behaviour, so for controller\n events to be passed to the app, set the filter to NULL."]
     pub fn android_app_set_motion_event_filter(
         app: *mut android_app,
         filter: android_motion_event_filter,
     );
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " You can send your custom events using the function below.\n\n Make sure your custom codes do not overlap with this library's ones.\n\n Values from 0 to 127 are reserved for this library; values from -128 to -1\n can be used for custom user's events."]
     pub fn android_app_write_cmd(android_app: *mut android_app, cmd: i8);
 }
-extern "C" {
+unsafe extern "C" {
     #[doc = " Determines if a looper wake up was due to new input becoming available"]
     pub fn android_app_input_available_wake_up(app: *mut android_app) -> bool;
 }

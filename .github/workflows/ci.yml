@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         # See top README for MSRV policy
-        rust-version: [1.73.0, stable]
+        rust-version: [1.85.0, stable]
     steps:
       - uses: actions/checkout@v4
 
