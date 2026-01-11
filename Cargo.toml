@@ -3,3 +3,6 @@ resolver = "2"
 members = ["android-activity"]
 
 exclude = ["examples"]
+
+[patch.crates-io]
+jni = { git = "https://github.com/jni-rs/jni-rs.git", branch = "release-0.22" }

@@ -182,3 +182,6 @@ label = "Application Name"
 #path = "/rust-windowing/android-ndk-rs/tree/master/cargo-apk"
 #path_prefix = "/rust-windowing/"
 #mime_type = "image/jpeg"
+
+[patch.crates-io]
+jni = { git = "https://github.com/jni-rs/jni-rs.git", branch = "release-0.22" }
