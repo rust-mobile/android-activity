@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
 
 ### Changed
-- rust-version bumped to 1.73.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193))
+- rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), [#219](https://github.com/rust-mobile/android-activity/pull/219))
 - GameActivity updated to 4.0.0 (requires the corresponding 4.0.0 `.aar` release from Google) ([#191](https://github.com/rust-mobile/android-activity/pull/191))
 
 ## [0.6.0] - 2024-04-26
