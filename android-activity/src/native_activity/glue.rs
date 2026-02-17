@@ -854,6 +854,7 @@ extern "C" fn ANativeActivity_onCreate(
         let rust_glue = jvm_glue.clone();
         // Let us Send the NativeActivity pointer to the Rust main() thread without a wrapper type
         let activity_ptr: libc::intptr_t = activity as _;
+        let main_looper_ptr: libc::intptr_t = unsafe { ndk_sys::ALooper_forThread() } as _;
 
         // Note: we drop the thread handle which will detach the thread
         std::thread::spawn(move || {
@@ -873,7 +874,7 @@ extern "C" fn ANativeActivity_onCreate(
                 jvm
             });
 
-            let app = AndroidApp::new(rust_glue.clone(), jvm.clone());
+            let app = AndroidApp::new(rust_glue.clone(), jvm.clone(), main_looper_ptr as *mut _);
 
             rust_glue.notify_main_thread_running();
 

@@ -560,6 +560,23 @@ impl AndroidApp {
         self.inner.read().unwrap().native_window()
     }
 
+    /// Returns a pointer to the current looper associated with the main thread
+    ///
+    /// This is appropriate for posting callbacks that need to run on the UI thread
+    /// Wrap in an [`ndk::looper::ForeignLooper `]
+    /// ```ignore
+    /// # use ndk;
+    /// # let app: AndroidApp = todo!();
+    /// let looper = unsafe {
+    ///     let non_null_looper = ptr::NonNull::new(_app.main_looper_as_ptr()).unwrap();
+    ///     ndk::looper::ForeignLooper::from_ptr(non_null_looper)
+    /// };
+    /// looper.add_fd_with_callback(todo!(), ndk::looper::FdEvent::INPUT, todo!()).unwrap();
+    /// ```
+    pub fn main_looper_as_ptr(&self) -> *mut ndk_sys::ALooper {
+        self.inner.read().unwrap().main_looper()
+    }
+
     /// Returns a pointer to the Java Virtual Machine, for making JNI calls
     ///
     /// This returns a pointer to the Java Virtual Machine which can be used
