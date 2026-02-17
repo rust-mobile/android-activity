@@ -3,7 +3,7 @@
 [![ci](https://github.com/rust-mobile/android-activity/actions/workflows/ci.yml/badge.svg)](https://github.com/rust-mobile/android-activity/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/android-activity.svg)](https://crates.io/crates/android-activity)
 [![Docs](https://docs.rs/android-activity/badge.svg)](https://docs.rs/android-activity)
-[![MSRV](https://img.shields.io/badge/rustc-1.68.0+-ab6000.svg)](https://blog.rust-lang.org/2023/03/09/Rust-1.68.0.html)
+[![MSRV](https://img.shields.io/badge/rustc-1.85.0+-ab6000.svg)](https://blog.rust-lang.org/2025/02/20/Rust-1.85.0/)
 
 ## Overview
 
