@@ -25,9 +25,9 @@ applications.
 [`Activity`]: https://developer.android.com/reference/android/app/Activity
 [`NativeActivity`]: https://developer.android.com/reference/android/app/NativeActivity
 [ndk_concepts]: https://developer.android.com/ndk/guides/concepts#naa
-[`GameActivity`]: https://developer.android.com/games/agdk/integrate-game-activity
+[`GameActivity`]: https://developer.android.com/games/agdk/game-activity
 [ndk-glue]: https://crates.io/crates/ndk-glue
-[agdk]: https://developer.android.com/games/agdk
+[agdk]: https://developer.android.com/games/agdk/overview
 
 ## Example
 
@@ -111,9 +111,9 @@ Even if you start out using `NativeActivity` for the convenience, it's likely th
 
 Firstly; if you have a [Winit](https://crates.io/crates/winit) based application and also have an explicit dependency on `ndk-glue` your application will need to remove its dependency on `ndk-glue` for the 0.28 release of Winit which will be based on android-activity (Since glue crates, due to their nature, can't be compatible with alternative glue crates).
 
-Winit-based applications can follow the [Android README](https://github.com/rust-windowing/winit#android) guidance for advice on how to switch over. Most Winit-based applications should aim to remove any explicit dependency on a specific glue crate (so not depend directly on `ndk-glue` or `android-activity` and instead rely on Winit to pull in the right glue crate). The main practical change will then be to add a `#[no_mangle]fn android_main(app: AndroidApp)` entry point.
+Winit-based applications can follow the [Android documentation](https://docs.rs/winit/latest/winit/platform/android/index.html) guidance for advice on how to switch over. Most Winit-based applications should aim to remove any explicit dependency on a specific glue crate (so not depend directly on `ndk-glue` or `android-activity` and instead rely on Winit to pull in the right glue crate). The main practical change will then be to add a `#[no_mangle]fn android_main(app: AndroidApp)` entry point.
 
-See the [Android README](https://github.com/rust-windowing/winit#android) for more details and also see the [Winit-based examples here](https://github.com/rust-mobile/rust-android-examples).
+See the [Android documentation](https://docs.rs/winit/latest/winit/platform/android/index.html) for more details and also see the [Winit-based examples here](https://github.com/rust-mobile/rust-android-examples).
 
 ### Middleware crates (i.e. not applications)
 
