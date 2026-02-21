@@ -13,14 +13,15 @@ use ndk::input_queue::InputQueue;
 use ndk::{asset::AssetManager, native_window::NativeWindow};
 
 use crate::error::InternalResult;
-use crate::input::{device_key_character_map, Axis, KeyCharacterMap};
-use crate::input::{TextInputState, TextSpan};
 use crate::{
-    util, AndroidApp, ConfigurationRef, ImeOptions, InputStatus, InputType, MainEvent, PollEvent,
-    Rect, WindowManagerFlags,
+    util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
 
 pub mod input;
+use crate::input::{
+    device_key_character_map, Axis, ImeOptions, InputType, KeyCharacterMap, TextInputState,
+    TextSpan,
+};
 
 mod glue;
 use self::glue::NativeActivityGlue;
