@@ -23,20 +23,21 @@ use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
 use crate::error::InternalResult;
-use crate::input::{device_key_character_map, Axis, KeyCharacterMap, TextInputAction};
 use crate::util::{
     abort_on_panic, forward_stdio_to_logcat, init_android_main_thread, log_panic,
     try_get_path_from_ptr,
 };
 use crate::{
-    AndroidApp, ConfigurationRef, ImeOptions, InputStatus, InputType, MainEvent, PollEvent, Rect,
-    WindowManagerFlags,
+    AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
 };
 
 mod ffi;
 
 pub mod input;
-use crate::input::{TextInputState, TextSpan};
+use crate::input::{
+    device_key_character_map, Axis, ImeOptions, InputType, KeyCharacterMap, TextInputAction,
+    TextInputState, TextSpan,
+};
 use input::{InputEvent, KeyEvent, MotionEvent};
 
 // The only time it's safe to update the android_app->savedState pointer is
