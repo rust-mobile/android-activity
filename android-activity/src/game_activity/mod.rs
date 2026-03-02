@@ -214,17 +214,20 @@ impl NativeAppGlue {
         self.text_input_state()
     }
 
-    pub fn set_ime_editor_info(&self, input_type: InputType, options: ImeOptions) {
+    pub fn set_ime_editor_info(
+        &self,
+        input_type: InputType,
+        action: TextInputAction,
+        options: ImeOptions,
+    ) {
         unsafe {
             let activity = (*self.as_ptr()).activity;
-            let action_id = 0; // IME_ACTION_UNSPECIFIED
-                               // (https://developer.android.com/reference/android/view/inputmethod/EditorInfo#IME_ACTION_DONE)
-                               // TODO: expose this later?
+            let action_id: i32 = action.into();
 
             ffi::GameActivity_setImeEditorInfo(
                 activity,
                 input_type.bits(),
-                action_id,
+                action_id as _,
                 options.bits(),
             );
         }
@@ -579,8 +582,14 @@ impl AndroidAppInner {
         self.native_app.set_text_input_state(state);
     }
 
-    pub fn set_ime_editor_info(&self, input_type: InputType, options: ImeOptions) {
-        self.native_app.set_ime_editor_info(input_type, options);
+    pub fn set_ime_editor_info(
+        &self,
+        input_type: InputType,
+        action: TextInputAction,
+        options: ImeOptions,
+    ) {
+        self.native_app
+            .set_ime_editor_info(input_type, action, options);
     }
 
     pub(crate) fn device_key_character_map(

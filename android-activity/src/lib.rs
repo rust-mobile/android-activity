@@ -726,12 +726,21 @@ impl AndroidApp {
         self.inner.read().unwrap().set_text_input_state(state);
     }
 
-    /// Set IME editor flags
-    pub fn set_ime_editor_info(&self, input_type: input::InputType, options: input::ImeOptions) {
+    /// Specify the type of text being input, how the IME enter/action key
+    /// should behave and any additional IME options.
+    ///
+    /// Also see the Android SDK documentation for
+    /// [android.view.inputmethod.EditorInfo](https://developer.android.com/reference/android/view/inputmethod/EditorInfo)
+    pub fn set_ime_editor_info(
+        &self,
+        input_type: input::InputType,
+        action: input::TextInputAction,
+        options: input::ImeOptions,
+    ) {
         self.inner
             .read()
             .unwrap()
-            .set_ime_editor_info(input_type, options);
+            .set_ime_editor_info(input_type, action, options);
     }
 
     /// Get an exclusive, lending iterator over buffered input events
