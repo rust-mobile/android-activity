@@ -15,8 +15,7 @@ use log::{error, trace};
 
 use jni::sys::*;
 
-use ndk_sys::ALooper_wake;
-use ndk_sys::{ALooper, ALooper_pollAll};
+use ndk_sys::{ALooper, ALooper_pollOnce, ALooper_wake};
 
 use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
@@ -346,8 +345,8 @@ impl AndroidAppInner {
             } else {
                 -1
             };
-            trace!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
-            let id = ALooper_pollAll(
+            trace!("Calling ALooper_pollOnce, timeout = {timeout_milliseconds}");
+            let id = ALooper_pollOnce(
                 timeout_milliseconds,
                 &mut fd,
                 &mut events,
@@ -355,8 +354,7 @@ impl AndroidAppInner {
             );
             match id {
                 ffi::ALOOPER_POLL_WAKE => {
-                    trace!("ALooper_pollAll returned POLL_WAKE");
-
+                    trace!("ALooper_pollOnce returned POLL_WAKE");
                     if ffi::android_app_input_available_wake_up(native_app.as_ptr()) {
                         log::debug!("Notifying Input Available");
                         callback(PollEvent::Main(MainEvent::InputAvailable));
@@ -365,23 +363,23 @@ impl AndroidAppInner {
                     callback(PollEvent::Wake);
                 }
                 ffi::ALOOPER_POLL_CALLBACK => {
-                    // ALooper_pollAll is documented to handle all callback sources internally so it should
+                    // ALooper_pollOnce is documented to handle all callback sources internally so it should
                     // never return a _CALLBACK source id...
-                    error!("Spurious ALOOPER_POLL_CALLBACK from ALopper_pollAll() (ignored)");
+                    error!("Spurious ALOOPER_POLL_CALLBACK from ALooper_pollOnce() (ignored)");
                 }
                 ffi::ALOOPER_POLL_TIMEOUT => {
-                    trace!("ALooper_pollAll returned POLL_TIMEOUT");
+                    trace!("ALooper_pollOnce returned POLL_TIMEOUT");
                     callback(PollEvent::Timeout);
                 }
                 ffi::ALOOPER_POLL_ERROR => {
                     // If we have an IO error with our pipe to the main Java thread that's surely
                     // not something we can recover from
-                    panic!("ALooper_pollAll returned POLL_ERROR");
+                    panic!("ALooper_pollOnce returned POLL_ERROR");
                 }
                 id if id >= 0 => {
                     match id as ffi::NativeAppGlueLooperId {
                         ffi::NativeAppGlueLooperId_LOOPER_ID_MAIN => {
-                            trace!("ALooper_pollAll returned ID_MAIN");
+                            trace!("ALooper_pollOnce returned ID_MAIN");
                             let source: *mut ffi::android_poll_source = source.cast();
                             if !source.is_null() {
                                 let cmd_i = ffi::android_app_read_cmd(native_app.as_ptr());
@@ -485,7 +483,7 @@ impl AndroidAppInner {
                                 trace!("Calling android_app_post_exec_cmd({cmd_i})");
                                 ffi::android_app_post_exec_cmd(native_app.as_ptr(), cmd_i);
                             } else {
-                                panic!("ALooper_pollAll returned ID_MAIN event with NULL android_poll_source!");
+                                panic!("ALooper_pollOnce returned ID_MAIN event with NULL android_poll_source!");
                             }
                         }
                         _ => {
@@ -494,7 +492,7 @@ impl AndroidAppInner {
                     }
                 }
                 _ => {
-                    error!("Spurious ALooper_pollAll return value {id} (ignored)");
+                    error!("Spurious ALooper_pollOnce return value {id} (ignored)");
                 }
             }
         }
