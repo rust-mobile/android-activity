@@ -19,7 +19,7 @@ jobs:
         # See top README for MSRV policy
         rust-version: [1.85.0, stable]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Downgrade all dependencies to their minimum version, both to ensure our
       # minimum version bounds are correct and buildable, as well as to satisfy
@@ -109,7 +109,7 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Format
         run: cargo fmt --all -- --check
