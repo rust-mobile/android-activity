@@ -194,42 +194,42 @@ impl AndroidAppInner {
                 -1
             };
 
-            trace!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
+            trace!("Calling ALooper_pollOnce, timeout = {timeout_milliseconds}");
             assert_eq!(
                 ndk_sys::ALooper_forThread(),
                 self.looper.ptr,
                 "Application tried to poll events from non-main thread"
             );
-            let id = ndk_sys::ALooper_pollAll(
+            let id = ndk_sys::ALooper_pollOnce(
                 timeout_milliseconds,
                 &mut fd,
                 &mut events,
                 &mut source as *mut *mut c_void,
             );
-            trace!("pollAll id = {id}");
+            trace!("pollOnce id = {id}");
             match id {
                 ndk_sys::ALOOPER_POLL_WAKE => {
-                    trace!("ALooper_pollAll returned POLL_WAKE");
+                    trace!("ALooper_pollOnce returned POLL_WAKE");
                     callback(PollEvent::Wake);
                 }
                 ndk_sys::ALOOPER_POLL_CALLBACK => {
-                    // ALooper_pollAll is documented to handle all callback sources internally so it should
+                    // ALooper_pollOnce is documented to handle all callback sources internally so it should
                     // never return a _CALLBACK source id...
-                    error!("Spurious ALOOPER_POLL_CALLBACK from ALopper_pollAll() (ignored)");
+                    error!("Spurious ALOOPER_POLL_CALLBACK from ALooper_pollOnce() (ignored)");
                 }
                 ndk_sys::ALOOPER_POLL_TIMEOUT => {
-                    trace!("ALooper_pollAll returned POLL_TIMEOUT");
+                    trace!("ALooper_pollOnce returned POLL_TIMEOUT");
                     callback(PollEvent::Timeout);
                 }
                 ndk_sys::ALOOPER_POLL_ERROR => {
                     // If we have an IO error with our pipe to the main Java thread that's surely
                     // not something we can recover from
-                    panic!("ALooper_pollAll returned POLL_ERROR");
+                    panic!("ALooper_pollOnce returned POLL_ERROR");
                 }
                 id if id >= 0 => {
                     match id {
                         LOOPER_ID_MAIN => {
-                            trace!("ALooper_pollAll returned ID_MAIN");
+                            trace!("ALooper_pollOnce returned ID_MAIN");
                             if let Some(ipc_cmd) = self.native_activity.read_cmd() {
                                 let main_cmd = match ipc_cmd {
                                     // We don't forward info about the AInputQueue to apps since it's
@@ -283,7 +283,7 @@ impl AndroidAppInner {
                             }
                         }
                         LOOPER_ID_INPUT => {
-                            trace!("ALooper_pollAll returned ID_INPUT");
+                            trace!("ALooper_pollOnce returned ID_INPUT");
 
                             // To avoid spamming the application with event loop iterations notifying them of
                             // input events then we only send one `InputAvailable` per iteration of input
@@ -298,7 +298,7 @@ impl AndroidAppInner {
                     }
                 }
                 _ => {
-                    error!("Spurious ALooper_pollAll return value {id} (ignored)");
+                    error!("Spurious ALooper_pollOnce return value {id} (ignored)");
                 }
             }
         }

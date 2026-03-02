@@ -607,24 +607,46 @@ impl AndroidApp {
         self.inner.read().unwrap().activity_as_ptr()
     }
 
-    /// Polls for any events associated with this [AndroidApp] and processes those events
-    /// (such as lifecycle events) via the given `callback`.
+    /// Polls for any events associated with this [AndroidApp] and processes
+    /// those events (such as lifecycle events) via the given `callback`.
     ///
-    /// It's important to use this API for polling, and not call [`ALooper_pollAll`] directly since
-    /// some events require pre- and post-processing either side of the callback. For correct
-    /// behavior events should be handled immediately, before returning from the callback and
-    /// not simply queued for batch processing later. For example the existing [`NativeWindow`]
-    /// is accessible during a [`MainEvent::TerminateWindow`] callback and will be
-    /// set to `None` once the callback returns, and this is also synchronized with the Java
-    /// main thread. The [`MainEvent::SaveState`] event is also synchronized with the
+    /// It's important to use this API for polling, and not call
+    /// [`ALooper_pollAll`] or [`ALooper_pollOnce`] directly since some events
+    /// require pre- and post-processing either side of the callback. For
+    /// correct behavior events should be handled immediately, before returning
+    /// from the callback and not simply queued for batch processing later. For
+    /// example the existing [`NativeWindow`] is accessible during a
+    /// [`MainEvent::TerminateWindow`] callback and will be set to `None` once
+    /// the callback returns, and this is also synchronized with the Java main
+    /// thread. The [`MainEvent::SaveState`] event is also synchronized with the
     /// Java main thread.
+    ///
+    /// Internally this is based on [`ALooper_pollOnce`] and will only poll
+    /// file descriptors once per invocation.
+    ///
+    /// # Wake Events
+    ///
+    /// Note that although there is an explicit [PollEvent::Wake] that _can_
+    /// indicate that the main loop was explicitly woken up (E.g. via
+    /// [`AndroidAppWaker::wake`]) it's possible that there will be
+    /// more-specific events that will be delivered after a wake up.
+    ///
+    /// In other words you should only expect to explicitly see
+    /// [`PollEvent::Wake`] events after an early wake up if there were no
+    /// other, more-specific, events that could be delivered after the wake up.
+    ///
+    /// Again, said another way - it's possible that _any_ event could
+    /// effectively be delivered after an early wake up so don't assume there is
+    /// a 1:1 relationship between invoking a wake up via
+    /// [`AndroidAppWaker::wake`] and the delivery of [PollEvent::Wake].
     ///
     /// # Panics
     ///
-    /// This must only be called from your `android_main()` thread and it may panic if called
-    /// from another thread.
+    /// This must only be called from your `android_main()` thread and it may
+    /// panic if called from another thread.
     ///
     /// [`ALooper_pollAll`]: ndk::looper::ThreadLooper::poll_all
+    /// [`ALooper_pollOnce`]: ndk::looper::ThreadLooper::poll_once
     pub fn poll_events<F>(&self, timeout: Option<Duration>, callback: F)
     where
         F: FnMut(PollEvent<'_>),
