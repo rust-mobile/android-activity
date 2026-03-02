@@ -216,7 +216,7 @@ impl NativeAppGlue {
     pub fn set_text_input_state(&self, state: TextInputState) {
         unsafe {
             let activity = (*self.as_ptr()).activity;
-            let modified_utf8 = cesu8::to_java_cesu8(&state.text);
+            let modified_utf8 = simd_cesu8::mutf8::encode(&state.text);
             let text_length = modified_utf8.len() as i32;
             let modified_utf8_bytes = modified_utf8.as_ptr();
             let ffi_state = ffi::GameTextInputState {
@@ -525,7 +525,7 @@ impl AndroidAppInner {
         let text_modified_utf8: *const u8 = (*state).text_UTF8.cast();
         let text_modified_utf8 =
             std::slice::from_raw_parts(text_modified_utf8, (*state).text_length as usize);
-        match cesu8::from_java_cesu8(text_modified_utf8) {
+        match simd_cesu8::mutf8::decode(text_modified_utf8) {
             Ok(str) => {
                 let len = str.len();
                 (*out_ptr).text = String::from(str);
