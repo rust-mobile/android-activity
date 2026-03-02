@@ -19,8 +19,8 @@ use crate::{
 
 pub mod input;
 use crate::input::{
-    device_key_character_map, Axis, ImeOptions, InputType, KeyCharacterMap, TextInputState,
-    TextSpan,
+    device_key_character_map, Axis, ImeOptions, InputType, KeyCharacterMap, TextInputAction,
+    TextInputState, TextSpan,
 };
 
 mod glue;
@@ -387,7 +387,12 @@ impl AndroidAppInner {
     }
 
     // TODO: move into a trait
-    pub fn set_ime_editor_info(&self, _input_type: InputType, _options: ImeOptions) {
+    pub fn set_ime_editor_info(
+        &self,
+        _input_type: InputType,
+        _action: TextInputAction,
+        _options: ImeOptions,
+    ) {
         // NOP: Unsupported
     }
 
