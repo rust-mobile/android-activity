@@ -15,7 +15,7 @@ use log::{error, trace};
 
 use jni::sys::*;
 
-use ndk_sys::{ALooper, ALooper_pollOnce, ALooper_wake};
+use ndk_sys::ALooper_pollOnce;
 
 use ndk::asset::AssetManager;
 use ndk::configuration::Configuration;
@@ -27,7 +27,8 @@ use crate::util::{
     try_get_path_from_ptr,
 };
 use crate::{
-    AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
+    AndroidApp, AndroidAppWaker, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect,
+    WindowManagerFlags,
 };
 
 mod ffi;
@@ -101,24 +102,6 @@ impl StateLoader<'_> {
             } else {
                 None
             }
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct AndroidAppWaker {
-    // The looper pointer is owned by the android_app and effectively
-    // has a 'static lifetime, and the ALooper_wake C API is thread
-    // safe, so this can be cloned safely and is send + sync safe
-    looper: NonNull<ALooper>,
-}
-unsafe impl Send for AndroidAppWaker {}
-unsafe impl Sync for AndroidAppWaker {}
-
-impl AndroidAppWaker {
-    pub fn wake(&self) {
-        unsafe {
-            ALooper_wake(self.looper.as_ptr());
         }
     }
 }
@@ -619,13 +602,10 @@ impl AndroidAppInner {
     }
 
     pub fn create_waker(&self) -> AndroidAppWaker {
+        // Safety: we know that the app and looper pointers are valid
         unsafe {
-            // From the application's pov we assume the app_ptr and looper pointer
-            // have static lifetimes and we can safely assume they are never NULL.
             let app_ptr = self.native_app.as_ptr();
-            AndroidAppWaker {
-                looper: NonNull::new_unchecked((*app_ptr).looper),
-            }
+            AndroidAppWaker::new((*app_ptr).looper)
         }
     }
 

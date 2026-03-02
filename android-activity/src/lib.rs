@@ -187,6 +187,9 @@ mod util;
 
 mod jni_utils;
 
+mod waker;
+pub use waker::AndroidAppWaker;
+
 /// A rectangle with integer edge coordinates. Used to represent window insets, for example.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Rect {
@@ -344,7 +347,6 @@ pub enum InputStatus {
 }
 
 use activity_impl::AndroidAppInner;
-pub use activity_impl::AndroidAppWaker;
 
 bitflags! {
     /// Flags for [`AndroidApp::set_window_flags`]
