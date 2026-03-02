@@ -14,7 +14,8 @@ use ndk::{asset::AssetManager, native_window::NativeWindow};
 
 use crate::error::InternalResult;
 use crate::{
-    util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
+    util, AndroidApp, AndroidAppWaker, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect,
+    WindowManagerFlags,
 };
 
 pub mod input;
@@ -57,31 +58,6 @@ impl StateLoader<'_> {
     /// Returns whatever state was saved during the last [MainEvent::SaveState] event or `None`
     pub fn load(&self) -> Option<Vec<u8>> {
         self.app.native_activity.saved_state()
-    }
-}
-
-/// A means to wake up the main thread while it is blocked waiting for I/O
-#[derive(Clone)]
-pub struct AndroidAppWaker {
-    // The looper pointer is owned by the android_app and effectively
-    // has a 'static lifetime, and the ALooper_wake C API is thread
-    // safe, so this can be cloned safely and is send + sync safe
-    looper: NonNull<ndk_sys::ALooper>,
-}
-unsafe impl Send for AndroidAppWaker {}
-unsafe impl Sync for AndroidAppWaker {}
-
-impl AndroidAppWaker {
-    /// Interrupts the main thread if it is blocked within [`AndroidApp::poll_events()`]
-    ///
-    /// If [`AndroidApp::poll_events()`] is interrupted it will invoke the poll
-    /// callback with a [PollEvent::Wake][wake_event] event.
-    ///
-    /// [wake_event]: crate::PollEvent::Wake
-    pub fn wake(&self) {
-        unsafe {
-            ndk_sys::ALooper_wake(self.looper.as_ptr());
-        }
     }
 }
 
@@ -305,13 +281,8 @@ impl AndroidAppInner {
     }
 
     pub fn create_waker(&self) -> AndroidAppWaker {
-        unsafe {
-            // From the application's pov we assume the looper pointer has a static
-            // lifetimes and we can safely assume it is never NULL.
-            AndroidAppWaker {
-                looper: NonNull::new_unchecked(self.looper.ptr),
-            }
-        }
+        // Safety: we know that the looper is a valid, non-null pointer
+        unsafe { AndroidAppWaker::new(self.looper.ptr) }
     }
 
     pub fn config(&self) -> ConfigurationRef {
