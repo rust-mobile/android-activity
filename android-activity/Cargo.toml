@@ -21,14 +21,14 @@ rust-version = "1.85.0"
 # In general it's only the final application crate that needs
 # to decide on a backend.
 default = []
-game-activity = []
+game-activity = ["simd_cesu8"]
 native-activity = []
 api-level-30 = ["ndk/api-level-30"]
 
 [dependencies]
 log = "0.4"
-cesu8 = "1"
-jni = "0.22"
+simd_cesu8 = { version = "1.0.1", optional = true }
+jni = "0.22.2"
 ndk-sys = "0.6.0"
 ndk = { version = "0.9.0", default-features = false }
 ndk-context = "0.1.1"
