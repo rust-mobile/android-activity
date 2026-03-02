@@ -886,7 +886,7 @@ fn rust_glue_entry(rust_glue: NativeActivityGlue, activity: *mut ndk_sys::ANativ
         // For compatibility we attach before calling the applications main function to
         // allow it to assume the thread is attached before making JNI calls.
         jvm.attach_current_thread_with_config(
-            || AttachConfig::new().name("android_main"),
+            || AttachConfig::new().thread_name(jni::jni_str!("android_main")),
             Some(16),
             |env| -> jni::errors::Result<()> {
                 // SAFETY: We know jni_activity is a valid JNI global ref to an Activity instance
