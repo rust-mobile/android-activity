@@ -875,7 +875,6 @@ fn rust_glue_entry(rust_glue: NativeActivityGlue, activity: *mut ndk_sys::ANativ
         let (jvm, jni_activity) = unsafe {
             let jvm: *mut jni::sys::JavaVM = (*activity).vm.cast();
             let jni_activity: jni::sys::jobject = (*activity).clazz as _; // Completely bogus name; this is the _instance_ not class pointer
-            ndk_context::initialize_android_context(jvm.cast(), jni_activity.cast());
             (jni::JavaVM::from_raw(jvm), jni_activity)
         };
         // Note: At this point we can assume jni::JavaVM::singleton is initialized
@@ -923,8 +922,6 @@ fn rust_glue_entry(rust_glue: NativeActivityGlue, activity: *mut ndk_sys::ANativ
                     // "Note that this method can be called from any thread; it will send a message
                     //  to the main thread of the process where the Java finish call will take place"
                     ndk_sys::ANativeActivity_finish(activity);
-
-                    ndk_context::release_android_context();
                 }
 
                 rust_glue.notify_main_thread_stopped_running();
