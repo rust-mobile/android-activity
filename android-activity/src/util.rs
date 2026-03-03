@@ -1,5 +1,5 @@
 use jni::{
-    jni_str,
+    jni_sig, jni_str,
     objects::{JObject, JString, JThread},
     vm::JavaVM,
 };
@@ -12,6 +12,7 @@ use std::{
         fd::{FromRawFd as _, RawFd},
         raw::c_char,
     },
+    sync::OnceLock,
 };
 
 pub fn try_get_path_from_ptr(path: *const c_char) -> Option<std::path::PathBuf> {
@@ -117,6 +118,24 @@ pub(crate) fn abort_on_panic<R>(f: impl FnOnce() -> R) -> R {
     })
 }
 
+static NDK_CONTEXT_ONCE: OnceLock<()> = OnceLock::new();
+
+// Get the Application instance from the Activity
+fn get_application<'local, 'any>(
+    env: &mut jni::Env<'local>,
+    activity: &JObject<'any>,
+) -> jni::errors::Result<JObject<'local>> {
+    let app = env
+        .call_method(
+            activity,
+            jni_str!("getApplication"),
+            jni_sig!(() -> android.app.Application),
+            &[],
+        )?
+        .l()?;
+    Ok(app)
+}
+
 /// Name the Java Thread + native thread "android_main" and set the Java Thread context class loader
 /// so that jni code can more-easily find non-system Java classes.
 pub(crate) fn init_android_main_thread(
@@ -125,6 +144,18 @@ pub(crate) fn init_android_main_thread(
 ) -> jni::errors::Result<()> {
     vm.with_local_frame(10, |env| -> jni::errors::Result<()> {
         let activity_class = env.get_object_class(jni_activity)?;
+
+        if let Ok(application) = get_application(env, jni_activity) {
+            NDK_CONTEXT_ONCE.get_or_init(|| unsafe {
+                let app_global = env
+                    .new_global_ref(application)
+                    .expect("Failed to create global ref for Application");
+                // Make sure we don't delete the global reference via Drop
+                let app_global = app_global.into_raw();
+                ndk_context::initialize_android_context(vm.get_raw().cast(), app_global.cast());
+            });
+        }
+
         let class_loader = activity_class.get_class_loader(env)?;
 
         let thread = JThread::current_thread(env)?;
