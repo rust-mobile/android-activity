@@ -970,7 +970,6 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
         let (jvm, jni_activity) = unsafe {
             let jvm = (*(*native_app).activity).vm;
             let activity: jobject = (*(*native_app).activity).javaGameActivity;
-            ndk_context::initialize_android_context(jvm.cast(), activity.cast());
             (jni::JavaVM::from_raw(jvm), activity)
         };
         // Note: At this point we can assume jni::JavaVM::singleton is initialized
@@ -1011,8 +1010,6 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
                 // "Note that this method can be called from any thread; it will send a message
                 //  to the main thread of the process where the Java finish call will take place"
                 ffi::GameActivity_finish((*native_app).activity);
-
-                ndk_context::release_android_context();
             }
 
             Ok(())
