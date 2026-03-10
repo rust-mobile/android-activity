@@ -5087,6 +5087,8 @@ pub struct android_app {
     pub savedStateSize: usize,
     #[doc = " The ALooper associated with the app's thread."]
     pub looper: *mut ALooper,
+    #[doc = " The ALooper associated with the app's Java main/UI thread."]
+    pub mainLooper: *mut ALooper,
     #[doc = " When non-NULL, this is the window surface that the app can draw in."]
     pub window: *mut ANativeWindow,
     #[doc = " Current content rectangle of the window; this is the area where the\n window's content should be placed to be seen by the user."]
@@ -5140,19 +5142,21 @@ const _: () = {
     ["Offset of field: android_app::savedStateSize"]
         [::std::mem::offset_of!(android_app, savedStateSize) - 20usize];
     ["Offset of field: android_app::looper"][::std::mem::offset_of!(android_app, looper) - 24usize];
-    ["Offset of field: android_app::window"][::std::mem::offset_of!(android_app, window) - 28usize];
+    ["Offset of field: android_app::mainLooper"]
+        [::std::mem::offset_of!(android_app, mainLooper) - 28usize];
+    ["Offset of field: android_app::window"][::std::mem::offset_of!(android_app, window) - 32usize];
     ["Offset of field: android_app::contentRect"]
-        [::std::mem::offset_of!(android_app, contentRect) - 32usize];
+        [::std::mem::offset_of!(android_app, contentRect) - 36usize];
     ["Offset of field: android_app::softwareKeyboardVisible"]
-        [::std::mem::offset_of!(android_app, softwareKeyboardVisible) - 48usize];
+        [::std::mem::offset_of!(android_app, softwareKeyboardVisible) - 52usize];
     ["Offset of field: android_app::editorAction"]
-        [::std::mem::offset_of!(android_app, editorAction) - 52usize];
+        [::std::mem::offset_of!(android_app, editorAction) - 56usize];
     ["Offset of field: android_app::pendingEditorAction"]
-        [::std::mem::offset_of!(android_app, pendingEditorAction) - 56usize];
+        [::std::mem::offset_of!(android_app, pendingEditorAction) - 60usize];
     ["Offset of field: android_app::activityState"]
-        [::std::mem::offset_of!(android_app, activityState) - 60usize];
+        [::std::mem::offset_of!(android_app, activityState) - 64usize];
     ["Offset of field: android_app::destroyRequested"]
-        [::std::mem::offset_of!(android_app, destroyRequested) - 64usize];
+        [::std::mem::offset_of!(android_app, destroyRequested) - 68usize];
     ["Offset of field: android_app::inputBuffers"]
         [::std::mem::offset_of!(android_app, inputBuffers) - 72usize];
     ["Offset of field: android_app::currentInputBuffer"]
@@ -5261,6 +5265,10 @@ unsafe extern "C" {
 unsafe extern "C" {
     #[doc = " Clear the array of key events that were waiting to be handled, and release\n each of them.\n\n This method should be called after you have processed the key up events in\n your game loop. You should handle events at each iteration of your game loop."]
     pub fn android_app_clear_key_events(inputBuffer: *mut android_input_buffer);
+}
+unsafe extern "C" {
+    #[doc = " A hook that is called within Activity.onCreate, before the android_main\n thread has been spawned.\n\n This gives the Rust glue code a chance to perform any necessary\n initialization that needs to run from the Java main/UI thread, before the\n android_main thread is started."]
+    pub fn _rust_glue_on_create_hook(app: *mut android_app);
 }
 unsafe extern "C" {
     #[doc = " This is a springboard into the Rust glue layer that wraps calling the\n main entry for the app itself."]
