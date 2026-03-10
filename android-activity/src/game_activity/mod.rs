@@ -959,8 +959,15 @@ extern "Rust" {
     pub fn android_main(app: AndroidApp);
 }
 
+// This is called via `GameActivity.onCreate`, from the Java main/UI thread,
+// before spawning an `android_main` thread.
+#[no_mangle]
+pub unsafe extern "C" fn _rust_glue_on_create_hook(_native_app: *mut ffi::android_app) {
+    // Noop currently
+}
+
 // This is a spring board between android_native_app_glue and the user's
-// `app_main` function. This is run on a dedicated thread spawned
+// `android_main` function. This is run on a dedicated thread spawned
 // by android_native_app_glue.
 #[no_mangle]
 pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {

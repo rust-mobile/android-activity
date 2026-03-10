@@ -43,3 +43,13 @@ cp -av "$SOURCE_DIR/game-text-input/prefab-src" "$DEST_DIR/game-text-input"
 cp -av "$SOURCE_DIR/include/common/gamesdk_common.h" "$DEST_DIR/include/common"
 cp -av "$SOURCE_DIR/src/common/system_utils.h" "$DEST_DIR/src/common"
 cp -av "$SOURCE_DIR/src/common/system_utils.cpp" "$DEST_DIR/src/common"
+
+# Remove symlinks so the android-activity crate is easily buildable
+# from Git on Windows.
+
+rm "$DEST_DIR/game-activity/prefab-src/modules/game-activity/include/common"
+rm -fr "$DEST_DIR/game-activity/prefab-src/modules/game-activity/include/game-text-input"
+rm -fr "$DEST_DIR/game-activity/prefab-src/modules/game-activity/src/common"
+rm -fr "$DEST_DIR/game-activity/prefab-src/modules/game-activity/src/game-text-input"
+
+rm "$DEST_DIR/game-text-input/prefab-src/modules/game-text-input/include/common"
