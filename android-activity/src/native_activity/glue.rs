@@ -328,7 +328,7 @@ impl NativeActivityState {
 
 impl Drop for WaitableNativeActivityState {
     fn drop(&mut self) {
-        log::debug!("WaitableNativeActivityState::drop!");
+        log::info!("WaitableNativeActivityState::drop!");
         unsafe {
             let mut guard = self.mutex.lock().unwrap();
             guard.detach_input_queue_from_looper();
@@ -670,12 +670,19 @@ unsafe fn try_with_waitable_activity_ref(
     assert!(!(*activity).instance.is_null());
     let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
     let weak_ref = Weak::from_raw(weak_ptr);
-    if let Some(waitable_activity) = weak_ref.upgrade() {
+    let maybe_upgraded = weak_ref.upgrade();
+
+    // Make sure we don't Drop the Weak reference (even if we failed to upgrade it
+    // and also considering the possibility that we unwind due to a panic in `closure()`)
+    // (The raw weak pointer associated with activity->instance must remain valid
+    //  until `on_destroy` is called).
+    let _ = weak_ref.into_raw();
+
+    if let Some(waitable_activity) = maybe_upgraded {
         closure(waitable_activity);
     } else {
         log::error!("Ignoring spurious JVM callback after last activity reference was dropped!")
     }
-    let _ = weak_ref.into_raw();
 }
 
 unsafe extern "C" fn on_destroy(activity: *mut ndk_sys::ANativeActivity) {
@@ -684,6 +691,16 @@ unsafe extern "C" fn on_destroy(activity: *mut ndk_sys::ANativeActivity) {
         try_with_waitable_activity_ref(activity, |waitable_activity| {
             waitable_activity.notify_destroyed()
         });
+
+        // Once we return from here the `ANativeActivity` will be deleted via an
+        // `unloadNativeCode` native method and so we can't get any more
+        // callbacks and we can release the `Weak<WaitableNativeActivityState>`
+        // reference we have associated with `activity->instance`
+
+        assert!(!(*activity).instance.is_null());
+        let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
+        let _drop_weak_ref = Weak::from_raw(weak_ptr);
+        (*activity).instance = std::ptr::null_mut();
     })
 }
 
