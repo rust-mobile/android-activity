@@ -13,6 +13,7 @@ use ndk::input_queue::InputQueue;
 use ndk::{asset::AssetManager, native_window::NativeWindow};
 
 use crate::error::InternalResult;
+use crate::main_callbacks::MainCallbacks;
 use crate::{
     util, AndroidApp, AndroidAppWaker, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect,
     WindowManagerFlags,
@@ -66,6 +67,7 @@ impl AndroidApp {
         native_activity: NativeActivityGlue,
         jvm: JavaVM,
         main_looper: ndk::looper::ForeignLooper,
+        main_callbacks: MainCallbacks,
     ) -> Self {
         jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
             if let Err(err) = crate::input::jni_init(env) {
@@ -84,6 +86,7 @@ impl AndroidApp {
                     native_activity,
                     looper,
                     main_looper,
+                    main_callbacks,
                     key_maps: Mutex::new(HashMap::new()),
                     input_receiver: Mutex::new(None),
                 })),
@@ -117,6 +120,8 @@ pub(crate) struct AndroidAppInner {
     pub(crate) jvm: JavaVM,
 
     pub(crate) native_activity: NativeActivityGlue,
+
+    main_callbacks: MainCallbacks,
 
     /// Looper associated with the Rust `android_main` thread
     looper: ndk::looper::ForeignLooper,
@@ -292,6 +297,13 @@ impl AndroidAppInner {
     pub fn create_waker(&self) -> AndroidAppWaker {
         // Safety: we know that the looper is a valid, non-null pointer
         unsafe { AndroidAppWaker::new(self.looper_as_ptr()) }
+    }
+
+    pub fn run_on_java_main_thread<F>(&self, f: Box<F>)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.main_callbacks.run_on_java_main_thread(f);
     }
 
     pub fn config(&self) -> ConfigurationRef {

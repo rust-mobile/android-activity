@@ -190,6 +190,8 @@ mod jni_utils;
 mod waker;
 pub use waker::AndroidAppWaker;
 
+mod main_callbacks;
+
 /// A rectangle with integer edge coordinates. Used to represent window insets, for example.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Rect {
@@ -676,6 +678,41 @@ impl AndroidApp {
     /// events within [`AndroidApp::poll_events()`].
     pub fn create_waker(&self) -> AndroidAppWaker {
         self.inner.read().unwrap().create_waker()
+    }
+
+    /// Runs the given closure on the Java main / UI thread.
+    ///
+    /// This is useful for performing operations that must be executed on the
+    /// main thread, such as interacting with Android SDK APIs that require
+    /// execution on the main thread.
+    ///
+    /// Any panic within the closure will be caught and logged as an error,
+    /// (assuming your application is built to allow unwinding).
+    ///
+    /// The thread will be attached to the JVM (for using JNI) and any
+    /// un-cleared Java exceptions left over by the callback will be caught,
+    /// cleared and logged as an error.
+    ///
+    /// There is no built-in mechanism to propagate results back to the caller
+    /// but you can use channels or other synchronization primitives that you
+    /// capture.
+    ///
+    /// It's important to avoid blocking the `android_main` thread while waiting
+    /// for any results because this could lead to deadlocks for `Activity`
+    /// callbacks that require a synchronous response for the `android_activity`
+    /// thread.
+    ///
+    /// ```ignore
+    /// # let app: android_activity::AndroidApp = todo!()
+    /// app.run_on_java_main_thread(Box::new(|| {
+    ///     // code here
+    /// }));
+    /// ```
+    pub fn run_on_java_main_thread<F>(&self, f: Box<F>)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.inner.read().unwrap().run_on_java_main_thread(f);
     }
 
     /// Returns a **reference** to this application's [`ndk::configuration::Configuration`].

@@ -15,6 +15,8 @@ use std::{
     sync::OnceLock,
 };
 
+use crate::main_callbacks::MainCallbacks;
+
 pub fn try_get_path_from_ptr(path: *const c_char) -> Option<std::path::PathBuf> {
     if path.is_null() {
         return None;
@@ -118,10 +120,14 @@ pub(crate) fn abort_on_panic<R>(f: impl FnOnce() -> R) -> R {
     })
 }
 
-static NDK_CONTEXT_ONCE: OnceLock<()> = OnceLock::new();
+struct AppState {
+    main_callbacks: MainCallbacks,
+}
+
+static APP_ONCE: OnceLock<AppState> = OnceLock::new();
 
 // Get the Application instance from the Activity
-fn get_application<'local, 'any>(
+pub(crate) fn get_application<'local, 'any>(
     env: &mut jni::Env<'local>,
     activity: &JObject<'any>,
 ) -> jni::errors::Result<JObject<'local>> {
@@ -136,40 +142,53 @@ fn get_application<'local, 'any>(
     Ok(app)
 }
 
+fn try_init_current_thread(env: &mut jni::Env, activity: &JObject) -> jni::errors::Result<()> {
+    let activity_class = env.get_object_class(activity)?;
+    let class_loader = activity_class.get_class_loader(env)?;
+
+    let thread = JThread::current_thread(env)?;
+    thread.set_context_class_loader(env, &class_loader)?;
+    let thread_name = JString::from_jni_str(env, jni_str!("android_main"))?;
+    thread.set_name(env, &thread_name)?;
+
+    // Also name native thread - this needs to happen here after attaching to a JVM thread,
+    // since that changes the thread name to something like "Thread-2".
+    unsafe {
+        let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
+        let _ = libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
+    }
+    Ok(())
+}
+
 /// Name the Java Thread + native thread "android_main" and set the Java Thread context class loader
 /// so that jni code can more-easily find non-system Java classes.
 pub(crate) fn init_android_main_thread(
     vm: &JavaVM,
     jni_activity: &JObject,
-) -> jni::errors::Result<()> {
-    vm.with_local_frame(10, |env| -> jni::errors::Result<()> {
-        let activity_class = env.get_object_class(jni_activity)?;
+    java_main_looper: &ndk::looper::ForeignLooper,
+) -> jni::errors::Result<MainCallbacks> {
+    vm.with_local_frame(10, |env| -> jni::errors::Result<_> {
+        let app_state = APP_ONCE.get_or_init(|| unsafe {
+            let application =
+                get_application(env, jni_activity).expect("Failed to get Application instance");
+            let app_global = env
+                .new_global_ref(application)
+                .expect("Failed to create global ref for Application");
+            // Make sure we don't delete the global reference via Drop
+            let app_global = app_global.into_raw();
+            ndk_context::initialize_android_context(vm.get_raw().cast(), app_global.cast());
 
-        if let Ok(application) = get_application(env, jni_activity) {
-            NDK_CONTEXT_ONCE.get_or_init(|| unsafe {
-                let app_global = env
-                    .new_global_ref(application)
-                    .expect("Failed to create global ref for Application");
-                // Make sure we don't delete the global reference via Drop
-                let app_global = app_global.into_raw();
-                ndk_context::initialize_android_context(vm.get_raw().cast(), app_global.cast());
-            });
+            let main_callbacks = MainCallbacks::new(java_main_looper);
+
+            AppState { main_callbacks }
+        });
+
+        if let Err(err) = try_init_current_thread(env, jni_activity) {
+            eprintln!("Failed to initialize Java thread state: {:?}", err);
         }
 
-        let class_loader = activity_class.get_class_loader(env)?;
+        let main_callbacks = app_state.main_callbacks.clone();
 
-        let thread = JThread::current_thread(env)?;
-        thread.set_context_class_loader(env, &class_loader)?;
-        let thread_name = JString::from_jni_str(env, jni_str!("android_main"))?;
-        thread.set_name(env, &thread_name)?;
-
-        // Also name native thread - this needs to happen here after attaching to a JVM thread,
-        // since that changes the thread name to something like "Thread-2".
-        unsafe {
-            let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
-            let _ = libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
-        }
-
-        Ok(())
+        Ok(main_callbacks)
     })
 }
