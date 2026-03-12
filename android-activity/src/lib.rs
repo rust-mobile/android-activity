@@ -783,9 +783,28 @@ impl AndroidApp {
         self.inner.read().unwrap().content_rect()
     }
 
-    /// Queries the Asset Manager instance for the application.
+    /// Returns the `AssetManager` for the application's `Application` context.
     ///
-    /// Use this to access binary assets bundled inside your application's .apk file.
+    /// Use this to access raw files bundled in the application's .apk file.
+    ///
+    /// This is an `Application`-scoped asset manager, not an `Activity`-scoped
+    /// one. In normal usage those behave the same for packaged assets, so this
+    /// is usually the correct API to use.
+    ///
+    /// In uncommon cases, an `Activity` may have a context-specific
+    /// asset/resource view that differs from the `Application` context. If you
+    /// specifically need the current `Activity`'s `AssetManager`, obtain the
+    /// `Activity` via [`AndroidApp::activity_as_ptr`] and call `getAssets()`
+    /// through JNI.
+    ///
+    /// The returned `AssetManager` has a `'static` lifetime and remains valid
+    /// across `Activity` recreation, including when `android_main()` is
+    /// re-entered.
+    ///
+    /// **Beware**: If you consider accessing the `Activity` context's
+    /// `AssetManager` through JNI you must keep the `AssetManager` alive via a
+    /// global reference before accessing the ndk `AAssetManager` and
+    /// `ndk::asset::AssetManager` does not currently handle this for you.
     pub fn asset_manager(&self) -> AssetManager {
         self.inner.read().unwrap().asset_manager()
     }

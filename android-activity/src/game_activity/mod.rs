@@ -111,6 +111,7 @@ impl AndroidApp {
     pub(crate) fn new(
         ptr: NonNull<ffi::android_app>,
         jvm: jni::JavaVM,
+        app_asset_manager: AssetManager,
         main_looper: ndk::looper::ForeignLooper,
         main_callbacks: MainCallbacks,
     ) -> Self {
@@ -137,6 +138,7 @@ impl AndroidApp {
                     main_callbacks,
                     key_maps: Mutex::new(HashMap::new()),
                     input_receiver: Mutex::new(None),
+                    app_asset_manager,
                 })),
             })
         })
@@ -303,6 +305,14 @@ pub struct AndroidAppInner {
     /// InputReceiver reference which we track to ensure
     /// we don't hand out more than one receiver at a time
     input_receiver: Mutex<Option<Weak<InputReceiver>>>,
+
+    /// An `AAssetManager` wrapper for the `Application` `AssetManager`
+    /// Note: `AAssetManager_fromJava` specifies that the pointer is only valid
+    /// while we hold a global reference to the `AssetManager` Java object
+    /// to ensure it is not garbage collected. This AssetManager comes from
+    /// a OnceLock initialization that leaks a single global JNI reference
+    /// to guarantee that it remains valid for the lifetime of the process.
+    app_asset_manager: AssetManager,
 }
 
 impl AndroidAppInner {
@@ -652,11 +662,11 @@ impl AndroidAppInner {
     }
 
     pub fn asset_manager(&self) -> AssetManager {
-        unsafe {
-            let app_ptr = self.native_app.as_ptr();
-            let am_ptr = NonNull::new_unchecked((*(*app_ptr).activity).assetManager);
-            AssetManager::from_ptr(am_ptr)
-        }
+        // Safety: While constructing the AndroidApp we do a OnceLock initialization
+        // where we get the Application AssetManager and leak a single global JNI
+        // reference that guarantees it will not be garbage collected, so we can
+        // safely return the corresponding AAssetManager here.
+        unsafe { AssetManager::from_ptr(self.app_asset_manager.ptr()) }
     }
 
     pub(crate) fn input_events_receiver(&self) -> InternalResult<Arc<InputReceiver>> {
@@ -1023,20 +1033,22 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
             // SAFETY: We know jni_activity is a valid JNI global ref to an Activity instance
             let jni_activity = unsafe { env.as_cast_raw::<Global<JObject>>(&jni_activity)? };
 
-            let main_callbacks = match init_android_main_thread(&jvm, &jni_activity, &main_looper) {
-                Ok(main_callbacks) => main_callbacks,
-                Err(err) => {
-                    eprintln!(
-                        "Failed to name Java thread and set thread context class loader: {err}"
-                    );
-                    return Err(err);
-                }
-            };
+            let (app_asset_manager, main_callbacks) =
+                match init_android_main_thread(&jvm, &jni_activity, &main_looper) {
+                    Ok((asset_manager, main_callbacks)) => (asset_manager, main_callbacks),
+                    Err(err) => {
+                        eprintln!(
+                            "Failed to name Java thread and set thread context class loader: {err}"
+                        );
+                        return Err(err);
+                    }
+                };
 
             unsafe {
                 let app = AndroidApp::new(
                     NonNull::new(native_app).unwrap(),
                     jvm.clone(),
+                    app_asset_manager,
                     main_looper,
                     main_callbacks,
                 );

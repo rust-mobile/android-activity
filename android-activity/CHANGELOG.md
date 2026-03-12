@@ -8,11 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- input: TextInputAction enum representing action button types on soft keyboards.
-- input: InputEvent::TextAction event for handling action button presses from soft keyboards.
+- input: `TextInputAction` enum representing action button types on soft keyboards. ([#216](https://github.com/rust-mobile/android-activity/pull/216))
+- input: `InputEvent::TextAction` event for handling action button presses from soft keyboards. ([#216](https://github.com/rust-mobile/android-activity/pull/216))
 - The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
 - `AndroidApp::java_main_looper()` gives access to the `ALooper` for the Java main / UI thread ([#198](https://github.com/rust-mobile/android-activity/pull/198))
 - `AndroidApp::run_on_java_main_thread()` can be used to run boxed closures on the Java main / UI thread ([#232](https://github.com/rust-mobile/android-activity/pull/232))
+
+### Fixed
+
+- *Safety* `AndroidApp::asset_manager()` returns an `AssetManager` that has a safe `'static` lifetime that's not invalidated when `android_main()` returns [#233](https://github.com/rust-mobile/android-activity/pull/233)
 
 ### Changed
 - rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), [#219](https://github.com/rust-mobile/android-activity/pull/219))
