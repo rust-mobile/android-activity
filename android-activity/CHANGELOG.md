@@ -14,13 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AndroidApp::java_main_looper()` gives access to the `ALooper` for the Java main / UI thread ([#198](https://github.com/rust-mobile/android-activity/pull/198))
 - `AndroidApp::run_on_java_main_thread()` can be used to run boxed closures on the Java main / UI thread ([#232](https://github.com/rust-mobile/android-activity/pull/232))
 
-### Fixed
-
-- *Safety* `AndroidApp::asset_manager()` returns an `AssetManager` that has a safe `'static` lifetime that's not invalidated when `android_main()` returns [#233](https://github.com/rust-mobile/android-activity/pull/233)
-
 ### Changed
+
 - rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), [#219](https://github.com/rust-mobile/android-activity/pull/219))
 - GameActivity updated to 4.0.0 (requires the corresponding 4.0.0 `.aar` release from Google) ([#191](https://github.com/rust-mobile/android-activity/pull/191))
+
+### Fixed
+
+- *Safety* `AndroidApp::asset_manager()` returns an `AssetManager` that has a safe `'static` lifetime that's not invalidated when `android_main()` returns ([#233](https://github.com/rust-mobile/android-activity/pull/233))
+- *Safety* The `native-activity` backend clears its `ANativeActivity` ptr after `onDestroy` and `AndroidApp` remains safe to access after `android_main()` returns ([#234](https://github.com/rust-mobile/android-activity/pull/234))
+- *Safety* `AndroidApp::activity_as_ptr()` returns a pointer to a global reference that remains valid until `AndroidApp` is dropped, instead of the `ANativeActivity`'s `clazz` pointer which is only guaranteed to be valid until `onDestroy` returns (`native-activity` backend) ([#234](https://github.com/rust-mobile/android-activity/pull/234))
 
 ## [0.6.0] - 2024-04-26
 
