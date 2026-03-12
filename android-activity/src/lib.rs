@@ -121,6 +121,7 @@ use std::sync::RwLock;
 use std::time::Duration;
 
 use bitflags::bitflags;
+use jni::vm::JavaVM;
 use libc::c_void;
 
 use ndk::asset::AssetManager;
@@ -596,29 +597,39 @@ impl AndroidApp {
     /// [`jni`]: https://crates.io/crates/jni
     /// [`JavaVM`]: https://docs.rs/jni/latest/jni/struct.JavaVM.html
     pub fn vm_as_ptr(&self) -> *mut c_void {
-        self.inner.read().unwrap().vm_as_ptr()
+        JavaVM::singleton().unwrap().get_raw() as _
     }
 
-    /// Returns a JNI object reference for this application's JVM `Activity` as a pointer
+    /// Returns an (*unowned*) JNI global object reference for this
+    /// application's JVM `Activity` as a pointer
     ///
-    /// If you use the [`jni`] crate you can cast this as a `JObject` reference via:
+    /// If you use the [`jni`] crate you can cast this as a `JObject` reference
+    /// via:
     /// ```no_run
     /// # use jni::objects::JObject;
     /// # use jni::refs::Global;
     /// # fn use_jni(env: &jni::Env, app: &android_activity::AndroidApp) -> jni::errors::Result<()> {
     /// let raw_activity_global = app.activity_as_ptr() as jni::sys::jobject;
-    /// // SAFETY: The pointer is valid as long as `app` is valid.
+    /// // SAFETY: The reference / pointer is valid as long as `app` is valid
     /// let activity = unsafe { env.as_cast_raw::<Global<JObject>>(&raw_activity_global)? };
     /// # Ok(()) }
     /// ```
     ///
     /// # JNI Safety
     ///
-    /// Note that the object reference will be a JNI global reference, not a
-    /// local reference and it should not be deleted. Don't wrap the reference
-    /// in an [`Auto`] which would try to explicitly delete the reference
-    /// when dropped. Similarly, don't wrap the reference as a [`Global`]
-    /// which would also try to explicitly delete the reference when dropped.
+    /// Note that the returned reference will be a JNI global reference *that
+    /// you do not own*.
+    /// - Don't wrap the reference as a [`Global`] which would try to delete the
+    ///   reference when dropped.
+    /// - Don't wrap the reference in an [`Auto`] which would treat the
+    ///   reference like a local reference and try to delete it when dropped.
+    ///
+    /// The reference is only guaranteed to be valid until you drop the
+    /// [`AndroidApp`].
+    ///
+    /// **Warning:** Don't assume the returned reference has a `'static` lifetime
+    /// since it's possible for `android_main()` to run multiple times over the
+    /// lifetime of an application with a new `AndroidApp` instance each time.
     ///
     /// [`jni`]: https://crates.io/crates/jni
     /// [`Auto`]: https://docs.rs/jni/latest/jni/refs/struct.Auto.html

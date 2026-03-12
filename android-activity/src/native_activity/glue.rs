@@ -75,8 +75,6 @@ pub enum State {
 
 #[derive(Debug)]
 pub struct WaitableNativeActivityState {
-    pub activity: *mut ndk_sys::ANativeActivity,
-
     pub mutex: Mutex<NativeActivityState>,
     pub cond: Condvar,
 }
@@ -210,6 +208,29 @@ pub enum NativeThreadState {
 
 #[derive(Debug)]
 pub struct NativeActivityState {
+    /// Set as soon as the Java main thread notifies us of an `onDestroyed`
+    /// callback.
+    pub destroyed: bool,
+
+    /// The `ANativeActivity` associated with the NativeActivity instance
+    ///
+    /// # Safety
+    ///
+    /// This pointer will be reset to `null` when the NativeActivity is
+    /// destroyed.
+    ///
+    /// Keep in mind that `NativeActivityState` is ref-counted and can
+    /// potentially out-last an `onDestroy` callback where we may reset this to
+    /// be a null pointer!
+    ///
+    /// For example:
+    /// - An application could put an `AndroidApp` into a global `'static` and
+    ///   keep it alive beyond `android_main`
+    /// - An application could schedule a callback to run on the Java main
+    ///   thread with an `AndroidApp` clone and by the time it runs then the
+    ///   associated `ANativeActivity` could have been destroyed.
+    pub activity: *mut ndk_sys::ANativeActivity,
+
     pub msg_read: libc::c_int,
     pub msg_write: libc::c_int,
     pub config: ConfigurationRef,
@@ -222,9 +243,6 @@ pub struct NativeActivityState {
     pub thread_state: NativeThreadState,
     pub app_has_saved_state: bool,
 
-    /// Set as soon as the Java main thread notifies us of an
-    /// `onDestroyed` callback.
-    pub destroyed: bool,
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
     pub pending_window: Option<NativeWindow>,
 }
@@ -357,8 +375,8 @@ impl WaitableNativeActivityState {
         };
 
         Self {
-            activity,
             mutex: Mutex::new(NativeActivityState {
+                activity,
                 msg_read: msgpipe[0],
                 msg_write: msgpipe[1],
                 config,
@@ -392,6 +410,11 @@ impl WaitableNativeActivityState {
             guard.msg_read = -1;
             libc::close(guard.msg_write);
             guard.msg_write = -1;
+
+            // The last thing that `NativeActivity` `onDestroy` does is to call a
+            // native method (`unloadNativeCode`) which will `delete` the
+            // `ANativeActivity` instance.
+            guard.activity = ptr::null_mut();
         }
     }
 
@@ -605,7 +628,7 @@ impl WaitableNativeActivityState {
             AppCmd::ConfigChanged => {
                 let guard = self.mutex.lock().unwrap();
                 let config = ndk_sys::AConfiguration_new();
-                ndk_sys::AConfiguration_fromAssetManager(config, (*self.activity).assetManager);
+                ndk_sys::AConfiguration_fromAssetManager(config, (*guard.activity).assetManager);
                 let config = Configuration::from_ptr(NonNull::new_unchecked(config));
                 guard.config.replace(config);
                 log::debug!("Config: {:#?}", guard.config);
@@ -896,6 +919,8 @@ fn rust_glue_entry(
             Some(16),
             |env| -> jni::errors::Result<()> {
                 // SAFETY: We know jni_activity is a valid JNI global ref to an Activity instance
+                // that will remain valid until `onDestroy` is handled (not possible until we start
+                // `android_main()`).
                 let jni_activity = unsafe { env.as_cast_raw::<Global<JObject>>(&jni_activity)? };
 
                 let (app_asset_manager, main_callbacks) =
@@ -910,11 +935,12 @@ fn rust_glue_entry(
                     };
 
                 let app = AndroidApp::new(
-                    rust_glue.clone(),
                     jvm.clone(),
-                    app_asset_manager,
                     main_looper,
                     main_callbacks,
+                    app_asset_manager,
+                    rust_glue.clone(),
+                    &jni_activity,
                 );
 
                 rust_glue.notify_main_thread_running();

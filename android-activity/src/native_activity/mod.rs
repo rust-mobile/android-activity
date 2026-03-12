@@ -5,6 +5,7 @@ use std::ptr;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::time::Duration;
 
+use jni::objects::JObject;
 use jni::JavaVM;
 use libc::c_void;
 use log::{error, trace};
@@ -63,11 +64,12 @@ impl StateLoader<'_> {
 
 impl AndroidApp {
     pub(crate) fn new(
-        native_activity: NativeActivityGlue,
         jvm: JavaVM,
-        app_asset_manager: AssetManager,
         main_looper: ndk::looper::ForeignLooper,
         main_callbacks: MainCallbacks,
+        app_asset_manager: AssetManager,
+        native_activity: NativeActivityGlue,
+        jni_activity: &JObject,
     ) -> Self {
         jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
             if let Err(err) = crate::input::jni_init(env) {
@@ -80,16 +82,25 @@ impl AndroidApp {
                 );
                 ndk::looper::ForeignLooper::from_ptr(ptr::NonNull::new(ptr).unwrap())
             };
+
+            // The global reference in `ANativeActivity` is only guaranteed to be valid until
+            // `onDestroy` returns, so we create our own global reference that we can guarantee will
+            // remain valid until `AndroidApp` is dropped.
+            let activity = env
+                .new_global_ref(jni_activity)
+                .expect("Failed to create global ref for Activity instance");
+
             let app = Self {
                 inner: Arc::new(RwLock::new(AndroidAppInner {
                     jvm: jvm.clone(),
-                    native_activity,
-                    looper,
                     main_looper,
                     main_callbacks,
+                    app_asset_manager,
+                    native_activity,
+                    activity,
+                    looper,
                     key_maps: Mutex::new(HashMap::new()),
                     input_receiver: Mutex::new(None),
-                    app_asset_manager,
                 })),
             };
 
@@ -122,6 +133,8 @@ pub(crate) struct AndroidAppInner {
 
     pub(crate) native_activity: NativeActivityGlue,
 
+    activity: jni::refs::Global<jni::objects::JObject<'static>>,
+
     main_callbacks: MainCallbacks,
 
     /// Looper associated with the Rust `android_main` thread
@@ -151,17 +164,11 @@ pub(crate) struct AndroidAppInner {
 }
 
 impl AndroidAppInner {
-    pub(crate) fn vm_as_ptr(&self) -> *mut c_void {
-        unsafe { (*self.native_activity.activity).vm as _ }
-    }
-
     pub(crate) fn activity_as_ptr(&self) -> *mut c_void {
-        // "clazz" is a completely bogus name; this is the _instance_ not class pointer
-        unsafe { (*self.native_activity.activity).clazz as _ }
-    }
-
-    pub(crate) fn native_activity(&self) -> *const ndk_sys::ANativeActivity {
-        self.native_activity.activity
+        // Note: The global reference in `ANativeActivity::clazz` (misnomer for instance reference)
+        // is only guaranteed to be valid until `onDestroy` returns, so we have our own global
+        // reference that we can instead guarantee will remain valid until `AndroidApp` is dropped.
+        self.activity.as_raw() as *mut c_void
     }
 
     pub(crate) fn looper_as_ptr(&self) -> *mut ndk_sys::ALooper {
@@ -336,7 +343,13 @@ impl AndroidAppInner {
         add_flags: WindowManagerFlags,
         remove_flags: WindowManagerFlags,
     ) {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't set window flags after NativeActivity has been destroyed");
+            return;
+        }
+
         let na_mut = na as *mut ndk_sys::ANativeActivity;
         unsafe {
             ndk_sys::ANativeActivity_setWindowFlags(
@@ -349,7 +362,12 @@ impl AndroidAppInner {
 
     // TODO: move into a trait
     pub fn show_soft_input(&self, show_implicit: bool) {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't show soft input after NativeActivity has been destroyed");
+            return;
+        }
         unsafe {
             let flags = if show_implicit {
                 ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
@@ -362,7 +380,12 @@ impl AndroidAppInner {
 
     // TODO: move into a trait
     pub fn hide_soft_input(&self, hide_implicit_only: bool) {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't hide soft input after NativeActivity has been destroyed");
+            return;
+        }
         unsafe {
             let flags = if hide_implicit_only {
                 ndk_sys::ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY
@@ -447,17 +470,32 @@ impl AndroidAppInner {
     }
 
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't get internal data path after NativeActivity has been destroyed");
+            return None;
+        }
         unsafe { util::try_get_path_from_ptr((*na).internalDataPath) }
     }
 
     pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't get external data path after NativeActivity has been destroyed");
+            return None;
+        }
         unsafe { util::try_get_path_from_ptr((*na).externalDataPath) }
     }
 
     pub fn obb_path(&self) -> Option<std::path::PathBuf> {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't get OBB path after NativeActivity has been destroyed");
+            return None;
+        }
         unsafe { util::try_get_path_from_ptr((*na).obbPath) }
     }
 }
