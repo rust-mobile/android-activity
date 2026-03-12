@@ -898,13 +898,19 @@ fn rust_glue_entry(
                 // SAFETY: We know jni_activity is a valid JNI global ref to an Activity instance
                 let jni_activity = unsafe { env.as_cast_raw::<Global<JObject>>(&jni_activity)? };
 
-                if let Err(err) = init_android_main_thread(&jvm, &jni_activity) {
-                    eprintln!(
-                        "Failed to name Java thread and set thread context class loader: {err}"
-                    );
-                }
+                let main_callbacks =
+                    match init_android_main_thread(&jvm, &jni_activity, &main_looper) {
+                        Ok(callbacks) => callbacks,
+                        Err(err) => {
+                            eprintln!(
+                            "Failed to name Java thread and set thread context class loader: {err}"
+                        );
+                            return Err(err);
+                        }
+                    };
 
-                let app = AndroidApp::new(rust_glue.clone(), jvm.clone(), main_looper);
+                let app =
+                    AndroidApp::new(rust_glue.clone(), jvm.clone(), main_looper, main_callbacks);
 
                 rust_glue.notify_main_thread_running();
 

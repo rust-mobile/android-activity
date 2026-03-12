@@ -28,7 +28,7 @@ api-level-30 = ["ndk/api-level-30"]
 [dependencies]
 log = "0.4"
 simd_cesu8 = { version = "1.0.1", optional = true }
-jni = "0.22.2"
+jni = "0.22.4"
 ndk-sys = "0.6.0"
 ndk = { version = "0.9.0", default-features = false }
 ndk-context = "0.1.1"
@@ -40,6 +40,9 @@ thiserror = "1"
 
 [build-dependencies]
 cc = { version = "1.0.42", features = ["parallel"] }
+
+[dev-dependencies]
+jni = "0.22.4"
 
 [package.metadata.docs.rs]
 targets = [
