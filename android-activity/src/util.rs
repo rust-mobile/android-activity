@@ -4,6 +4,7 @@ use jni::{
     vm::JavaVM,
 };
 use log::{error, Level};
+use ndk::asset::AssetManager;
 use std::{
     ffi::{CStr, CString},
     fs::File,
@@ -122,6 +123,7 @@ pub(crate) fn abort_on_panic<R>(f: impl FnOnce() -> R) -> R {
 
 struct AppState {
     main_callbacks: MainCallbacks,
+    app_asset_manager: AssetManager,
 }
 
 static APP_ONCE: OnceLock<AppState> = OnceLock::new();
@@ -140,6 +142,21 @@ pub(crate) fn get_application<'local, 'any>(
         )?
         .l()?;
     Ok(app)
+}
+
+pub(crate) fn get_assets<'local, 'any>(
+    env: &mut jni::Env<'local>,
+    application: &JObject<'any>,
+) -> jni::errors::Result<JObject<'local>> {
+    let assets_manager = env
+        .call_method(
+            application,
+            jni_str!("getAssets"),
+            jni_sig!(() -> android.content.res.AssetManager),
+            &[],
+        )?
+        .l()?;
+    Ok(assets_manager)
 }
 
 fn try_init_current_thread(env: &mut jni::Env, activity: &JObject) -> jni::errors::Result<()> {
@@ -166,11 +183,13 @@ pub(crate) fn init_android_main_thread(
     vm: &JavaVM,
     jni_activity: &JObject,
     java_main_looper: &ndk::looper::ForeignLooper,
-) -> jni::errors::Result<MainCallbacks> {
+) -> jni::errors::Result<(AssetManager, MainCallbacks)> {
     vm.with_local_frame(10, |env| -> jni::errors::Result<_> {
         let app_state = APP_ONCE.get_or_init(|| unsafe {
             let application =
                 get_application(env, jni_activity).expect("Failed to get Application instance");
+            let app_asset_manager =
+                get_assets(env, &application).expect("Failed to get AssetManager");
             let app_global = env
                 .new_global_ref(application)
                 .expect("Failed to create global ref for Application");
@@ -178,17 +197,38 @@ pub(crate) fn init_android_main_thread(
             let app_global = app_global.into_raw();
             ndk_context::initialize_android_context(vm.get_raw().cast(), app_global.cast());
 
+            let asset_manager_global = env
+                .new_global_ref(app_asset_manager)
+                .expect("Failed to create global ref for AssetManager");
+            // Make sure we don't delete the global reference via Drop because
+            // the AAssetManager pointer will only be valid while we can
+            // guarantee that the Java AssetManager is not garbage collected
+            let asset_manager_global = asset_manager_global.into_raw();
+            let asset_manager_ptr =
+                ndk_sys::AAssetManager_fromJava(env.get_raw() as _, asset_manager_global as _);
+            assert_ne!(
+                asset_manager_ptr,
+                std::ptr::null_mut(),
+                "Failed to get Application AAssetManager"
+            );
+            let app_asset_manager =
+                AssetManager::from_ptr(std::ptr::NonNull::new(asset_manager_ptr).unwrap());
+
             let main_callbacks = MainCallbacks::new(java_main_looper);
 
-            AppState { main_callbacks }
+            AppState {
+                main_callbacks,
+                app_asset_manager,
+            }
         });
 
         if let Err(err) = try_init_current_thread(env, jni_activity) {
             eprintln!("Failed to initialize Java thread state: {:?}", err);
         }
 
+        let asset_manager = unsafe { AssetManager::from_ptr(app_state.app_asset_manager.ptr()) };
         let main_callbacks = app_state.main_callbacks.clone();
 
-        Ok(main_callbacks)
+        Ok((asset_manager, main_callbacks))
     })
 }
