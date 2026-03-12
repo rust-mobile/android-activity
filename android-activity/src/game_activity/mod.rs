@@ -22,6 +22,7 @@ use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
 use crate::error::InternalResult;
+use crate::main_callbacks::MainCallbacks;
 use crate::util::{
     abort_on_panic, forward_stdio_to_logcat, init_android_main_thread, log_panic,
     try_get_path_from_ptr,
@@ -111,6 +112,7 @@ impl AndroidApp {
         ptr: NonNull<ffi::android_app>,
         jvm: jni::JavaVM,
         main_looper: ndk::looper::ForeignLooper,
+        main_callbacks: MainCallbacks,
     ) -> Self {
         // We attach to the thread before creating the AndroidApp
         jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
@@ -132,6 +134,7 @@ impl AndroidApp {
                     config: ConfigurationRef::new(config),
                     native_window: Default::default(),
                     main_looper,
+                    main_callbacks,
                     key_maps: Mutex::new(HashMap::new()),
                     input_receiver: Mutex::new(None),
                 })),
@@ -284,6 +287,8 @@ pub struct AndroidAppInner {
     native_app: NativeAppGlue,
     config: ConfigurationRef,
     native_window: RwLock<Option<NativeWindow>>,
+
+    pub(crate) main_callbacks: MainCallbacks,
 
     /// Looper associated with the activity's Java main thread, sometimes called
     /// the UI thread.
@@ -621,6 +626,13 @@ impl AndroidAppInner {
             let app_ptr = self.native_app.as_ptr();
             AndroidAppWaker::new((*app_ptr).looper)
         }
+    }
+
+    pub fn run_on_java_main_thread<F>(&self, f: Box<F>)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.main_callbacks.run_on_java_main_thread(f);
     }
 
     pub fn config(&self) -> ConfigurationRef {
@@ -1011,13 +1023,23 @@ pub unsafe extern "C" fn _rust_glue_entry(native_app: *mut ffi::android_app) {
             // SAFETY: We know jni_activity is a valid JNI global ref to an Activity instance
             let jni_activity = unsafe { env.as_cast_raw::<Global<JObject>>(&jni_activity)? };
 
-            if let Err(err) = init_android_main_thread(&jvm, &jni_activity) {
-                eprintln!("Failed to name Java thread and set thread context class loader: {err}");
-            }
+            let main_callbacks = match init_android_main_thread(&jvm, &jni_activity, &main_looper) {
+                Ok(main_callbacks) => main_callbacks,
+                Err(err) => {
+                    eprintln!(
+                        "Failed to name Java thread and set thread context class loader: {err}"
+                    );
+                    return Err(err);
+                }
+            };
 
             unsafe {
-                let app =
-                    AndroidApp::new(NonNull::new(native_app).unwrap(), jvm.clone(), main_looper);
+                let app = AndroidApp::new(
+                    NonNull::new(native_app).unwrap(),
+                    jvm.clone(),
+                    main_looper,
+                    main_callbacks,
+                );
                 // We want to specifically catch any panic from the application's android_main
                 // so we can finish + destroy the Activity gracefully via the JVM
                 catch_unwind(|| {

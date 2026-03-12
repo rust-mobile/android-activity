@@ -190,6 +190,8 @@ mod jni_utils;
 mod waker;
 pub use waker::AndroidAppWaker;
 
+mod main_callbacks;
+
 /// A rectangle with integer edge coordinates. Used to represent window insets, for example.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Rect {
@@ -676,6 +678,91 @@ impl AndroidApp {
     /// events within [`AndroidApp::poll_events()`].
     pub fn create_waker(&self) -> AndroidAppWaker {
         self.inner.read().unwrap().create_waker()
+    }
+
+    /// Runs the given closure on the Java main / UI thread.
+    ///
+    /// This is useful for performing operations that must be executed on the
+    /// main thread, such as interacting with Android SDK APIs that require
+    /// execution on the main thread.
+    ///
+    /// Any panic within the closure will be caught and logged as an error,
+    /// (assuming your application is built to allow unwinding).
+    ///
+    /// The thread will be attached to the JVM (for using JNI) and any
+    /// un-cleared Java exceptions left over by the callback will be caught,
+    /// cleared and logged as an error.
+    ///
+    /// There is no built-in mechanism to propagate results back to the caller
+    /// but you can use channels or other synchronization primitives that you
+    /// capture.
+    ///
+    /// It's important to avoid blocking the `android_main` thread while waiting
+    /// for any results because this could lead to deadlocks for `Activity`
+    /// callbacks that require a synchronous response for the `android_activity`
+    /// thread.
+    ///
+    /// # Example
+    ///
+    /// This example demonstrates using the `jni` 0.22 API to show a toast
+    /// message from the Java main thread.
+    ///
+    /// ```no_run
+    /// use android_activity::AndroidApp;
+    /// use jni::{objects::JString, refs::Global};
+    ///
+    /// jni::bind_java_type! { Context => "android.content.Context" }
+    /// jni::bind_java_type! {
+    ///     Activity => "android.app.Activity",
+    ///     type_map {
+    ///         Context => "android.content.Context",
+    ///     },
+    ///     is_instance_of {
+    ///         context: Context
+    ///     },
+    /// }
+    ///
+    /// jni::bind_java_type! {
+    ///     Toast => "android.widget.Toast",
+    ///     type_map {
+    ///         Context => "android.content.Context",
+    ///     },
+    ///     methods {
+    ///         static fn make_text(context: Context, text: JCharSequence, duration: i32) -> Toast,
+    ///         fn show(),
+    ///     }
+    /// }
+    ///
+    /// enum ToastDuration {
+    ///     Short = 0,
+    ///     Long = 1,
+    /// }
+    ///
+    /// fn send_toast(outer_app: &AndroidApp, msg: impl AsRef<str>, duration: ToastDuration) {
+    ///     let app = outer_app.clone();
+    ///     let msg = msg.as_ref().to_string();
+    ///     outer_app.run_on_java_main_thread(Box::new(move || {
+    ///         let jvm = unsafe { jni::JavaVM::from_raw(app.vm_as_ptr() as _) };
+    ///         // As an micro optimization you could use jvm.with_top_local_frame, since we know
+    ///         // we're already attached
+    ///         if let Err(err) = jvm.attach_current_thread(|env| -> jni::errors::Result<()> {
+    ///             let activity: jni::sys::jobject = app.activity_as_ptr() as _;
+    ///             let activity = unsafe { env.as_cast_raw::<Global<Activity>>(&activity)? };
+    ///             let message = JString::new(env, &msg)?;
+    ///             let toast = Toast::make_text(env, activity.as_ref(), &message, duration as i32)?;
+    ///             toast.show(env)?;
+    ///             Ok(())
+    ///         }) {
+    ///             log::error!("Failed to show toast on main thread: {err:?}");
+    ///         }
+    ///     }));
+    /// }
+    /// ```
+    pub fn run_on_java_main_thread<F>(&self, f: Box<F>)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.inner.read().unwrap().run_on_java_main_thread(f);
     }
 
     /// Returns a **reference** to this application's [`ndk::configuration::Configuration`].
