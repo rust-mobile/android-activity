@@ -7,21 +7,6 @@
 
 use crate::error::InternalAppError;
 
-fn try_get_stack_trace(
-    env: &mut jni::Env<'_>,
-    throwable: &jni::objects::JThrowable,
-) -> jni::errors::Result<String> {
-    let stack_trace = throwable.get_stack_trace(env)?;
-    let len = stack_trace.len(env)?;
-    let mut trace = String::new();
-    for i in 0..len {
-        let element = stack_trace.get_element(env, i)?;
-        let element_jstr = element.try_to_string(env)?;
-        trace.push_str(&format!("{i}: {element_jstr}\n"));
-    }
-    Ok(trace)
-}
-
 /// Use with `.map_err()` to map `jni::errors::Error::JavaException` into a
 /// richer error based on the actual contents of the `JThrowable`
 ///
@@ -34,35 +19,10 @@ pub(crate) fn clear_and_map_exception_to_err(
     err: jni::errors::Error,
 ) -> InternalAppError {
     if matches!(err, jni::errors::Error::JavaException) {
-        let result = env.with_local_frame::<_, _, InternalAppError>(5, |env| {
-            let Some(e) = env.exception_occurred() else {
-                // should only be called after receiving a JavaException Result
-                unreachable!("JNI Error was JavaException but no exception was set");
-            };
-            env.exception_clear();
-
-            let msg = e.get_message(env)?;
-            let mut msg: String = msg.to_string();
-            match try_get_stack_trace(env, &e) {
-                Ok(stack_trace) => {
-                    msg.push_str("stack trace:\n");
-                    msg.push_str(&stack_trace);
-                }
-                Err(err) => {
-                    msg.push_str(&format!("\nfailed to get stack trace: {err:?}"));
-                }
-            }
-
-            Ok(msg)
-        });
-
-        match result {
-            Ok(msg) => InternalAppError::JniException(msg),
-            Err(err) => InternalAppError::JniException(format!(
-                "UNKNOWN (Failed to query JThrowable: {err:?})"
-            )),
-        }
+        env.exception_catch()
+            .expect_err("Spurious JavaException error with no exception to catch")
     } else {
-        err.into()
+        err
     }
+    .into()
 }

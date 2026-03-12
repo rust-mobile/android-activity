@@ -25,8 +25,6 @@ pub type Result<T> = std::result::Result<T, AppError>;
 pub(crate) enum InternalAppError {
     #[error("A JNI error")]
     JniError(jni::errors::JniError),
-    #[error("A Java Exception was thrown via a JNI method call")]
-    JniException(String),
     // For internal errors that don't lead to a Java exception but are
     // still JNI related.
     #[error("A bad argument was passed to a JNI method: {0}")]
@@ -54,7 +52,6 @@ impl From<InternalAppError> for AppError {
     fn from(value: InternalAppError) -> Self {
         match value {
             InternalAppError::JniError(err) => AppError::JavaError(err.to_string()),
-            InternalAppError::JniException(msg) => AppError::JavaError(msg),
             InternalAppError::JniBadArgument(msg) => AppError::JavaError(msg),
             InternalAppError::JvmError(err) => AppError::JavaError(err.to_string()),
             InternalAppError::InputUnavailable => AppError::InputUnavailable,
