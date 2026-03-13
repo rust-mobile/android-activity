@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 use std::ptr;
-use std::ptr::NonNull;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::time::Duration;
 
@@ -66,6 +65,7 @@ impl AndroidApp {
     pub(crate) fn new(
         native_activity: NativeActivityGlue,
         jvm: JavaVM,
+        app_asset_manager: AssetManager,
         main_looper: ndk::looper::ForeignLooper,
         main_callbacks: MainCallbacks,
     ) -> Self {
@@ -89,6 +89,7 @@ impl AndroidApp {
                     main_callbacks,
                     key_maps: Mutex::new(HashMap::new()),
                     input_receiver: Mutex::new(None),
+                    app_asset_manager,
                 })),
             };
 
@@ -139,6 +140,14 @@ pub(crate) struct AndroidAppInner {
     /// InputReceiver reference which we track to ensure
     /// we don't hand out more than one receiver at a time
     input_receiver: Mutex<Option<Weak<InputReceiver>>>,
+
+    /// An `AAssetManager` wrapper for the `Application` `AssetManager`
+    /// Note: `AAssetManager_fromJava` specifies that the pointer is only valid
+    /// while we hold a global reference to the `AssetManager` Java object
+    /// to ensure it is not garbage collected. This AssetManager comes from
+    /// a OnceLock initialization that leaks a single global JNI reference
+    /// to guarantee that it remains valid for the lifetime of the process.
+    app_asset_manager: AssetManager,
 }
 
 impl AndroidAppInner {
@@ -315,11 +324,11 @@ impl AndroidAppInner {
     }
 
     pub fn asset_manager(&self) -> AssetManager {
-        unsafe {
-            let activity_ptr = self.native_activity.activity;
-            let am_ptr = NonNull::new_unchecked((*activity_ptr).assetManager);
-            AssetManager::from_ptr(am_ptr)
-        }
+        // Safety: While constructing the AndroidApp we do a OnceLock initialization
+        // where we get the Application AssetManager and leak a single global JNI
+        // reference that guarantees it will not be garbage collected, so we can
+        // safely return the corresponding AAssetManager here.
+        unsafe { AssetManager::from_ptr(self.app_asset_manager.ptr()) }
     }
 
     pub fn set_window_flags(
