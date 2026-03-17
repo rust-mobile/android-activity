@@ -515,16 +515,6 @@ void android_app_clear_motion_events(struct android_input_buffer* inputBuffer);
 void android_app_clear_key_events(struct android_input_buffer* inputBuffer);
 
 /**
- * A hook that is called within Activity.onCreate, before the android_main
- * thread has been spawned.
- *
- * This gives the Rust glue code a chance to perform any necessary
- * initialization that needs to run from the Java main/UI thread, before the
- * android_main thread is started.
- */
-extern void _rust_glue_on_create_hook(struct android_app* app);
-
-/**
  * This is a springboard into the Rust glue layer that wraps calling the
  * main entry for the app itself.
  */

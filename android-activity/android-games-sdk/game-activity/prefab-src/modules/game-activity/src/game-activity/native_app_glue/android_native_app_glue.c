@@ -224,8 +224,6 @@ static void* android_app_entry(void* param) {
   android_app->cmdPollSource.app = android_app;
   android_app->cmdPollSource.process = process_cmd;
 
-  _rust_glue_on_create_hook(android_app);
-
   ALooper* looper = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
   ALooper_addFd(looper, android_app->msgread, LOOPER_ID_MAIN,
                 ALOOPER_EVENT_INPUT, NULL, &android_app->cmdPollSource);
@@ -756,10 +754,9 @@ static bool onEditorAction(GameActivity* activity, int action) {
   return true;
 }
 
-// XXX: This symbol is renamed with a _C suffix and then re-exported from
-// Rust because Rust/Cargo don't give us a way to directly export symbols
-// from C/C++ code: https://github.com/rust-lang/rfcs/issues/2771
-//
+// XXX: This symbol is renamed with a _C suffix so we can implement
+// `GameActivity_onCreate` as a wrapper in Rust that does some additional setup
+// before calling this function,
 JNIEXPORT
 void GameActivity_onCreate_C(GameActivity* activity, void* savedState,
                              size_t savedStateSize) {

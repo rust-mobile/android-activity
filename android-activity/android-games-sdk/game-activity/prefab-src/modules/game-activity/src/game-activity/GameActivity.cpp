@@ -538,7 +538,7 @@ static jlong initializeNativeCode_native(
   // read configuration for the first time
   readConfigurationValues(code, javaConfig);
 
-  GameActivity_onCreate_C(code, rawSavedState, rawSavedSize);
+  GameActivity_onCreate(code, rawSavedState, rawSavedSize);
 
   code->gameTextInput = GameTextInput_init(env, 0);
   GameTextInput_setEventCallback(code->gameTextInput,

@@ -9,7 +9,11 @@ fn build_glue_for_game_activity() {
         format!("{android_games_sdk}/game-text-input/prefab-src/modules/game-text-input/{src_inc}/game-text-input/{name}")
     };
 
-    for f in ["GameActivity.cpp", "GameActivityEvents.cpp"] {
+    for f in [
+        "GameActivity.cpp",
+        "GameActivityEvents.cpp",
+        "GameActivityEvents_internal.h",
+    ] {
         println!("cargo:rerun-if-changed={}", activity_path("src", f));
     }
 
@@ -17,7 +21,6 @@ fn build_glue_for_game_activity() {
         "GameActivity.h",
         "GameActivityEvents.h",
         "GameActivityLog.h",
-        "GameActivityEvents_internal.h",
     ] {
         println!("cargo:rerun-if-changed={}", activity_path("include", f));
     }
