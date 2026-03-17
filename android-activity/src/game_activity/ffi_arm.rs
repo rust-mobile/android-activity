@@ -165,8 +165,8 @@ pub const __ANDROID_API_V__: u32 = 35;
 pub const __ANDROID_NDK__: u32 = 1;
 pub const __NDK_MAJOR__: u32 = 29;
 pub const __NDK_MINOR__: u32 = 0;
-pub const __NDK_BETA__: u32 = 4;
-pub const __NDK_BUILD__: u32 = 14033849;
+pub const __NDK_BETA__: u32 = 0;
+pub const __NDK_BUILD__: u32 = 14206865;
 pub const __NDK_CANARY__: u32 = 0;
 pub const WCHAR_MIN: u8 = 0u8;
 pub const INT8_MIN: i32 = -128;
@@ -5265,10 +5265,6 @@ unsafe extern "C" {
 unsafe extern "C" {
     #[doc = " Clear the array of key events that were waiting to be handled, and release\n each of them.\n\n This method should be called after you have processed the key up events in\n your game loop. You should handle events at each iteration of your game loop."]
     pub fn android_app_clear_key_events(inputBuffer: *mut android_input_buffer);
-}
-unsafe extern "C" {
-    #[doc = " A hook that is called within Activity.onCreate, before the android_main\n thread has been spawned.\n\n This gives the Rust glue code a chance to perform any necessary\n initialization that needs to run from the Java main/UI thread, before the\n android_main thread is started."]
-    pub fn _rust_glue_on_create_hook(app: *mut android_app);
 }
 unsafe extern "C" {
     #[doc = " This is a springboard into the Rust glue layer that wraps calling the\n main entry for the app itself."]
