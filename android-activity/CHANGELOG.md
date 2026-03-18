@@ -13,6 +13,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
 - `AndroidApp::java_main_looper()` gives access to the `ALooper` for the Java main / UI thread ([#198](https://github.com/rust-mobile/android-activity/pull/198))
 - `AndroidApp::run_on_java_main_thread()` can be used to run boxed closures on the Java main / UI thread ([#232](https://github.com/rust-mobile/android-activity/pull/232))
+- Support for an optional `android_on_create` entry point that gets called from the `Activity.onCreate()` callback before `android_main()` is called, allowing for doing some setup work on the Java main / UI thread before the `android_main` Rust code starts running.
+
+For example:
+
+```rust
+use std::sync::OnceLock;
+use android_activity::OnCreateState;
+use jni::{JavaVM, refs::Global, objects::JObject};
+
+#[unsafe(no_mangle)]
+fn android_on_create(state: &OnCreateState) {
+    static APP_ONCE: OnceLock<()> = OnceLock::new();
+    APP_ONCE.get_or_init(|| {
+        // Initialize logging...
+        //
+        // Remember, `android_on_create` may be called multiple times but some
+        // logger crates will panic if initialized multiple times.
+    });
+    let vm = unsafe { JavaVM::from_raw(state.vm_as_ptr().cast()) };
+    let activity = state.activity_as_ptr() as jni::sys::jobject;
+    // Although the thread is implicitly already attached (we are inside an onCreate native method)
+    // using `vm.attach_current_thread` here will use the existing attachment, give us an `&Env`
+    // reference and also catch Java exceptions.
+    if let Err(err) = vm.attach_current_thread(|env| -> jni::errors::Result<()> {
+        // SAFETY:
+        // - The `Activity` reference / pointer is at least valid until we return
+        // - By creating a `Cast` we ensure we can't accidentally delete the reference
+        let activity = unsafe { env.as_cast_raw::<JObject>(&activity)? };
+
+        // Do something with the activity on the Java main thread...
+        Ok(())
+    }) {
+       eprintln!("Failed to interact with Android SDK on Java main thread: {err:?}");
+    }
+}
+```
 
 ### Changed
 
