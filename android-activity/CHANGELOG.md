@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - *Safety* `AndroidApp::asset_manager()` returns an `AssetManager` that has a safe `'static` lifetime that's not invalidated when `android_main()` returns ([#233](https://github.com/rust-mobile/android-activity/pull/233))
 - *Safety* The `native-activity` backend clears its `ANativeActivity` ptr after `onDestroy` and `AndroidApp` remains safe to access after `android_main()` returns ([#234](https://github.com/rust-mobile/android-activity/pull/234))
 - *Safety* `AndroidApp::activity_as_ptr()` returns a pointer to a global reference that remains valid until `AndroidApp` is dropped, instead of the `ANativeActivity`'s `clazz` pointer which is only guaranteed to be valid until `onDestroy` returns (`native-activity` backend) ([#234](https://github.com/rust-mobile/android-activity/pull/234))
+- *Safety* The `game-activity` backend clears its `android_app` ptr after `onDestroy` and `AndroidApp` remains safe to access after `android_main()` returns ([#236](https://github.com/rust-mobile/android-activity/pull/236))
 
 ## [0.6.0] - 2024-04-26
 
