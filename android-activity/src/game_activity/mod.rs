@@ -21,11 +21,9 @@ use ndk::configuration::Configuration;
 use ndk::native_window::NativeWindow;
 
 use crate::error::InternalResult;
+use crate::init::{init_android_main_thread, init_java_main_thread_on_create};
 use crate::main_callbacks::MainCallbacks;
-use crate::util::{
-    abort_on_panic, forward_stdio_to_logcat, init_android_main_thread, log_panic,
-    try_get_path_from_ptr,
-};
+use crate::util::{abort_on_panic, log_panic, try_get_path_from_ptr};
 use crate::{
     AndroidApp, AndroidAppWaker, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect,
     WindowManagerFlags,
@@ -1149,6 +1147,17 @@ pub unsafe extern "C" fn GameActivity_onCreate(
     saved_state: *mut ::std::os::raw::c_void,
     saved_state_size: libc::size_t,
 ) {
+    abort_on_panic(|| unsafe {
+        let vm = jni::JavaVM::from_raw((*activity).vm as *mut _);
+        let java_activity = (*activity).javaGameActivity;
+        let saved_state = if !saved_state.is_null() && saved_state_size > 0 {
+            std::slice::from_raw_parts(saved_state.cast(), saved_state_size)
+        } else {
+            &[]
+        };
+        init_java_main_thread_on_create(vm, java_activity as *mut c_void, saved_state);
+    });
+
     GameActivity_onCreate_C(activity, saved_state, saved_state_size);
 }
 
@@ -1162,8 +1171,6 @@ extern "Rust" {
 #[no_mangle]
 pub unsafe extern "C" fn _rust_glue_entry(game_activity_glue: *mut ffi::android_app) {
     abort_on_panic(|| {
-        let _join_log_forwarder = forward_stdio_to_logcat();
-
         let (jvm, jni_activity) = unsafe {
             let jvm = (*(*game_activity_glue).activity).vm;
             let activity: jobject = (*(*game_activity_glue).activity).javaGameActivity;

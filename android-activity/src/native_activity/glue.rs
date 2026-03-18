@@ -13,7 +13,8 @@ use jni::{objects::JObject, refs::Global, vm::AttachConfig};
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
 use crate::{
-    util::{abort_on_panic, forward_stdio_to_logcat, init_android_main_thread, log_panic},
+    init::{init_android_main_thread, init_java_main_thread_on_create},
+    util::{abort_on_panic, log_panic},
     ConfigurationRef,
 };
 
@@ -878,15 +879,22 @@ extern "C" fn ANativeActivity_onCreate(
     saved_state_size: libc::size_t,
 ) {
     abort_on_panic(|| {
-        let _join_log_forwarder = forward_stdio_to_logcat();
-
-        eprintln!(
-            "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
-            activity, saved_state, saved_state_size
-        );
-
         let main_looper =
             ndk::looper::ForeignLooper::for_thread().expect("Failed to get Java main looper");
+
+        let (jvm, jni_activity) = unsafe {
+            let jvm: *mut jni::sys::JavaVM = (*activity).vm.cast();
+            let jni_activity: jni::sys::jobject = (*activity).clazz as _; // Completely bogus name; this is the _instance_ not class pointer
+            (jni::JavaVM::from_raw(jvm), jni_activity)
+        };
+        unsafe {
+            let saved_state = if !saved_state.is_null() && saved_state_size > 0 {
+                std::slice::from_raw_parts(saved_state.cast(), saved_state_size)
+            } else {
+                &[]
+            };
+            init_java_main_thread_on_create(jvm, jni_activity as _, saved_state);
+        };
 
         // Conceptually we associate a glue reference with the JVM main thread, and another
         // reference with the Rust main thread
