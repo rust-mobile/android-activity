@@ -907,6 +907,16 @@ pub struct TextInputState {
     pub compose_region: Option<TextSpan>,
 }
 
+impl Default for TextInputState {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            selection: TextSpan { start: 0, end: 0 },
+            compose_region: None,
+        }
+    }
+}
+
 // Represents the action button on a soft keyboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
 #[non_exhaustive]
