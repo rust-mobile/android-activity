@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{iter::FusedIterator, marker::PhantomData, ptr::NonNull};
 
 use crate::input::{
     Axis, Button, ButtonState, EdgeFlags, KeyAction, Keycode, MetaState, MotionAction,
@@ -111,7 +111,10 @@ impl MotionEvent<'_> {
     pub fn pointers(&self) -> PointersIter<'_> {
         PointersIter {
             inner: PointersIterImpl {
-                ndk_pointers_iter: self.ndk_event.pointers(),
+                event: self.ndk_event.ptr(),
+                pointer_index: 0,
+                pointer_count: self.ndk_event.pointer_count(),
+                _marker: std::marker::PhantomData,
             },
         }
     }
@@ -123,30 +126,12 @@ impl MotionEvent<'_> {
     pub fn pointer_at_index(&self, index: usize) -> Pointer<'_> {
         Pointer {
             inner: PointerImpl {
-                ndk_pointer: self.ndk_event.pointer_at_index(index),
+                event: self.ndk_event.ptr(),
+                pointer_index: index,
+                _marker: std::marker::PhantomData,
             },
         }
     }
-
-    /*
-    XXX: Not currently supported with GameActivity so we don't currently expose for NativeActivity
-    either, for consistency.
-
-    /// Returns the size of the history contained in this event.
-    ///
-    /// See [the NDK
-    /// docs](https://developer.android.com/ndk/reference/group/input#amotionevent_gethistorysize)
-    #[inline]
-    pub fn history_size(&self) -> usize {
-        self.ndk_event.history_size()
-    }
-
-    /// An iterator over the historical events contained in this event.
-    #[inline]
-    pub fn history(&self) -> HistoricalMotionEventsIter<'_> {
-        self.ndk_event.history()
-    }
-    */
 
     /// Returns the state of any modifier keys that were pressed during the event.
     ///
@@ -245,69 +230,200 @@ impl MotionEvent<'_> {
 /// A view into the data of a specific pointer in a motion event.
 #[derive(Debug)]
 pub(crate) struct PointerImpl<'a> {
-    ndk_pointer: ndk::event::Pointer<'a>,
+    event: NonNull<ndk_sys::AInputEvent>,
+    pointer_index: usize,
+    _marker: std::marker::PhantomData<&'a MotionEvent<'a>>,
 }
 
 impl PointerImpl<'_> {
     #[inline]
     pub fn pointer_index(&self) -> usize {
-        self.ndk_pointer.pointer_index()
+        self.pointer_index
     }
 
     #[inline]
     pub fn pointer_id(&self) -> i32 {
-        self.ndk_pointer.pointer_id()
+        unsafe { ndk_sys::AMotionEvent_getPointerId(self.event.as_ptr(), self.pointer_index) }
     }
 
     #[inline]
     pub fn axis_value(&self, axis: Axis) -> f32 {
         let value: u32 = axis.into();
         let value = value as i32;
-        self.ndk_pointer.axis_value(value.into())
+        unsafe {
+            ndk_sys::AMotionEvent_getAxisValue(self.event.as_ptr(), value, self.pointer_index)
+        }
     }
 
     #[inline]
     pub fn raw_x(&self) -> f32 {
-        self.ndk_pointer.raw_x()
+        unsafe { ndk_sys::AMotionEvent_getRawX(self.event.as_ptr(), self.pointer_index) }
     }
 
     #[inline]
     pub fn raw_y(&self) -> f32 {
-        self.ndk_pointer.raw_y()
+        unsafe { ndk_sys::AMotionEvent_getRawY(self.event.as_ptr(), self.pointer_index) }
     }
 
     #[inline]
     pub fn tool_type(&self) -> ToolType {
-        let value: i32 = self.ndk_pointer.tool_type().into();
+        let value =
+            unsafe { ndk_sys::AMotionEvent_getToolType(self.event.as_ptr(), self.pointer_index) };
         let value = value as u32;
         value.into()
     }
+
+    pub fn history(&self) -> crate::input::PointerHistoryIter<'_> {
+        let history_size =
+            unsafe { ndk_sys::AMotionEvent_getHistorySize(self.event.as_ptr()) } as usize;
+        crate::input::PointerHistoryIter {
+            inner: PointerHistoryIterImpl {
+                event: self.event,
+                pointer_index: self.pointer_index,
+                front: 0,
+                back: history_size,
+                _marker: std::marker::PhantomData,
+            },
+        }
+    }
 }
 
-/// An iterator over the pointers in a [`MotionEvent`].
 #[derive(Debug)]
 pub(crate) struct PointersIterImpl<'a> {
-    ndk_pointers_iter: ndk::event::PointersIter<'a>,
+    event: NonNull<ndk_sys::AInputEvent>,
+    pointer_count: usize,
+    pointer_index: usize,
+    _marker: std::marker::PhantomData<&'a MotionEvent<'a>>,
 }
 
 impl<'a> Iterator for PointersIterImpl<'a> {
     type Item = Pointer<'a>;
     fn next(&mut self) -> Option<Pointer<'a>> {
-        self.ndk_pointers_iter.next().map(|ndk_pointer| Pointer {
-            inner: PointerImpl { ndk_pointer },
+        if self.pointer_index == self.pointer_count {
+            return None;
+        }
+        let pointer = Pointer {
+            inner: PointerImpl {
+                event: self.event,
+                pointer_index: self.pointer_index,
+                _marker: std::marker::PhantomData,
+            },
+        };
+        self.pointer_index += 1;
+        Some(pointer)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.pointer_count - self.pointer_index;
+        (remaining, Some(remaining))
+    }
+}
+
+impl ExactSizeIterator for PointersIterImpl<'_> {}
+
+/// A view into a pointer at a historical moment
+#[derive(Debug)]
+pub struct HistoricalPointerImpl<'a> {
+    event: NonNull<ndk_sys::AInputEvent>,
+    pointer_index: usize,
+    history_index: usize,
+    _marker: std::marker::PhantomData<&'a MotionEvent<'a>>,
+}
+
+impl<'a> HistoricalPointerImpl<'a> {
+    #[inline]
+    pub fn pointer_index(&self) -> usize {
+        self.pointer_index
+    }
+
+    /// Returns the time of the historical event, in the `java.lang.System.nanoTime()` time base
+    ///
+    /// See [`MotionEvent.getHistoricalEventTimeNanos`](https://developer.android.com/reference/android/view/MotionEvent#getHistoricalEventTimeNanos(int)) SDK docs
+    #[inline]
+    pub fn event_time(&self) -> i64 {
+        unsafe {
+            ndk_sys::AMotionEvent_getHistoricalEventTime(self.event.as_ptr(), self.history_index)
+        }
+    }
+
+    #[inline]
+    pub fn pointer_id(&self) -> i32 {
+        unsafe { ndk_sys::AMotionEvent_getPointerId(self.event.as_ptr(), self.pointer_index) }
+    }
+
+    #[inline]
+    pub fn history_index(&self) -> usize {
+        self.history_index
+    }
+
+    #[inline]
+    pub fn axis_value(&self, axis: Axis) -> f32 {
+        unsafe {
+            ndk_sys::AMotionEvent_getHistoricalAxisValue(
+                self.event.as_ptr(),
+                Into::<u32>::into(axis) as i32,
+                self.pointer_index,
+                self.history_index,
+            )
+        }
+    }
+}
+
+/// An iterator over the historical points of a specific pointer in a [`MotionEvent`].
+#[derive(Debug)]
+pub struct PointerHistoryIterImpl<'a> {
+    event: NonNull<ndk_sys::AInputEvent>,
+    pointer_index: usize,
+    front: usize,
+    back: usize,
+    _marker: std::marker::PhantomData<&'a MotionEvent<'a>>,
+}
+
+impl<'a> Iterator for PointerHistoryIterImpl<'a> {
+    type Item = crate::input::HistoricalPointer<'a>;
+
+    fn next(&mut self) -> Option<crate::input::HistoricalPointer<'a>> {
+        if self.front == self.back {
+            return None;
+        }
+
+        let history_index = self.front;
+        self.front += 1;
+        Some(crate::input::HistoricalPointer {
+            inner: crate::input::HistoricalPointerImpl {
+                event: self.event,
+                history_index,
+                pointer_index: self.pointer_index,
+                _marker: std::marker::PhantomData,
+            },
         })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.ndk_pointers_iter.size_hint()
+        let size = self.back - self.front;
+        (size, Some(size))
     }
 }
+impl<'a> DoubleEndedIterator for PointerHistoryIterImpl<'a> {
+    fn next_back(&mut self) -> Option<crate::input::HistoricalPointer<'a>> {
+        if self.front == self.back {
+            return None;
+        }
 
-impl ExactSizeIterator for PointersIterImpl<'_> {
-    fn len(&self) -> usize {
-        self.ndk_pointers_iter.len()
+        self.back -= 1;
+        let history_index = self.back;
+        Some(crate::input::HistoricalPointer {
+            inner: crate::input::HistoricalPointerImpl {
+                event: self.event,
+                history_index,
+                pointer_index: self.pointer_index,
+                _marker: std::marker::PhantomData,
+            },
+        })
     }
 }
+impl ExactSizeIterator for PointerHistoryIterImpl<'_> {}
+impl FusedIterator for PointerHistoryIterImpl<'_> {}
 
 /// A key event
 ///

@@ -1,3 +1,5 @@
+use std::iter::FusedIterator;
+
 use bitflags::bitflags;
 
 pub use crate::activity_impl::input::*;
@@ -1416,6 +1418,20 @@ impl Pointer<'_> {
     pub fn tool_type(&self) -> ToolType {
         self.inner.tool_type()
     }
+
+    /// Gives access to the historical data of a pointer in a [`MotionEvent`].
+    ///
+    /// This provides access to higher-frequency data points that were recorded
+    /// between the current event and the previous event, which can be used for
+    /// more accurate gesture detection and smoother animations.
+    ///
+    /// For a single [`MotionEvent`] each pointer will have the same number of
+    /// historical events, and the corresponding historical events will have the
+    /// same timestamps.
+    #[inline]
+    pub fn history(&self) -> PointerHistoryIter<'_> {
+        self.inner.history()
+    }
 }
 
 /// An iterator over the pointers in a [`MotionEvent`].
@@ -1435,8 +1451,108 @@ impl<'a> Iterator for PointersIter<'a> {
     }
 }
 
-impl ExactSizeIterator for PointersIter<'_> {
-    fn len(&self) -> usize {
-        self.inner.len()
+impl ExactSizeIterator for PointersIter<'_> {}
+
+/// An iterator over the historical data of a pointer in a [`MotionEvent`].
+///
+/// This provides access to higher-frequency data points that were recorded
+/// between the current event and the previous event, which can be used for more
+/// accurate gesture detection and smoother animations.
+///
+/// For a single [`MotionEvent`] each pointer will have the same number of
+/// historical events, and the corresponding historical events will have the
+/// same timestamps.
+///
+#[derive(Debug)]
+pub struct PointerHistoryIter<'a> {
+    pub(crate) inner: PointerHistoryIterImpl<'a>,
+}
+
+impl<'a> Iterator for PointerHistoryIter<'a> {
+    type Item = HistoricalPointer<'a>;
+    fn next(&mut self) -> Option<HistoricalPointer<'a>> {
+        self.inner.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+impl<'a> DoubleEndedIterator for PointerHistoryIter<'a> {
+    fn next_back(&mut self) -> Option<HistoricalPointer<'a>> {
+        self.inner.next_back()
+    }
+}
+impl ExactSizeIterator for PointerHistoryIter<'_> {}
+impl FusedIterator for PointerHistoryIter<'_> {}
+
+pub struct HistoricalPointer<'a> {
+    pub(crate) inner: HistoricalPointerImpl<'a>,
+}
+
+impl HistoricalPointer<'_> {
+    #[inline]
+    pub fn history_index(&self) -> usize {
+        self.inner.history_index()
+    }
+
+    #[inline]
+    pub fn pointer_index(&self) -> usize {
+        self.inner.pointer_index()
+    }
+
+    #[inline]
+    pub fn event_time(&self) -> i64 {
+        self.inner.event_time()
+    }
+
+    #[inline]
+    pub fn axis_value(&self, axis: Axis) -> f32 {
+        self.inner.axis_value(axis)
+    }
+
+    #[inline]
+    pub fn orientation(&self) -> f32 {
+        self.axis_value(Axis::Orientation)
+    }
+
+    #[inline]
+    pub fn pressure(&self) -> f32 {
+        self.axis_value(Axis::Pressure)
+    }
+
+    #[inline]
+    pub fn x(&self) -> f32 {
+        self.axis_value(Axis::X)
+    }
+
+    #[inline]
+    pub fn y(&self) -> f32 {
+        self.axis_value(Axis::Y)
+    }
+
+    #[inline]
+    pub fn size(&self) -> f32 {
+        self.axis_value(Axis::Size)
+    }
+
+    #[inline]
+    pub fn tool_major(&self) -> f32 {
+        self.axis_value(Axis::ToolMajor)
+    }
+
+    #[inline]
+    pub fn tool_minor(&self) -> f32 {
+        self.axis_value(Axis::ToolMinor)
+    }
+
+    #[inline]
+    pub fn touch_major(&self) -> f32 {
+        self.axis_value(Axis::TouchMajor)
+    }
+
+    #[inline]
+    pub fn touch_minor(&self) -> f32 {
+        self.axis_value(Axis::TouchMinor)
     }
 }

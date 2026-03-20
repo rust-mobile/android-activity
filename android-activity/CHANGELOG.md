@@ -50,6 +50,9 @@ fn android_on_create(state: &OnCreateState) {
 }
 ```
 
+- Support for `MotionEvent` history, providing higher fidelity input data for things like stylus input (`native-activity` + `game-activity` backends). ([#218](https://github.com/rust-mobile/android-activity/pull/218))
+
+
 ### Changed
 
 - rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), [#219](https://github.com/rust-mobile/android-activity/pull/219))
