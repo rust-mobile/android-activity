@@ -293,10 +293,10 @@ pub const SCNxPTR: &[u8; 3] = b"lx\0";
 pub const GAME_ACTIVITY_POINTER_INFO_AXIS_COUNT: u32 = 48;
 pub const GAMEACTIVITY_MAX_NUM_POINTERS_IN_MOTION_EVENT: u32 = 8;
 pub const GAMETEXTINPUT_MAJOR_VERSION: u32 = 4;
-pub const GAMETEXTINPUT_MINOR_VERSION: u32 = 0;
+pub const GAMETEXTINPUT_MINOR_VERSION: u32 = 3;
 pub const GAMETEXTINPUT_BUGFIX_VERSION: u32 = 0;
 pub const GAMEACTIVITY_MAJOR_VERSION: u32 = 4;
-pub const GAMEACTIVITY_MINOR_VERSION: u32 = 0;
+pub const GAMEACTIVITY_MINOR_VERSION: u32 = 4;
 pub const GAMEACTIVITY_BUGFIX_VERSION: u32 = 0;
 pub const POLLIN: u32 = 1;
 pub const POLLPRI: u32 = 2;
@@ -2364,7 +2364,7 @@ pub struct GameTextInput {
     _unused: [u8; 0],
 }
 unsafe extern "C" {
-    #[doc = " Initialize the GameTextInput library.\n If called twice without GameTextInput_destroy being called, the same pointer\n will be returned and a warning will be issued.\n @param env A JNI env valid on the calling thread.\n @param max_string_size The maximum length of a string that can be edited. If\n zero, the maximum defaults to 65536 bytes. A buffer of this size is allocated\n at initialization.\n @return A handle to the library."]
+    #[doc = " Initialize the GameTextInput library.\n If called twice without GameTextInput_destroy being called, the same pointer\n will be returned and a warning will be issued.\n @param env A JNI env valid on the calling thread. All other calls to the resulting GameTextInput\n object must be done on the same calling thread.\n @param max_string_size The maximum length of a string that can be edited. If\n zero, the maximum defaults to 65536 bytes. A buffer of this size is allocated\n at initialization.\n @return A handle to the library."]
     pub fn GameTextInput_init(env: *mut JNIEnv, max_string_size: u32) -> *mut GameTextInput;
 }
 unsafe extern "C" {
@@ -4829,7 +4829,7 @@ pub const NativeAppGlueAppCmd_APP_CMD_WINDOW_INSETS_CHANGED: NativeAppGlueAppCmd
 #[doc = " Commands passed from the application's main Java thread to the game's thread.\n\n Values from 0 to 127 are reserved for this library; values from -128 to -1\n can be used for custom user's events."]
 pub type NativeAppGlueAppCmd = i8;
 unsafe extern "C" {
-    #[doc = " Call when ALooper_pollAll() returns LOOPER_ID_MAIN, reading the next\n app command message."]
+    #[doc = " Call when ALooper_pollOnce() returns LOOPER_ID_MAIN, reading the next\n app command message."]
     pub fn android_app_read_cmd(android_app: *mut android_app) -> i8;
 }
 unsafe extern "C" {
@@ -4873,8 +4873,8 @@ unsafe extern "C" {
     );
 }
 unsafe extern "C" {
-    #[doc = " You can send your custom events using the function below.\n\n Make sure your custom codes do not overlap with this library's ones.\n\n Values from 0 to 127 are reserved for this library; values from -128 to -1\n can be used for custom user's events."]
-    pub fn android_app_write_cmd(android_app: *mut android_app, cmd: i8);
+    #[doc = " You can send your custom events using the function below.\n\n Make sure your custom codes do not overlap with this library's ones.\n\n Values from 0 to 127 are reserved for this library; values from -128 to -1\n can be used for custom user's events.\n\n The function returns true if the write operation was successful."]
+    pub fn android_app_write_cmd(android_app: *mut android_app, cmd: i8) -> bool;
 }
 unsafe extern "C" {
     #[doc = " Determines if a looper wake up was due to new input becoming available"]

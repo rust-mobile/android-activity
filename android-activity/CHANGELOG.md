@@ -56,7 +56,31 @@ fn android_on_create(state: &OnCreateState) {
 ### Changed
 
 - rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), [#219](https://github.com/rust-mobile/android-activity/pull/219))
-- GameActivity updated to 4.0.0 (requires the corresponding 4.0.0 `.aar` release from Google) ([#191](https://github.com/rust-mobile/android-activity/pull/191))
+- GameActivity updated to 4.4.0 ([#191](https://github.com/rust-mobile/android-activity/pull/191), [#240](https://github.com/rust-mobile/android-activity/pull/240))
+
+**Important:** This release is no longer compatible with GameActivity 2.0.2
+
+**Android Packaging:** Your Android application must be packaged with the corresponding androidX, GameActivity 4.x.x library from Google.
+
+This release has been tested with the [`androidx.games:games-activity:4.4.0` stable
+release](https://developer.android.com/jetpack/androidx/releases/games#games-activity-4.4.0), and is backwards
+compatible with the 4.0.0 stable release.
+
+If you use Gradle to build your Android application, you can depend on the 4.4.0 release of the GameActivity library via:
+
+```gradle
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+
+    // To use the Games Activity library
+    implementation "androidx.games:games-activity:4.4.0"
+    // Note: don't include game-text-input separately, since it's integrated into game-activity
+}
+```
+
+Note: there is no guarantee that later 4.x.x releases of GameActivity will be compatible with this release of
+`android-activity`, so please refer to the `android-activity` release notes for any future updates regarding
+GameActivity compatibility.
 
 ### Fixed
 

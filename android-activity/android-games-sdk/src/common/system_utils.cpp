@@ -23,15 +23,13 @@
 namespace gamesdk {
 
 #if __ANDROID_API__ >= 26
-std::string getSystemPropViaCallback(const char* key,
-                                     const char* default_value = "") {
+std::string getSystemPropViaCallback(const char* key, const char* default_value = "") {
     const prop_info* prop = __system_property_find(key);
     if (prop == nullptr) {
         return default_value;
     }
     std::string return_value;
-    auto thunk = [](void* cookie, const char* /*name*/, const char* value,
-                    uint32_t /*serial*/) {
+    auto thunk = [](void* cookie, const char* /*name*/, const char* value, uint32_t /*serial*/) {
         if (value != nullptr) {
             std::string* r = static_cast<std::string*>(cookie);
             *r = value;
@@ -41,9 +39,8 @@ std::string getSystemPropViaCallback(const char* key,
     return return_value;
 }
 #else
-std::string getSystemPropViaGet(const char* key,
-                                const char* default_value = "") {
-    char buffer[PROP_VALUE_MAX + 1] = "";  // +1 for terminator
+std::string getSystemPropViaGet(const char* key, const char* default_value = "") {
+    char buffer[PROP_VALUE_MAX + 1] = ""; // +1 for terminator
     int bufferLen = __system_property_get(key, buffer);
     if (bufferLen > 0)
         return buffer;
@@ -69,4 +66,4 @@ bool GetSystemPropAsBool(const char* key, bool default_value) {
     return GetSystemPropAsInt(key, default_value) != 0;
 }
 
-}  // namespace gamesdk
+} // namespace gamesdk
