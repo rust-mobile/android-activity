@@ -53,8 +53,8 @@ void GameActivityEventsInit(JNIEnv* env);
  * to avoid extra JNI calls.
  */
 void GameActivityMotionEvent_fromJava(JNIEnv* env, jobject motionEvent,
-                                      GameActivityMotionEvent* out_event,
-                                      int pointerCount, int historySize);
+                                      GameActivityMotionEvent* out_event, int pointerCount,
+                                      int historySize);
 
 /**
  * \brief Convert a Java `KeyEvent` to a `GameActivityKeyEvent`.
@@ -74,4 +74,4 @@ void GameActivityKeyEvent_fromJava(JNIEnv* env, jobject motionEvent,
 
 /** @} */
 
-#endif  // ANDROID_GAME_SDK_GAME_ACTIVITY_EVENTS_INTERNAL_H
+#endif // ANDROID_GAME_SDK_GAME_ACTIVITY_EVENTS_INTERNAL_H

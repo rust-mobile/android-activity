@@ -29,4 +29,4 @@ int GetSystemPropAsInt(const char* key, int default_value = 0);
 // Get the value of the given system property as a bool
 bool GetSystemPropAsBool(const char* key, bool default_value = false);
 
-}  // namespace gamesdk
+} // namespace gamesdk
