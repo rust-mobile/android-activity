@@ -1,27 +1,30 @@
-#![cfg(any(feature = "native-activity", doc))]
-
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::panic::AssertUnwindSafe;
 use std::ptr;
-use std::ptr::NonNull;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::time::Duration;
 
+use jni::objects::JObject;
+use jni::JavaVM;
 use libc::c_void;
 use log::{error, trace};
 use ndk::input_queue::InputQueue;
 use ndk::{asset::AssetManager, native_window::NativeWindow};
 
 use crate::error::InternalResult;
-use crate::input::{Axis, KeyCharacterMap, KeyCharacterMapBinding};
-use crate::input::{TextInputState, TextSpan};
-use crate::jni_utils::{self, CloneJavaVM};
+use crate::main_callbacks::MainCallbacks;
+use crate::sdk::{Activity, Context, InputMethodManager};
 use crate::{
-    util, AndroidApp, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect, WindowManagerFlags,
+    util, AndroidApp, AndroidAppWaker, ConfigurationRef, InputStatus, MainEvent, PollEvent, Rect,
+    WindowManagerFlags,
 };
 
 pub mod input;
+use crate::input::{
+    device_key_character_map, Axis, ImeOptions, InputType, KeyCharacterMap, TextInputAction,
+    TextInputState, TextSpan,
+};
 
 mod glue;
 use self::glue::NativeActivityGlue;
@@ -53,102 +56,94 @@ impl<'a> StateSaver<'a> {
 pub struct StateLoader<'a> {
     app: &'a AndroidAppInner,
 }
-impl<'a> StateLoader<'a> {
+impl StateLoader<'_> {
     /// Returns whatever state was saved during the last [MainEvent::SaveState] event or `None`
     pub fn load(&self) -> Option<Vec<u8>> {
         self.app.native_activity.saved_state()
     }
 }
 
-/// A means to wake up the main thread while it is blocked waiting for I/O
-#[derive(Clone)]
-pub struct AndroidAppWaker {
-    // The looper pointer is owned by the android_app and effectively
-    // has a 'static lifetime, and the ALooper_wake C API is thread
-    // safe, so this can be cloned safely and is send + sync safe
-    looper: NonNull<ndk_sys::ALooper>,
-}
-unsafe impl Send for AndroidAppWaker {}
-unsafe impl Sync for AndroidAppWaker {}
-
-impl AndroidAppWaker {
-    /// Interrupts the main thread if it is blocked within [`AndroidApp::poll_events()`]
-    ///
-    /// If [`AndroidApp::poll_events()`] is interrupted it will invoke the poll
-    /// callback with a [PollEvent::Wake][wake_event] event.
-    ///
-    /// [wake_event]: crate::PollEvent::Wake
-    pub fn wake(&self) {
-        unsafe {
-            ndk_sys::ALooper_wake(self.looper.as_ptr());
-        }
-    }
-}
-
 impl AndroidApp {
-    pub(crate) fn new(native_activity: NativeActivityGlue, jvm: CloneJavaVM) -> Self {
-        let mut env = jvm.get_env().unwrap(); // We attach to the thread before creating the AndroidApp
+    pub(crate) fn new(
+        jvm: JavaVM,
+        main_looper: ndk::looper::ForeignLooper,
+        main_callbacks: MainCallbacks,
+        app_asset_manager: AssetManager,
+        native_activity: NativeActivityGlue,
+        jni_activity: &JObject,
+    ) -> Self {
+        jvm.with_local_frame(10, |env| -> jni::errors::Result<_> {
+            if let Err(err) = crate::sdk::jni_init(env) {
+                panic!("Failed to init JNI bindings: {err:?}");
+            };
 
-        let key_map_binding = match KeyCharacterMapBinding::new(&mut env) {
-            Ok(b) => b,
-            Err(err) => {
-                panic!("Failed to create KeyCharacterMap JNI bindings: {err:?}");
-            }
-        };
-
-        let app = Self {
-            inner: Arc::new(RwLock::new(AndroidAppInner {
-                jvm,
-                native_activity,
-                looper: Looper {
-                    ptr: ptr::null_mut(),
-                },
-                key_map_binding: Arc::new(key_map_binding),
-                key_maps: Mutex::new(HashMap::new()),
-                input_receiver: Mutex::new(None),
-            })),
-        };
-
-        {
-            let mut guard = app.inner.write().unwrap();
-
-            let main_fd = guard.native_activity.cmd_read_fd();
-            unsafe {
-                guard.looper.ptr = ndk_sys::ALooper_prepare(
+            let looper = unsafe {
+                let ptr = ndk_sys::ALooper_prepare(
                     ndk_sys::ALOOPER_PREPARE_ALLOW_NON_CALLBACKS as libc::c_int,
                 );
-                ndk_sys::ALooper_addFd(
-                    guard.looper.ptr,
-                    main_fd,
-                    LOOPER_ID_MAIN,
-                    ndk_sys::ALOOPER_EVENT_INPUT as libc::c_int,
-                    None,
-                    //&mut guard.cmd_poll_source as *mut _ as *mut _);
-                    ptr::null_mut(),
-                );
-            }
-        }
+                ndk::looper::ForeignLooper::from_ptr(ptr::NonNull::new(ptr).unwrap())
+            };
 
-        app
+            // The global reference in `ANativeActivity` is only guaranteed to be valid until
+            // `onDestroy` returns, so we create our own global reference that we can guarantee will
+            // remain valid until `AndroidApp` is dropped.
+            let activity = env
+                .new_global_ref(jni_activity)
+                .expect("Failed to create global ref for Activity instance");
+
+            let app = Self {
+                inner: Arc::new(RwLock::new(AndroidAppInner {
+                    jvm: jvm.clone(),
+                    main_looper,
+                    main_callbacks,
+                    app_asset_manager,
+                    native_activity,
+                    activity,
+                    looper,
+                    key_maps: Mutex::new(HashMap::new()),
+                    input_receiver: Mutex::new(None),
+                })),
+            };
+
+            {
+                let guard = app.inner.write().unwrap();
+
+                let main_fd = guard.native_activity.cmd_read_fd();
+                unsafe {
+                    ndk_sys::ALooper_addFd(
+                        guard.looper.ptr().as_ptr(),
+                        main_fd,
+                        LOOPER_ID_MAIN,
+                        ndk_sys::ALOOPER_EVENT_INPUT as libc::c_int,
+                        None,
+                        //&mut guard.cmd_poll_source as *mut _ as *mut _);
+                        ptr::null_mut(),
+                    );
+                }
+            }
+
+            Ok(app)
+        })
+        .expect("Failed to create AndroidApp instance")
     }
 }
-
-#[derive(Debug)]
-struct Looper {
-    pub ptr: *mut ndk_sys::ALooper,
-}
-unsafe impl Send for Looper {}
-unsafe impl Sync for Looper {}
 
 #[derive(Debug)]
 pub(crate) struct AndroidAppInner {
-    pub(crate) jvm: CloneJavaVM,
+    pub(crate) jvm: JavaVM,
 
     pub(crate) native_activity: NativeActivityGlue,
-    looper: Looper,
 
-    /// Shared JNI bindings for the `KeyCharacterMap` class
-    key_map_binding: Arc<KeyCharacterMapBinding>,
+    activity: jni::refs::Global<jni::objects::JObject<'static>>,
+
+    main_callbacks: MainCallbacks,
+
+    /// Looper associated with the Rust `android_main` thread
+    looper: ndk::looper::ForeignLooper,
+
+    /// Looper associated with the activity's Java main thread, sometimes called
+    /// the UI thread.
+    main_looper: ndk::looper::ForeignLooper,
 
     /// A table of `KeyCharacterMap`s per `InputDevice` ID
     /// these are used to be able to map key presses to unicode
@@ -159,24 +154,30 @@ pub(crate) struct AndroidAppInner {
     /// InputReceiver reference which we track to ensure
     /// we don't hand out more than one receiver at a time
     input_receiver: Mutex<Option<Weak<InputReceiver>>>,
+
+    /// An `AAssetManager` wrapper for the `Application` `AssetManager`
+    /// Note: `AAssetManager_fromJava` specifies that the pointer is only valid
+    /// while we hold a global reference to the `AssetManager` Java object
+    /// to ensure it is not garbage collected. This AssetManager comes from
+    /// a OnceLock initialization that leaks a single global JNI reference
+    /// to guarantee that it remains valid for the lifetime of the process.
+    app_asset_manager: AssetManager,
 }
 
 impl AndroidAppInner {
-    pub(crate) fn vm_as_ptr(&self) -> *mut c_void {
-        unsafe { (*self.native_activity.activity).vm as _ }
-    }
-
     pub(crate) fn activity_as_ptr(&self) -> *mut c_void {
-        // "clazz" is a completely bogus name; this is the _instance_ not class pointer
-        unsafe { (*self.native_activity.activity).clazz as _ }
+        // Note: The global reference in `ANativeActivity::clazz` (misnomer for instance reference)
+        // is only guaranteed to be valid until `onDestroy` returns, so we have our own global
+        // reference that we can instead guarantee will remain valid until `AndroidApp` is dropped.
+        self.activity.as_raw() as *mut c_void
     }
 
-    pub(crate) fn native_activity(&self) -> *const ndk_sys::ANativeActivity {
-        self.native_activity.activity
+    pub(crate) fn looper_as_ptr(&self) -> *mut ndk_sys::ALooper {
+        self.looper.ptr().as_ptr()
     }
 
-    pub(crate) fn looper(&self) -> *mut ndk_sys::ALooper {
-        self.looper.ptr
+    pub fn java_main_looper(&self) -> ndk::looper::ForeignLooper {
+        self.main_looper.clone()
     }
 
     pub fn native_window(&self) -> Option<NativeWindow> {
@@ -200,41 +201,42 @@ impl AndroidAppInner {
                 -1
             };
 
-            trace!("Calling ALooper_pollAll, timeout = {timeout_milliseconds}");
-            assert!(
-                !ndk_sys::ALooper_forThread().is_null(),
+            trace!("Calling ALooper_pollOnce, timeout = {timeout_milliseconds}");
+            assert_eq!(
+                ndk_sys::ALooper_forThread(),
+                self.looper_as_ptr(),
                 "Application tried to poll events from non-main thread"
             );
-            let id = ndk_sys::ALooper_pollAll(
+            let id = ndk_sys::ALooper_pollOnce(
                 timeout_milliseconds,
                 &mut fd,
                 &mut events,
                 &mut source as *mut *mut c_void,
             );
-            trace!("pollAll id = {id}");
+            trace!("pollOnce id = {id}");
             match id {
                 ndk_sys::ALOOPER_POLL_WAKE => {
-                    trace!("ALooper_pollAll returned POLL_WAKE");
+                    trace!("ALooper_pollOnce returned POLL_WAKE");
                     callback(PollEvent::Wake);
                 }
                 ndk_sys::ALOOPER_POLL_CALLBACK => {
-                    // ALooper_pollAll is documented to handle all callback sources internally so it should
+                    // ALooper_pollOnce is documented to handle all callback sources internally so it should
                     // never return a _CALLBACK source id...
-                    error!("Spurious ALOOPER_POLL_CALLBACK from ALopper_pollAll() (ignored)");
+                    error!("Spurious ALOOPER_POLL_CALLBACK from ALooper_pollOnce() (ignored)");
                 }
                 ndk_sys::ALOOPER_POLL_TIMEOUT => {
-                    trace!("ALooper_pollAll returned POLL_TIMEOUT");
+                    trace!("ALooper_pollOnce returned POLL_TIMEOUT");
                     callback(PollEvent::Timeout);
                 }
                 ndk_sys::ALOOPER_POLL_ERROR => {
                     // If we have an IO error with our pipe to the main Java thread that's surely
                     // not something we can recover from
-                    panic!("ALooper_pollAll returned POLL_ERROR");
+                    panic!("ALooper_pollOnce returned POLL_ERROR");
                 }
                 id if id >= 0 => {
                     match id {
                         LOOPER_ID_MAIN => {
-                            trace!("ALooper_pollAll returned ID_MAIN");
+                            trace!("ALooper_pollOnce returned ID_MAIN");
                             if let Some(ipc_cmd) = self.native_activity.read_cmd() {
                                 let main_cmd = match ipc_cmd {
                                     // We don't forward info about the AInputQueue to apps since it's
@@ -274,7 +276,7 @@ impl AndroidAppInner {
                                 trace!("Calling pre_exec_cmd({ipc_cmd:#?})");
                                 self.native_activity.pre_exec_cmd(
                                     ipc_cmd,
-                                    self.looper(),
+                                    self.looper_as_ptr(),
                                     LOOPER_ID_INPUT,
                                 );
 
@@ -288,7 +290,7 @@ impl AndroidAppInner {
                             }
                         }
                         LOOPER_ID_INPUT => {
-                            trace!("ALooper_pollAll returned ID_INPUT");
+                            trace!("ALooper_pollOnce returned ID_INPUT");
 
                             // To avoid spamming the application with event loop iterations notifying them of
                             // input events then we only send one `InputAvailable` per iteration of input
@@ -303,20 +305,22 @@ impl AndroidAppInner {
                     }
                 }
                 _ => {
-                    error!("Spurious ALooper_pollAll return value {id} (ignored)");
+                    error!("Spurious ALooper_pollOnce return value {id} (ignored)");
                 }
             }
         }
     }
 
     pub fn create_waker(&self) -> AndroidAppWaker {
-        unsafe {
-            // From the application's pov we assume the looper pointer has a static
-            // lifetimes and we can safely assume it is never NULL.
-            AndroidAppWaker {
-                looper: NonNull::new_unchecked(self.looper.ptr),
-            }
-        }
+        // Safety: we know that the looper is a valid, non-null pointer
+        unsafe { AndroidAppWaker::new(self.looper_as_ptr()) }
+    }
+
+    pub fn run_on_java_main_thread<F>(&self, f: Box<F>)
+    where
+        F: FnOnce() + Send + 'static,
+    {
+        self.main_callbacks.run_on_java_main_thread(f);
     }
 
     pub fn config(&self) -> ConfigurationRef {
@@ -328,11 +332,11 @@ impl AndroidAppInner {
     }
 
     pub fn asset_manager(&self) -> AssetManager {
-        unsafe {
-            let activity_ptr = self.native_activity.activity;
-            let am_ptr = NonNull::new_unchecked((*activity_ptr).assetManager);
-            AssetManager::from_ptr(am_ptr)
-        }
+        // Safety: While constructing the AndroidApp we do a OnceLock initialization
+        // where we get the Application AssetManager and leak a single global JNI
+        // reference that guarantees it will not be garbage collected, so we can
+        // safely return the corresponding AAssetManager here.
+        unsafe { AssetManager::from_ptr(self.app_asset_manager.ptr()) }
     }
 
     pub fn set_window_flags(
@@ -340,7 +344,13 @@ impl AndroidAppInner {
         add_flags: WindowManagerFlags,
         remove_flags: WindowManagerFlags,
     ) {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't set window flags after NativeActivity has been destroyed");
+            return;
+        }
+
         let na_mut = na as *mut ndk_sys::ANativeActivity;
         unsafe {
             ndk_sys::ANativeActivity_setWindowFlags(
@@ -353,27 +363,71 @@ impl AndroidAppInner {
 
     // TODO: move into a trait
     pub fn show_soft_input(&self, show_implicit: bool) {
-        let na = self.native_activity();
-        unsafe {
-            let flags = if show_implicit {
-                ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT
-            } else {
-                0
-            };
-            ndk_sys::ANativeActivity_showSoftInput(na as *mut _, flags);
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't show soft input after NativeActivity has been destroyed");
+            return;
+        }
+
+        // Note: `.attach_current_thread()` will also handle catching any Java exceptions that
+        // might be thrown by the JNI calls we make.
+        let res = self
+            .jvm
+            .attach_current_thread(|env| -> jni::errors::Result<()> {
+                let activity = env.as_cast::<Activity>(self.activity.as_ref())?;
+
+                let ims = Context::INPUT_METHOD_SERVICE(env)?;
+                let im_manager = activity.as_context().get_system_service(env, ims)?;
+                let im_manager = InputMethodManager::cast_local(env, im_manager)?;
+                let jni_window = activity.get_window(env)?;
+                let view = jni_window.get_decor_view(env)?;
+                let flags = if show_implicit {
+                    ndk_sys::ANATIVEACTIVITY_SHOW_SOFT_INPUT_IMPLICIT as i32
+                } else {
+                    0
+                };
+                im_manager.show_soft_input(env, view, flags)?;
+                Ok(())
+            });
+        if let Err(err) = res {
+            log::warn!("Failed to show soft input: {err:?}");
         }
     }
 
     // TODO: move into a trait
     pub fn hide_soft_input(&self, hide_implicit_only: bool) {
-        let na = self.native_activity();
-        unsafe {
-            let flags = if hide_implicit_only {
-                ndk_sys::ANATIVEACTIVITY_HIDE_SOFT_INPUT_IMPLICIT_ONLY
-            } else {
-                0
-            };
-            ndk_sys::ANativeActivity_hideSoftInput(na as *mut _, flags);
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't hide soft input after NativeActivity has been destroyed");
+            return;
+        }
+
+        // Note: `.attach_current_thread()` will also handle catching any Java exceptions that
+        // might be thrown by the JNI calls we make.
+        let res = self
+            .jvm
+            .attach_current_thread(|env| -> jni::errors::Result<()> {
+                let activity = env.as_cast::<Activity>(self.activity.as_ref())?;
+
+                let ims = Context::INPUT_METHOD_SERVICE(env)?;
+                let imm_obj = activity.as_context().get_system_service(env, ims)?;
+                let imm = InputMethodManager::cast_local(env, imm_obj)?;
+
+                let window = activity.get_window(env)?;
+                let decor = window.get_decor_view(env)?;
+                let token = decor.get_window_token(env)?;
+
+                // HIDE_IMPLICIT_ONLY == 1, HIDE_NOT_ALWAYS == 2
+                let flags = if hide_implicit_only { 1 } else { 0 };
+
+                let _hidden = imm.hide_soft_input_from_window(env, token, flags)?;
+                Ok(())
+            });
+
+        if let Err(err) = res {
+            error!("Failed to hide soft input: {err:?}");
         }
     }
 
@@ -391,17 +445,23 @@ impl AndroidAppInner {
         // NOP: Unsupported
     }
 
+    // TODO: move into a trait
+    pub fn set_ime_editor_info(
+        &self,
+        _input_type: InputType,
+        _action: TextInputAction,
+        _options: ImeOptions,
+    ) {
+        // NOP: Unsupported
+    }
+
     pub fn device_key_character_map(&self, device_id: i32) -> InternalResult<KeyCharacterMap> {
         let mut guard = self.key_maps.lock().unwrap();
 
         let key_map = match guard.entry(device_id) {
             std::collections::hash_map::Entry::Occupied(occupied) => occupied.get().clone(),
             std::collections::hash_map::Entry::Vacant(vacant) => {
-                let character_map = jni_utils::device_key_character_map(
-                    self.jvm.clone(),
-                    self.key_map_binding.clone(),
-                    device_id,
-                )?;
+                let character_map = device_key_character_map(self.jvm.clone(), device_id)?;
                 vacant.insert(character_map.clone());
                 character_map
             }
@@ -433,7 +493,7 @@ impl AndroidAppInner {
         // trigger a wake up)
         let queue = self
             .native_activity
-            .looper_attached_input_queue(self.looper(), LOOPER_ID_INPUT);
+            .looper_attached_input_queue(self.looper_as_ptr(), LOOPER_ID_INPUT);
 
         // Note: we don't treat it as an error if there is no queue, so if applications
         // iterate input before a queue has been created (e.g. before onStart) then
@@ -445,17 +505,32 @@ impl AndroidAppInner {
     }
 
     pub fn internal_data_path(&self) -> Option<std::path::PathBuf> {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't get internal data path after NativeActivity has been destroyed");
+            return None;
+        }
         unsafe { util::try_get_path_from_ptr((*na).internalDataPath) }
     }
 
     pub fn external_data_path(&self) -> Option<std::path::PathBuf> {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't get external data path after NativeActivity has been destroyed");
+            return None;
+        }
         unsafe { util::try_get_path_from_ptr((*na).externalDataPath) }
     }
 
     pub fn obb_path(&self) -> Option<std::path::PathBuf> {
-        let na = self.native_activity();
+        let guard = self.native_activity.mutex.lock().unwrap();
+        let na = guard.activity;
+        if na.is_null() {
+            log::error!("Can't get OBB path after NativeActivity has been destroyed");
+            return None;
+        }
         unsafe { util::try_get_path_from_ptr((*na).obbPath) }
     }
 }
@@ -465,7 +540,7 @@ pub(crate) struct InputReceiver {
     queue: Option<InputQueue>,
 }
 
-impl<'a> From<Arc<InputReceiver>> for InputIteratorInner<'a> {
+impl From<Arc<InputReceiver>> for InputIteratorInner<'_> {
     fn from(receiver: Arc<InputReceiver>) -> Self {
         Self {
             receiver,
@@ -480,7 +555,7 @@ pub(crate) struct InputIteratorInner<'a> {
     _lifetime: PhantomData<&'a ()>,
 }
 
-impl<'a> InputIteratorInner<'a> {
+impl InputIteratorInner<'_> {
     pub(crate) fn next<F>(&self, callback: F) -> bool
     where
         F: FnOnce(&input::InputEvent) -> InputStatus,

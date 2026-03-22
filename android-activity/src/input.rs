@@ -1,3 +1,5 @@
+use std::iter::FusedIterator;
+
 use bitflags::bitflags;
 
 pub use crate::activity_impl::input::*;
@@ -907,12 +909,421 @@ pub struct TextInputState {
     pub compose_region: Option<TextSpan>,
 }
 
+impl Default for TextInputState {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            selection: TextSpan { start: 0, end: 0 },
+            compose_region: None,
+        }
+    }
+}
+
+// Represents the action button on a soft keyboard.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
+#[repr(i32)]
+pub enum TextInputAction {
+    /// Let receiver decide what logical action to perform
+    Unspecified = 0,
+    /// No action - receiver could instead interpret as an "enter" key that inserts a newline character
+    None = 1,
+    /// Navigate to the input location (such as a URL)
+    Go = 2,
+    /// Search based on the input text
+    Search = 3,
+    /// Send the input to the target
+    Send = 4,
+    /// Move to the next input field
+    Next = 5,
+    /// Indicate that input is done
+    Done = 6,
+    /// Move to the previous input field
+    Previous = 7,
+
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(i32),
+}
+
+bitflags! {
+    /// Flags for [`AndroidApp::set_ime_editor_info`]
+    /// as per the [android.view.inputmethod.EditorInfo Java API](https://developer.android.com/reference/android/view/inputmethod/EditorInfo)
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+    pub struct ImeOptions: u32 {
+
+        /// The mask of bits that configure alternative actions for the "enter" key. This helps the
+        /// IME provide clear feedback for what the key will do and provide alternative mechanisms
+        /// for taking the same action.
+        const IME_MASK_ACTION = 0x000000ff;
+
+        /// Indicates that ascii input is a priority (such as for entering an account ID)
+        const IME_FLAG_FORCE_ASCII = 0x80000000;
+
+        /// Indicates that it's possible to navigate focus forwards to something.
+        ///
+        /// This is similar to using `IME_ACTION_NEXT` except it allows for multi-line input with
+        /// an enter key in addition to forward navigation for focus.
+        ///
+        /// This may not be supported by all IMEs (especially on small screens)
+        const IME_FLAG_NAVIGATE_NEXT = 0x08000000;
+
+        /// Similar to `IME_FLAG_NAVIGATE_NEXT`, except it indicates that it's possible to navigate
+        /// focus backwards to something.
+        const IME_FLAG_NAVIGATE_PREVIOUS = 0x04000000;
+
+        /// This requests that the IME should not show any accessory actions next to the extracted
+        /// text UI, when it is in fullscreen mode.
+        ///
+        /// The implication is that you think it's more important to prioritize having room for
+        /// previewing more text, instead of showing accessory actions.
+        ///
+        /// Note: In some cases this can make the action unavailable.
+        const IME_FLAG_NO_ACCESSORY_ACTION = 0x20000000;
+
+        /// If this flag is not set, IMEs will normally replace the "enter" key with the action
+        /// supplied. This flag indicates that the action should not be available in-line as a
+        /// replacement for the "enter" key. Typically this is because the action has such a
+        /// significant impact or is not recoverable enough that accidentally hitting it should be
+        /// avoided, such as sending a message.
+        const IME_FLAG_NO_ENTER_ACTION = 0x40000000;
+
+        /// Don't show any "extracted-text UI" as part of the on-screen IME.
+        ///
+        /// Some keyboards may show an additional text box above the keyboard for previewing what
+        /// you type (referred to as the extracted text UI) and it can sometimes be quite large.
+        ///
+        /// The exact semantics of this flag can be unclear sometimes and the UI that becomes
+        /// visible may not respond to input as you would expect.
+        ///
+        /// This flag may be deprecated in the future and it's recommend to use
+        /// `IME_FLAG_NO_FULLSCREEN` instead, to avoid having the extracted text UI appear to cover
+        /// the full screen.
+        const IMG_FLAG_NO_EXTRACT_UI = 0x10000000;
+
+        /// Request that the IME should avoid ever entering a fullscreen mode and should always
+        /// leave some room for the application UI.
+        ///
+        /// Note: It's not guaranteed that an IME will honor this state
+        const IME_FLAG_NO_FULLSCREEN = 0x02000000;
+
+        /// Request that the IME should not update personalized data, such as typing history.
+        ///
+        /// Note: It's not guaranteed that an IME will honor this state
+        const IME_FLAG_NO_PERSONALIZED_LEARNING = 0x01000000;
+
+        /// Generic unspecified type for ImeOptions
+        const IME_NULL = 0;
+    }
+}
+
+impl ImeOptions {
+    /// Specify what action the IME's "enter" key should perform.
+    ///
+    /// This helps the IME provide clear feedback for what the key will do and provide alternative
+    /// mechanisms for taking the same action.
+    pub fn set_action(&mut self, action: TextInputAction) {
+        let action: i32 = action.into();
+        let action = action as u32;
+        *self = Self::from_bits_truncate(
+            (self.bits() & !Self::IME_MASK_ACTION.bits()) | (action & Self::IME_MASK_ACTION.bits()),
+        );
+    }
+
+    /// Get the current action of the IME's "enter" key.
+    pub fn action(&self) -> TextInputAction {
+        let action_bits = self.bits() & Self::IME_MASK_ACTION.bits();
+        TextInputAction::from(action_bits as i32)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[non_exhaustive]
+#[repr(u32)]
+pub enum InputTypeClass {
+    /// Special content type for when no explicit type has been specified.
+    ///
+    /// This should be interpreted to mean that the target input connection is
+    /// not rich, it can not process and show things like candidate text nor
+    /// retrieve the current text, so the input method will need to run in a
+    /// limited "generate key events" mode, if it supports it.
+    ///
+    /// Note that some input methods may not support it, for example a
+    /// voice-based input method will likely not be able to generate key events
+    /// even if this flag is set.
+    Null = 0,
+
+    ///  Class for normal text.
+    ///
+    /// This class supports the following flags (only one of which should be set):
+    /// - TYPE_TEXT_FLAG_CAP_CHARACTERS
+    /// - TYPE_TEXT_FLAG_CAP_WORDS
+    /// - TYPE_TEXT_FLAG_CAP_SENTENCES.
+    ///
+    /// It also supports the following variations:
+    /// - TYPE_TEXT_VARIATION_NORMAL
+    /// - TYPE_TEXT_VARIATION_URI
+    ///
+    /// *If you do not recognize the variation, normal should be assumed.*
+    Text = 1,
+
+    /// Class for numeric text.
+    ///
+    /// This class supports the following flags:
+    /// - `TYPE_NUMBER_FLAG_SIGNED`
+    /// - `TYPE_NUMBER_FLAG_DECIMAL`
+    ///
+    /// It also supports the following variations:
+    /// - `TYPE_NUMBER_VARIATION_NORMAL`
+    /// - `TYPE_NUMBER_VARIATION_PASSWORD`
+    ///
+    /// *IME authors: If you do not recognize the variation, normal should be assumed.*
+    Number = 2,
+
+    ///  Class for a phone number.
+    ///
+    /// This class currently supports no variations or flags.
+    Phone = 3,
+
+    ///  Class for dates and times.
+    ///
+    /// It supports the following variations:
+    /// - TYPE_DATETIME_VARIATION_NORMAL
+    /// - TYPE_DATETIME_VARIATION_DATE
+    /// - TYPE_DATETIME_VARIATION_TIME
+    DateTime = 4,
+
+    #[doc(hidden)]
+    #[num_enum(catch_all)]
+    __Unknown(u32),
+}
+
+bitflags! {
+    /// Flags specifying the content type of text being input.
+    ///
+    /// Corresponds to the Android SDK [InputType](https://developer.android.com/reference/android/text/InputType) API
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+    pub struct InputType: u32 {
+        ///  Mask of bits that determine the overall class of text being given. Currently
+        ///  supported classes are: TYPE_CLASS_TEXT, TYPE_CLASS_NUMBER, TYPE_CLASS_PHONE,
+        ///  TYPE_CLASS_DATETIME. IME authors: If the class is not one you understand, assume
+        ///  TYPE_CLASS_TEXT with NO variation or flags.
+        const TYPE_MASK_CLASS = 0x0000000f;
+
+        ///  Mask of bits that determine the variation of the base content class.
+        const TYPE_MASK_VARIATION = 0x00000ff0;
+
+        ///  Mask of bits that provide addition bit flags of options.
+        const TYPE_MASK_FLAGS = 0x00fff000;
+
+        ///  Special content type for when no explicit type has been specified. This should be
+        ///  interpreted to mean that the target input connection is not rich, it can not process
+        ///  and show things like candidate text nor retrieve the current text, so the input
+        ///  method will need to run in a limited "generate key events" mode, if it supports
+        ///  it. Note that some input methods may not support it, for example a voice-based
+        ///  input method will likely not be able to generate key events even if this flag is
+        ///  set.
+        const TYPE_NULL = 0;
+
+        ///  Class for normal text. This class supports the following flags (only one of which
+        ///  should be set): TYPE_TEXT_FLAG_CAP_CHARACTERS, TYPE_TEXT_FLAG_CAP_WORDS, and.
+        ///  TYPE_TEXT_FLAG_CAP_SENTENCES.  It also supports the following variations:
+        ///  TYPE_TEXT_VARIATION_NORMAL, and TYPE_TEXT_VARIATION_URI. If you do not recognize the
+        ///  variation, normal should be assumed.
+        const TYPE_CLASS_TEXT = 1;
+
+        ///  Flag for TYPE_CLASS_TEXT: capitalize all characters.  Overrides
+        ///  #TYPE_TEXT_FLAG_CAP_WORDS} and  #TYPE_TEXT_FLAG_CAP_SENTENCES}.  This value is
+        ///  explicitly defined to be the same as  TextUtils#CAP_MODE_CHARACTERS}. Of
+        ///  course, this only affects languages where there are upper-case and lower-case
+        ///  letters.
+        const TYPE_TEXT_FLAG_CAP_CHARACTERS = 0x00001000;
+
+        ///  Flag for TYPE_CLASS_TEXT: capitalize the first character of every word.
+        ///  Overrides TYPE_TEXT_FLAG_CAP_SENTENCES.  This value is explicitly defined
+        ///  to be the same as TextUtils#CAP_MODE_WORDS. Of course, this only affects
+        ///  languages where there are upper-case and lower-case letters.
+        const TYPE_TEXT_FLAG_CAP_WORDS = 0x00002000;
+
+        ///  Flag for TYPE_CLASS_TEXT: capitalize the first character of each sentence.  This value
+        ///  is explicitly defined to be the same as TextUtils#CAP_MODE_SENTENCES. For example in
+        ///  English it means to capitalize after a period and a space (note that other languages
+        ///  may have different characters for period, or not use spaces, or use different
+        ///  grammatical rules). Of course, this only affects languages where there are upper-case
+        ///  and lower-case letters.
+        const TYPE_TEXT_FLAG_CAP_SENTENCES = 0x00004000;
+
+        ///  Flag for TYPE_CLASS_TEXT: the user is entering free-form text that should have
+        ///  auto-correction applied to it. Without this flag, the IME will not try to correct
+        ///  typos. You should always set this flag unless you really expect users to type
+        ///  non-words in this field, for example to choose a name for a character in a game.
+        ///  Contrast this with  TYPE_TEXT_FLAG_AUTO_COMPLETE and TYPE_TEXT_FLAG_NO_SUGGESTIONS:
+        ///  TYPE_TEXT_FLAG_AUTO_CORRECT means that the IME will try to auto-correct typos as the
+        ///  user is typing, but does not define whether the IME offers an interface to show
+        ///  suggestions.
+        const TYPE_TEXT_FLAG_AUTO_CORRECT = 0x00008000;
+
+        ///  Flag for TYPE_CLASS_TEXT: the text editor (which means the application) is performing
+        ///  auto-completion of the text being entered based on its own semantics, which it will
+        ///  present to the user as they type. This generally means that the input method should
+        ///  not be showing candidates itself, but can expect the editor to supply its own
+        ///  completions/candidates from
+        ///  android.view.inputmethod.InputMethodSession#displayCompletions
+        ///  InputMethodSession.displayCompletions()} as a result of the editor calling
+        ///  android.view.inputmethod.InputMethodManager#displayCompletions
+        ///  InputMethodManager.displayCompletions()}. Note the contrast with
+        ///  TYPE_TEXT_FLAG_AUTO_CORRECT and  TYPE_TEXT_FLAG_NO_SUGGESTIONS:
+        ///  TYPE_TEXT_FLAG_AUTO_COMPLETE means the editor should show an interface for displaying
+        ///  suggestions, but instead of supplying its own it will rely on the Editor to pass
+        ///  completions/corrections.
+        const TYPE_TEXT_FLAG_AUTO_COMPLETE = 0x00010000;
+
+        ///  Flag for TYPE_CLASS_TEXT: multiple lines of text can be entered into the
+        ///  field.  If this flag is not set, the text field will be constrained to a single
+        ///  line. The IME may also choose not to display an enter key when this flag is not set,
+        ///  as there should be no need to create new lines.
+        const TYPE_TEXT_FLAG_MULTI_LINE = 0x00020000;
+
+        ///  Flag for TYPE_CLASS_TEXT: the regular text view associated with this should
+        ///  not be multi-line, but when a fullscreen input method is providing text it should
+        ///  use multiple lines if it can.
+        const TYPE_TEXT_FLAG_IME_MULTI_LINE = 0x00040000;
+
+        ///  Flag for TYPE_CLASS_TEXT: the input method does not need to display any
+        ///  dictionary-based candidates. This is useful for text views that do not contain words
+        ///  from the language and do not benefit from any dictionary-based completions or
+        ///  corrections. It overrides the TYPE_TEXT_FLAG_AUTO_CORRECT value when set.  Please
+        ///  avoid using this unless you are certain this is what you want. Many input methods need
+        ///  suggestions to work well, for example the ones based on gesture typing.  Consider
+        ///  clearing TYPE_TEXT_FLAG_AUTO_CORRECT instead if you just do not want the IME to
+        ///  correct typos. Note the contrast with TYPE_TEXT_FLAG_AUTO_CORRECT and
+        ///  TYPE_TEXT_FLAG_AUTO_COMPLETE: TYPE_TEXT_FLAG_NO_SUGGESTIONS means the IME does not
+        ///  need to show an interface to display suggestions. Most IMEs will also take this to
+        ///  mean they do not need to try to auto-correct what the user is typing.
+        const TYPE_TEXT_FLAG_NO_SUGGESTIONS = 0x00080000;
+
+        ///  Flag for TYPE_CLASS_TEXT: Let the IME know the text conversion suggestions are
+        ///  required by the application. Text conversion suggestion is for the transliteration
+        ///  languages which has pronunciation characters and target characters.  When the user is
+        ///  typing the pronunciation charactes, the IME could provide the possible target
+        ///  characters to the user. When this flag is set, the IME should insert the text
+        ///  conversion suggestions through  Builder#setTextConversionSuggestions(List)} and the
+        ///  TextAttribute} with initialized with the text conversion suggestions is provided by
+        ///  the IME to the application. To receive the additional information, the application
+        ///  needs to implement  InputConnection#setComposingText(CharSequence, int,
+        ///  TextAttribute)},  InputConnection#setComposingRegion(int, int, TextAttribute)}, and
+        ///  InputConnection#commitText(CharSequence, int, TextAttribute)}.
+        const TYPE_TEXT_FLAG_ENABLE_TEXT_CONVERSION_SUGGESTIONS = 0x00100000;
+
+        /// Flag for TYPE_CLASS_TEXT: Let the IME know that conversion candidate selection
+        /// information is requested by the application. Text conversion suggestion is for the
+        /// transliteration languages, which have the notions of pronunciation and target
+        /// characters. When the user actively selects a candidate from the conversion suggestions,
+        /// notifying when candidate selection is occurring helps assistive technologies generate
+        /// more effective feedback. When this flag is set, and there is an active selected
+        /// suggestion, the IME should set that a conversion suggestion is selected when
+        /// initializing the TextAttribute. To receive this information, the application should
+        /// implement InputConnection.setComposingText(CharSequence, int, TextAttribute),
+        /// InputConnection.setComposingRegion(int, int, TextAttribute), and
+        /// InputConnection.commitText(CharSequence, int, TextAttribute)
+        const TYPE_TEXT_FLAG_ENABLE_TEXT_SUGGESTION_SELECTED = 0x00200000;
+
+        ///  Default variation of TYPE_CLASS_TEXT: plain old normal text.
+        const TYPE_TEXT_VARIATION_NORMAL = 0;
+        ///  Variation of TYPE_CLASS_TEXT: entering a URI.
+        const TYPE_TEXT_VARIATION_URI = 0x00000010;
+        ///  Variation of TYPE_CLASS_TEXT: entering an e-mail address.
+        const TYPE_TEXT_VARIATION_EMAIL_ADDRESS = 0x00000020;
+        ///  Variation of TYPE_CLASS_TEXT: entering the subject line of an e-mail.
+        const TYPE_TEXT_VARIATION_EMAIL_SUBJECT = 0x00000030;
+        ///  Variation of TYPE_CLASS_TEXT: entering a short, possibly informal message such as an instant message or a text message.
+        const TYPE_TEXT_VARIATION_SHORT_MESSAGE = 64;
+        ///  Variation of TYPE_CLASS_TEXT: entering the content of a long, possibly formal message such as the body of an e-mail.
+        const TYPE_TEXT_VARIATION_LONG_MESSAGE = 0x00000050;
+        ///  Variation of TYPE_CLASS_TEXT: entering the name of a person.
+        const TYPE_TEXT_VARIATION_PERSON_NAME = 0x00000060;
+        ///  Variation of TYPE_CLASS_TEXT: entering a postal mailing address.
+        const TYPE_TEXT_VARIATION_POSTAL_ADDRESS = 0x00000070;
+        ///  Variation of TYPE_CLASS_TEXT: entering a password.
+        const TYPE_TEXT_VARIATION_PASSWORD = 0x00000080;
+        ///  Variation of TYPE_CLASS_TEXT: entering a password, which should be visible to the user.
+        const TYPE_TEXT_VARIATION_VISIBLE_PASSWORD = 0x00000090;
+        ///  Variation of TYPE_CLASS_TEXT: entering text inside of a web form.
+        const TYPE_TEXT_VARIATION_WEB_EDIT_TEXT = 0x000000a0;
+        ///  Variation of TYPE_CLASS_TEXT: entering text to filter contents of a list etc.
+        const TYPE_TEXT_VARIATION_FILTER = 0x000000b0;
+        ///  Variation of TYPE_CLASS_TEXT: entering text for phonetic pronunciation, such as a
+        ///  phonetic name field in contacts. This is mostly useful for languages where one
+        ///  spelling may have several phonetic readings, like Japanese.
+        const TYPE_TEXT_VARIATION_PHONETIC = 0x000000c0;
+        ///  Variation of TYPE_CLASS_TEXT: entering e-mail address inside of a web form.  This
+        ///  was added in  android.os.Build.VERSION_CODES#HONEYCOMB}.  An IME must target this API
+        ///  version or later to see this input type; if it doesn't, a request for this type will
+        ///  be seen as  #TYPE_TEXT_VARIATION_EMAIL_ADDRESS} when passed through
+        ///  android.view.inputmethod.EditorInfo#makeCompatible(int)
+        ///  EditorInfo.makeCompatible(int)}.
+        const TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS = 0x000000d0;
+        ///  Variation of TYPE_CLASS_TEXT: entering password inside of a web form.  This was
+        ///  added in  android.os.Build.VERSION_CODES#HONEYCOMB}.  An IME must target this API
+        ///  version or later to see this input type; if it doesn't, a request for this type will
+        ///  be seen as  #TYPE_TEXT_VARIATION_PASSWORD} when passed through
+        ///  android.view.inputmethod.EditorInfo#makeCompatible(int)
+        ///  EditorInfo.makeCompatible(int)}.
+        const TYPE_TEXT_VARIATION_WEB_PASSWORD = 0x000000e0;
+        ///  Class for numeric text.  This class supports the following flags:
+        ///  #TYPE_NUMBER_FLAG_SIGNED} and  #TYPE_NUMBER_FLAG_DECIMAL}.  It also supports the
+        ///  following variations:  #TYPE_NUMBER_VARIATION_NORMAL} and
+        ///  #TYPE_NUMBER_VARIATION_PASSWORD}. <p>IME authors: If you do not recognize the
+        ///  variation, normal should be assumed.</p>
+        const TYPE_CLASS_NUMBER = 2;
+        ///  Flag of TYPE_CLASS_NUMBER: the number is signed, allowing a positive or negative
+        ///  sign at the start.
+        const TYPE_NUMBER_FLAG_SIGNED = 0x00001000;
+        ///  Flag of TYPE_CLASS_NUMBER: the number is decimal, allowing a decimal point to
+        ///  provide fractional values.
+        const TYPE_NUMBER_FLAG_DECIMAL = 0x00002000;
+        ///  Default variation of TYPE_CLASS_NUMBER: plain normal numeric text.  This was added
+        ///  in  android.os.Build.VERSION_CODES#HONEYCOMB}.  An IME must target this API version or
+        ///  later to see this input type; if it doesn't, a request for this type will be dropped
+        ///  when passed through  android.view.inputmethod.EditorInfo#makeCompatible(int)
+        ///  EditorInfo.makeCompatible(int)}.
+        const TYPE_NUMBER_VARIATION_NORMAL = 0;
+        ///  Variation of TYPE_CLASS_NUMBER: entering a numeric password. This was added in
+        ///  android.os.Build.VERSION_CODES#HONEYCOMB}.  An IME must target this API version or
+        ///  later to see this input type; if it doesn't, a request for this type will be dropped
+        ///  when passed through  android.view.inputmethod.EditorInfo#makeCompatible(int)
+        ///  EditorInfo.makeCompatible(int)}.
+        const TYPE_NUMBER_VARIATION_PASSWORD = 0x00000010;
+        ///  Class for a phone number.  This class currently supports no variations or flags.
+        const TYPE_CLASS_PHONE = 3;
+        ///  Class for dates and times.  It supports the following variations:
+        ///  #TYPE_DATETIME_VARIATION_NORMAL}  #TYPE_DATETIME_VARIATION_DATE}, and
+        ///  #TYPE_DATETIME_VARIATION_TIME}.
+        const TYPE_CLASS_DATETIME = 4;
+        ///  Default variation of  #TYPE_CLASS_DATETIME}: allows entering both a date and time.
+        const TYPE_DATETIME_VARIATION_NORMAL = 0;
+        ///  Default variation of  #TYPE_CLASS_DATETIME}: allows entering only a date.
+        const TYPE_DATETIME_VARIATION_DATE = 16;
+        ///  Default variation of  #TYPE_CLASS_DATETIME}: allows entering only a time.
+        const TYPE_DATETIME_VARIATION_TIME = 32;
+
+    }
+}
+
+impl InputType {
+    /// Extract just the class of the input type.
+    pub fn class(&self) -> InputTypeClass {
+        let class = self.bits() & InputType::TYPE_MASK_CLASS.bits();
+        InputTypeClass::from(class)
+    }
+}
+
 /// An exclusive, lending iterator for input events
 pub struct InputIterator<'a> {
     pub(crate) inner: crate::activity_impl::InputIteratorInner<'a>,
 }
 
-impl<'a> InputIterator<'a> {
+impl InputIterator<'_> {
     /// Reads and handles the next input event by passing it to the given `callback`
     ///
     /// `callback` should return [`InputStatus::Unhandled`] for any input events that aren't directly
@@ -932,7 +1343,7 @@ pub struct Pointer<'a> {
     pub(crate) inner: PointerImpl<'a>,
 }
 
-impl<'a> Pointer<'a> {
+impl Pointer<'_> {
     #[inline]
     pub fn pointer_index(&self) -> usize {
         self.inner.pointer_index()
@@ -1007,6 +1418,20 @@ impl<'a> Pointer<'a> {
     pub fn tool_type(&self) -> ToolType {
         self.inner.tool_type()
     }
+
+    /// Gives access to the historical data of a pointer in a [`MotionEvent`].
+    ///
+    /// This provides access to higher-frequency data points that were recorded
+    /// between the current event and the previous event, which can be used for
+    /// more accurate gesture detection and smoother animations.
+    ///
+    /// For a single [`MotionEvent`] each pointer will have the same number of
+    /// historical events, and the corresponding historical events will have the
+    /// same timestamps.
+    #[inline]
+    pub fn history(&self) -> PointerHistoryIter<'_> {
+        self.inner.history()
+    }
 }
 
 /// An iterator over the pointers in a [`MotionEvent`].
@@ -1026,8 +1451,108 @@ impl<'a> Iterator for PointersIter<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for PointersIter<'a> {
-    fn len(&self) -> usize {
-        self.inner.len()
+impl ExactSizeIterator for PointersIter<'_> {}
+
+/// An iterator over the historical data of a pointer in a [`MotionEvent`].
+///
+/// This provides access to higher-frequency data points that were recorded
+/// between the current event and the previous event, which can be used for more
+/// accurate gesture detection and smoother animations.
+///
+/// For a single [`MotionEvent`] each pointer will have the same number of
+/// historical events, and the corresponding historical events will have the
+/// same timestamps.
+///
+#[derive(Debug)]
+pub struct PointerHistoryIter<'a> {
+    pub(crate) inner: PointerHistoryIterImpl<'a>,
+}
+
+impl<'a> Iterator for PointerHistoryIter<'a> {
+    type Item = HistoricalPointer<'a>;
+    fn next(&mut self) -> Option<HistoricalPointer<'a>> {
+        self.inner.next()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+impl<'a> DoubleEndedIterator for PointerHistoryIter<'a> {
+    fn next_back(&mut self) -> Option<HistoricalPointer<'a>> {
+        self.inner.next_back()
+    }
+}
+impl ExactSizeIterator for PointerHistoryIter<'_> {}
+impl FusedIterator for PointerHistoryIter<'_> {}
+
+pub struct HistoricalPointer<'a> {
+    pub(crate) inner: HistoricalPointerImpl<'a>,
+}
+
+impl HistoricalPointer<'_> {
+    #[inline]
+    pub fn history_index(&self) -> usize {
+        self.inner.history_index()
+    }
+
+    #[inline]
+    pub fn pointer_index(&self) -> usize {
+        self.inner.pointer_index()
+    }
+
+    #[inline]
+    pub fn event_time(&self) -> i64 {
+        self.inner.event_time()
+    }
+
+    #[inline]
+    pub fn axis_value(&self, axis: Axis) -> f32 {
+        self.inner.axis_value(axis)
+    }
+
+    #[inline]
+    pub fn orientation(&self) -> f32 {
+        self.axis_value(Axis::Orientation)
+    }
+
+    #[inline]
+    pub fn pressure(&self) -> f32 {
+        self.axis_value(Axis::Pressure)
+    }
+
+    #[inline]
+    pub fn x(&self) -> f32 {
+        self.axis_value(Axis::X)
+    }
+
+    #[inline]
+    pub fn y(&self) -> f32 {
+        self.axis_value(Axis::Y)
+    }
+
+    #[inline]
+    pub fn size(&self) -> f32 {
+        self.axis_value(Axis::Size)
+    }
+
+    #[inline]
+    pub fn tool_major(&self) -> f32 {
+        self.axis_value(Axis::ToolMajor)
+    }
+
+    #[inline]
+    pub fn tool_minor(&self) -> f32 {
+        self.axis_value(Axis::ToolMinor)
+    }
+
+    #[inline]
+    pub fn touch_major(&self) -> f32 {
+        self.axis_value(Axis::TouchMajor)
+    }
+
+    #[inline]
+    pub fn touch_minor(&self) -> f32 {
+        self.axis_value(Axis::TouchMinor)
     }
 }

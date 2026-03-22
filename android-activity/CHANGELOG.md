@@ -6,6 +6,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- input: `TextInputAction` enum representing action button types on soft keyboards. ([#216](https://github.com/rust-mobile/android-activity/pull/216))
+- input: `InputEvent::TextAction` event for handling action button presses from soft keyboards. ([#216](https://github.com/rust-mobile/android-activity/pull/216))
+- The `ndk` and `ndk-sys` crates are now re-exported under `android_activity::ndk` and `android_activity::ndk_sys` ([#194](https://github.com/rust-mobile/android-activity/pull/194))
+- `AndroidApp::java_main_looper()` gives access to the `ALooper` for the Java main / UI thread ([#198](https://github.com/rust-mobile/android-activity/pull/198))
+- `AndroidApp::run_on_java_main_thread()` can be used to run boxed closures on the Java main / UI thread ([#232](https://github.com/rust-mobile/android-activity/pull/232))
+- Support for an optional `android_on_create` entry point that gets called from the `Activity.onCreate()` callback before `android_main()` is called, allowing for doing some setup work on the Java main / UI thread before the `android_main` Rust code starts running.
+
+For example:
+
+```rust
+use std::sync::OnceLock;
+use android_activity::OnCreateState;
+use jni::{JavaVM, refs::Global, objects::JObject};
+
+#[unsafe(no_mangle)]
+fn android_on_create(state: &OnCreateState) {
+    static APP_ONCE: OnceLock<()> = OnceLock::new();
+    APP_ONCE.get_or_init(|| {
+        // Initialize logging...
+        //
+        // Remember, `android_on_create` may be called multiple times but some
+        // logger crates will panic if initialized multiple times.
+    });
+    let vm = unsafe { JavaVM::from_raw(state.vm_as_ptr().cast()) };
+    let activity = state.activity_as_ptr() as jni::sys::jobject;
+    // Although the thread is implicitly already attached (we are inside an onCreate native method)
+    // using `vm.attach_current_thread` here will use the existing attachment, give us an `&Env`
+    // reference and also catch Java exceptions.
+    if let Err(err) = vm.attach_current_thread(|env| -> jni::errors::Result<()> {
+        // SAFETY:
+        // - The `Activity` reference / pointer is at least valid until we return
+        // - By creating a `Cast` we ensure we can't accidentally delete the reference
+        let activity = unsafe { env.as_cast_raw::<JObject>(&activity)? };
+
+        // Do something with the activity on the Java main thread...
+        Ok(())
+    }) {
+       eprintln!("Failed to interact with Android SDK on Java main thread: {err:?}");
+    }
+}
+```
+
+- Support for `MotionEvent` history, providing higher fidelity input data for things like stylus input (`native-activity` + `game-activity` backends). ([#218](https://github.com/rust-mobile/android-activity/pull/218))
+
+
+### Changed
+
+- rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), [#219](https://github.com/rust-mobile/android-activity/pull/219))
+- GameActivity updated to 4.4.0 ([#191](https://github.com/rust-mobile/android-activity/pull/191), [#240](https://github.com/rust-mobile/android-activity/pull/240))
+
+**Important:** This release is no longer compatible with GameActivity 2.0.2
+
+**Android Packaging:** Your Android application must be packaged with the corresponding androidX, GameActivity 4.x.x library from Google.
+
+This release has been tested with the [`androidx.games:games-activity:4.4.0` stable
+release](https://developer.android.com/jetpack/androidx/releases/games#games-activity-4.4.0), and is backwards
+compatible with the 4.0.0 stable release.
+
+If you use Gradle to build your Android application, you can depend on the 4.4.0 release of the GameActivity library via:
+
+```gradle
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+
+    // To use the Games Activity library
+    implementation "androidx.games:games-activity:4.4.0"
+    // Note: don't include game-text-input separately, since it's integrated into game-activity
+}
+```
+
+Note: there is no guarantee that later 4.x.x releases of GameActivity will be compatible with this release of
+`android-activity`, so please refer to the `android-activity` release notes for any future updates regarding
+GameActivity compatibility.
+
+### Fixed
+
+- *Safety* `AndroidApp::asset_manager()` returns an `AssetManager` that has a safe `'static` lifetime that's not invalidated when `android_main()` returns ([#233](https://github.com/rust-mobile/android-activity/pull/233))
+- *Safety* The `native-activity` backend clears its `ANativeActivity` ptr after `onDestroy` and `AndroidApp` remains safe to access after `android_main()` returns ([#234](https://github.com/rust-mobile/android-activity/pull/234))
+- *Safety* `AndroidApp::activity_as_ptr()` returns a pointer to a global reference that remains valid until `AndroidApp` is dropped, instead of the `ANativeActivity`'s `clazz` pointer which is only guaranteed to be valid until `onDestroy` returns (`native-activity` backend) ([#234](https://github.com/rust-mobile/android-activity/pull/234))
+- *Safety* The `game-activity` backend clears its `android_app` ptr after `onDestroy` and `AndroidApp` remains safe to access after `android_main()` returns ([#236](https://github.com/rust-mobile/android-activity/pull/236))
+- Support for `AndroidApp::show/hide_soft_input()` APIs in the `native-activity` backend ([#178](https://github.com/rust-mobile/android-activity/pull/178))
+
 ## [0.6.0] - 2024-04-26
 
 ### Changed
@@ -25,32 +109,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Avoids depending on default features for `ndk` crate to avoid pulling in any `raw-window-handle` dependencies ([#142](https://github.com/rust-mobile/android-activity/pull/142))
 
-    **Note:** Technically, this could be observed as a breaking change in case you
-    were depending on the `rwh_06` feature that was enabled by default in the
-    `ndk` crate. This could be observed via the `NativeWindow` type (exposed via
-    `AndroidApp::native_window()`) no longer implementing `rwh_06::HasWindowHandle`.
+  **Note:** Technically, this could be observed as a breaking change in case you
+  were depending on the `rwh_06` feature that was enabled by default in the
+  `ndk` crate. This could be observed via the `NativeWindow` type (exposed via
+  `AndroidApp::native_window()`) no longer implementing `rwh_06::HasWindowHandle`.
 
-    In the unlikely case that you were depending on the `ndk`'s `rwh_06` API
-    being enabled by default via `android-activity`'s `ndk` dependency, your crate
-    should explicitly enable the `rwh_06` feature for the `ndk` crate.
+  In the unlikely case that you were depending on the `ndk`'s `rwh_06` API
+  being enabled by default via `android-activity`'s `ndk` dependency, your crate
+  should explicitly enable the `rwh_06` feature for the `ndk` crate.
 
-    As far as could be seen though, it's not expected that anything was
-    depending on this (e.g. anything based on Winit enables the `ndk` feature
-    based on an equivalent `winit` feature).
+  As far as could be seen though, it's not expected that anything was
+  depending on this (e.g. anything based on Winit enables the `ndk` feature
+  based on an equivalent `winit` feature).
 
-    The benefit of the change is that it can help avoid a redundant
-    `raw-window-handle 0.6` dependency in projects that still need to use older
-    (non-default) `raw-window-handle` versions. (Though note that this may be
-    awkward to achieve in practice since other crates that depend on the `ndk`
-    are still likely to use default features and also pull in
-    `raw-window-handles 0.6`)
+  The benefit of the change is that it can help avoid a redundant
+  `raw-window-handle 0.6` dependency in projects that still need to use older
+  (non-default) `raw-window-handle` versions. (Though note that this may be
+  awkward to achieve in practice since other crates that depend on the `ndk`
+  are still likely to use default features and also pull in
+  `raw-window-handles 0.6`)
 
 - The IO thread now gets named `stdio-to-logcat` and main thread is named `android_main` ([#145](https://github.com/rust-mobile/android-activity/pull/145))
 - Improved IO error handling in `stdio-to-logcat` IO loop. ([#133](https://github.com/rust-mobile/android-activity/pull/133))
 
 ## [0.5.0] - 2023-10-16
 ### Added
-- Added `MotionEvent::action_button()` exposing the button associated with button press/release actions ()
+- Added `MotionEvent::action_button()` exposing the button associated with button press/release actions ([#138](https://github.com/rust-mobile/android-activity/pull/138))
 
 ### Changed
 - rust-version bumped to 0.68 ([#123](https://github.com/rust-mobile/android-activity/pull/123))

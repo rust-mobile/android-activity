@@ -3,7 +3,7 @@
 [![ci](https://github.com/rust-mobile/android-activity/actions/workflows/ci.yml/badge.svg)](https://github.com/rust-mobile/android-activity/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/android-activity.svg)](https://crates.io/crates/android-activity)
 [![Docs](https://docs.rs/android-activity/badge.svg)](https://docs.rs/android-activity)
-[![MSRV](https://img.shields.io/badge/rustc-1.68.0+-ab6000.svg)](https://blog.rust-lang.org/2023/03/09/Rust-1.68.0.html)
+[![MSRV](https://img.shields.io/badge/rustc-1.85.0+-ab6000.svg)](https://blog.rust-lang.org/2025/02/20/Rust-1.85.0/)
 
 ## Overview
 
@@ -25,9 +25,9 @@ applications.
 [`Activity`]: https://developer.android.com/reference/android/app/Activity
 [`NativeActivity`]: https://developer.android.com/reference/android/app/NativeActivity
 [ndk_concepts]: https://developer.android.com/ndk/guides/concepts#naa
-[`GameActivity`]: https://developer.android.com/games/agdk/integrate-game-activity
+[`GameActivity`]: https://developer.android.com/games/agdk/game-activity
 [ndk-glue]: https://crates.io/crates/ndk-glue
-[agdk]: https://developer.android.com/games/agdk
+[agdk]: https://developer.android.com/games/agdk/overview
 
 ## Example
 
@@ -37,22 +37,33 @@ Cargo.toml
 [dependencies]
 log = "0.4"
 android_logger = "0.13"
-android-activity = { version = "0.5", features = [ "native-activity" ] }
+android-activity = { version = "0.6", features = [ "native-activity" ] }
 
 [lib]
-crate_type = ["cdylib"]
+crate-type = ["cdylib"]
 ```
 
-_Note: that you will need to either specify the **"native-activity"** feature or **"game-activity"** feature to identify which `Activity` base class your application is based on_
+_Note: that you will need to either specify the **"native-activity"** feature or
+**"game-activity"** feature to identify which `Activity` base class your
+application is based on_
 
 lib.rs
 
 ```rust
 use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
+
+    // `android_main` is tied to your `Activity` lifecycle, not your application lifecycle
+    // and so it may be called multiple times if your activity is destroyed and recreated.
+    //
+    // Use a `OnceLock` or similar to ensure that you don't attempt to initialize global state
+    // multiple times.
+    static APP_ONCE: OnceLock<()> = OnceLock::new();
+    APP_ONCE.get_or_init(|| {
+        android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
+    });
 
     loop {
         app.poll_events(Some(std::time::Duration::from_millis(500)) /* timeout */, |event| {
@@ -62,6 +73,11 @@ fn android_main(app: AndroidApp) {
                 PollEvent::Main(main_event) => {
                     log::info!("Main event: {:?}", main_event);
                     match main_event {
+                        // Once you receive a `Destroy` event, your `AndroidApp` will no longer
+                        // be associated with any `Activity` and it's methods will effectively be no-ops.
+                        //
+                        // You should return from `android_main` and if your `Activity` gets recreated then
+                        // a new `AndroidApp` will be passsed to a new invocation of `android_main`.
                         MainEvent::Destroy => { return; }
                         _ => {}
                     }
@@ -83,6 +99,36 @@ rustup target add aarch64-linux-android
 cargo install cargo-apk
 cargo apk run
 adb logcat example:V *:S
+```
+
+## Optional `android_on_create` entry point
+
+`android-activity` also supports an optional `android_on_create` entry point that gets called from the
+`Activity.onCreate()` callback before `android_main()` is called, allowing for doing some setup work on the Java main
+thread before the main Rust code starts running.
+
+For example:
+
+```rust
+use std::sync::OnceLock;
+use jni::{JavaVM, objects::JObject};
+
+#[unsafe(no_mangle)]
+fn android_on_create(state: &android_activity::OnCreateState) {
+
+    // `android_on_create` is tied to your `Activity` lifecycle, not your application lifecycle
+    // and so it may be called multiple times if your activity is destroyed and recreated.
+    //
+    // Use a `OnceLock` or similar to ensure that you don't attempt to initialize global state
+    // multiple times.
+    static APP_ONCE: OnceLock<()> = OnceLock::new();
+    APP_ONCE.get_or_init(|| {
+        // Initialize logging...
+    });
+    let vm = unsafe { JavaVM::from_raw(state.vm_as_ptr().cast()) };
+    let activity = state.activity_as_ptr() as jni::sys::jobject;
+    // Do some other setup work on the Java main thread before `android_main` starts running
+}
 ```
 
 ## Full Examples
@@ -111,9 +157,9 @@ Even if you start out using `NativeActivity` for the convenience, it's likely th
 
 Firstly; if you have a [Winit](https://crates.io/crates/winit) based application and also have an explicit dependency on `ndk-glue` your application will need to remove its dependency on `ndk-glue` for the 0.28 release of Winit which will be based on android-activity (Since glue crates, due to their nature, can't be compatible with alternative glue crates).
 
-Winit-based applications can follow the [Android README](https://github.com/rust-windowing/winit#android) guidance for advice on how to switch over. Most Winit-based applications should aim to remove any explicit dependency on a specific glue crate (so not depend directly on `ndk-glue` or `android-activity` and instead rely on Winit to pull in the right glue crate). The main practical change will then be to add a `#[no_mangle]fn android_main(app: AndroidApp)` entry point.
+Winit-based applications can follow the [Android documentation](https://docs.rs/winit/latest/winit/platform/android/index.html) guidance for advice on how to switch over. Most Winit-based applications should aim to remove any explicit dependency on a specific glue crate (so not depend directly on `ndk-glue` or `android-activity` and instead rely on Winit to pull in the right glue crate). The main practical change will then be to add a `#[unsafe(no_mangle)]fn android_main(app: AndroidApp)` entry point.
 
-See the [Android README](https://github.com/rust-windowing/winit#android) for more details and also see the [Winit-based examples here](https://github.com/rust-mobile/rust-android-examples).
+See the [Android documentation](https://docs.rs/winit/latest/winit/platform/android/index.html) for more details and also see the [Winit-based examples here](https://github.com/rust-mobile/rust-android-examples).
 
 ### Middleware crates (i.e. not applications)
 
@@ -126,7 +172,7 @@ Middleware libraries can instead look at using the [ndk-context](https://crates.
 The steps to switch a simple standalone application over from `ndk-glue` to `android-activity` (still based on `NativeActivity`) should be:
 
 1. Remove `ndk-glue` from your Cargo.toml
-2. Add a dependency on `android-activity`, like `android-activity = { version="0.5", features = [ "native-activity" ] }`
+2. Add a dependency on `android-activity`, like `android-activity = { version="0.6", features = [ "native-activity" ] }`
 3. Optionally add a dependency on `android_logger = "0.13.0"`
 4. Update the `main` entry point to look like this:
 

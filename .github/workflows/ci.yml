@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: '*'
+    branches: "*"
   pull_request:
 
 env:
@@ -17,9 +17,23 @@ jobs:
       fail-fast: false
       matrix:
         # See top README for MSRV policy
-        rust-version: [1.69.0, stable]
+        rust-version: [1.85.0, stable]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
+      # Downgrade all dependencies to their minimum version, both to ensure our
+      # minimum version bounds are correct and buildable, as well as to satisfy
+      # our MSRV check when arbitrary dependencies bump their MSRV beyond our
+      # MSRV in a patch-release.
+      # This implies that downstream consumers can only rely on our MSRV when
+      # downgrading various (transitive) dependencies.
+      - uses: hecrj/setup-rust-action@v2
+        with:
+          rust-version: nightly
+        if: ${{ matrix.rust-version != 'stable' }}
+      - name: Downgrade dependencies
+        run: cargo +nightly generate-lockfile -Zminimal-versions
+        if: ${{ matrix.rust-version != 'stable' }}
 
       - uses: hecrj/setup-rust-action@v2
         with:
@@ -82,17 +96,20 @@ jobs:
         run: >
           cargo ndk -t arm64-v8a doc --no-deps
 
+      - name: Build doctests
+        # All doctests are set to no_run, because they require running in the
+        # context of an Android app.
+        # Only run on stable because cross-compiling doctests is only supported
+        # since Rust 1.89.
+        if: ${{ matrix.rust-version == 'stable' }}
+        run: |
+          cargo test --doc -F native-activity --target aarch64-linux-android
+          cargo ndk -t arm64-v8a -- test --doc -F game-activity
+
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt
+      - uses: actions/checkout@v6
 
       - name: Format
         run: cargo fmt --all -- --check

@@ -31,26 +31,43 @@
 #include <android/input.h>
 #include <android/native_window.h>
 #include <android/rect.h>
+#include <common/gamesdk_common.h>
+#include <game-activity/GameActivityEvents.h>
+#include <game-text-input/gametextinput.h>
 #include <jni.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
 
-#include "common/gamesdk_common.h"
-#include "game-activity/GameActivityEvents.h"
-#include "game-text-input/gametextinput.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define GAMEACTIVITY_MAJOR_VERSION 2
-#define GAMEACTIVITY_MINOR_VERSION 0
-#define GAMEACTIVITY_BUGFIX_VERSION 2
-#define GAMEACTIVITY_PACKED_VERSION                            \
-    ANDROID_GAMESDK_PACKED_VERSION(GAMEACTIVITY_MAJOR_VERSION, \
-                                   GAMEACTIVITY_MINOR_VERSION, \
+#define GAMEACTIVITY_VERSION_REVISION a0e943c3a84fd7f344c3d36cdf4e88fd595f81b8
+#define GAMEACTIVITY_MAJOR_VERSION 4
+#define GAMEACTIVITY_MINOR_VERSION 4
+#define GAMEACTIVITY_BUGFIX_VERSION 0
+#define GAMEACTIVITY_PACKED_VERSION                                                        \
+    ANDROID_GAMESDK_PACKED_VERSION(GAMEACTIVITY_MAJOR_VERSION, GAMEACTIVITY_MINOR_VERSION, \
                                    GAMEACTIVITY_BUGFIX_VERSION)
+
+/**
+ * The type of a component for which to retrieve insets. See
+ * https://developer.android.com/reference/androidx/core/view/WindowInsetsCompat.Type
+ */
+typedef enum GameCommonInsetsType : uint8_t {
+    GAMECOMMON_INSETS_TYPE_CAPTION_BAR = 0,
+    GAMECOMMON_INSETS_TYPE_DISPLAY_CUTOUT,
+    GAMECOMMON_INSETS_TYPE_IME,
+    GAMECOMMON_INSETS_TYPE_MANDATORY_SYSTEM_GESTURES,
+    GAMECOMMON_INSETS_TYPE_NAVIGATION_BARS,
+    GAMECOMMON_INSETS_TYPE_STATUS_BARS,
+    GAMECOMMON_INSETS_TYPE_SYSTEM_BARS,
+    GAMECOMMON_INSETS_TYPE_SYSTEM_GESTURES,
+    GAMECOMMON_INSETS_TYPE_TAPABLE_ELEMENT,
+    GAMECOMMON_INSETS_TYPE_WATERFALL,
+    GAMECOMMON_INSETS_TYPE_COUNT
+} GameCommonInsetsType;
 
 /**
  * {@link GameActivityCallbacks}
@@ -129,8 +146,7 @@ typedef struct GameActivity {
  * A function the user should call from their callback with the data, its length
  * and the library- supplied context.
  */
-typedef void (*SaveInstanceStateRecallback)(const char* bytes, int len,
-                                            void* context);
+typedef void (*SaveInstanceStateRecallback)(const char* bytes, int len, void* context);
 
 /**
  * These are the callbacks the framework makes into a native application.
@@ -159,8 +175,7 @@ typedef struct GameActivityCallbacks {
      * that the saved state will be persisted, so it can not contain any active
      * entities (pointers to memory, file descriptors, etc).
      */
-    void (*onSaveInstanceState)(GameActivity* activity,
-                                SaveInstanceStateRecallback recallback,
+    void (*onSaveInstanceState)(GameActivity* activity, SaveInstanceStateRecallback recallback,
                                 void* context);
 
     /**
@@ -191,16 +206,15 @@ typedef struct GameActivityCallbacks {
      * The drawing window for this native activity has been created.  You
      * can use the given native window object to start drawing.
      */
-    void (*onNativeWindowCreated)(GameActivity* activity,
-                                  ANativeWindow* window);
+    void (*onNativeWindowCreated)(GameActivity* activity, ANativeWindow* window);
 
     /**
      * The drawing window for this native activity has been resized.  You should
      * retrieve the new size from the window and ensure that your rendering in
      * it now matches.
      */
-    void (*onNativeWindowResized)(GameActivity* activity, ANativeWindow* window,
-                                  int32_t newWidth, int32_t newHeight);
+    void (*onNativeWindowResized)(GameActivity* activity, ANativeWindow* window, int32_t newWidth,
+                                  int32_t newHeight);
 
     /**
      * The drawing window for this native activity needs to be redrawn.  To
@@ -208,8 +222,7 @@ typedef struct GameActivityCallbacks {
      * rotation), applications should not return from this function until they
      * have finished drawing their window in its current state.
      */
-    void (*onNativeWindowRedrawNeeded)(GameActivity* activity,
-                                       ANativeWindow* window);
+    void (*onNativeWindowRedrawNeeded)(GameActivity* activity, ANativeWindow* window);
 
     /**
      * The drawing window for this native activity is going to be destroyed.
@@ -219,11 +232,10 @@ typedef struct GameActivityCallbacks {
      * properly synchronize with the other thread to stop its drawing before
      * returning from here.
      */
-    void (*onNativeWindowDestroyed)(GameActivity* activity,
-                                    ANativeWindow* window);
+    void (*onNativeWindowDestroyed)(GameActivity* activity, ANativeWindow* window);
 
     /**
-     * The current device AConfiguration has changed.  The new configuration can
+     * The current device AConfiguration has changed. The new configuration can
      * be retrieved from assetManager.
      */
     void (*onConfigurationChanged)(GameActivity* activity);
@@ -240,16 +252,14 @@ typedef struct GameActivityCallbacks {
      * SurfaceView. Ownership of `event` is maintained by the library and it is
      * only valid during the callback.
      */
-    bool (*onTouchEvent)(GameActivity* activity,
-                         const GameActivityMotionEvent* event);
+    bool (*onTouchEvent)(GameActivity* activity, const GameActivityMotionEvent* event);
 
     /**
      * Callback called for every key down event on the GameActivity SurfaceView.
      * Ownership of `event` is maintained by the library and it is only valid
      * during the callback.
      */
-    bool (*onKeyDown)(GameActivity* activity,
-                      const GameActivityKeyEvent* event);
+    bool (*onKeyDown)(GameActivity* activity, const GameActivityKeyEvent* event);
 
     /**
      * Callback called for every key up event on the GameActivity SurfaceView.
@@ -263,8 +273,7 @@ typedef struct GameActivityCallbacks {
      * Ownership of `state` is maintained by the library and it is only valid
      * during the callback.
      */
-    void (*onTextInputEvent)(GameActivity* activity,
-                             const GameTextInputState* state);
+    void (*onTextInputEvent)(GameActivity* activity, const GameTextInputState* state);
 
     /**
      * Callback called when WindowInsets of the main app window have changed.
@@ -276,7 +285,17 @@ typedef struct GameActivityCallbacks {
      * Callback called when the rectangle in the window where the content
      * should be placed has changed.
      */
-    void (*onContentRectChanged)(GameActivity *activity, const ARect *rect);
+    void (*onContentRectChanged)(GameActivity* activity, const ARect* rect);
+
+    /**
+     * Callback called when the software keyboard is shown or hidden.
+     */
+    void (*onSoftwareKeyboardVisibilityChanged)(GameActivity* activity, bool visible);
+
+    /**
+     * Callback called when the software keyboard is shown or hidden.
+     */
+    bool (*onEditorAction)(GameActivity* activity, int action);
 } GameActivityCallbacks;
 
 /**
@@ -296,7 +315,7 @@ typedef void GameActivity_createFunc(GameActivity* activity, void* savedState,
  * "android.app.func_name" string meta-data in your manifest to use a different
  * function.
  */
-extern GameActivity_createFunc GameActivity_onCreate_C;
+extern GameActivity_createFunc GameActivity_onCreate;
 
 /**
  * Finish the given activity.  Its finish() method will be called, causing it
@@ -310,7 +329,7 @@ void GameActivity_finish(GameActivity* activity);
  * Flags for GameActivity_setWindowFlags,
  * as per the Java API at android.view.WindowManager.LayoutParams.
  */
-enum GameActivitySetWindowFlags {
+enum GameActivitySetWindowFlags : uint32_t {
     /**
      * As long as this window is visible to the user, allow the lock
      * screen to activate while the screen is on.  This can be used
@@ -503,14 +522,13 @@ enum GameActivitySetWindowFlags {
  * *any* thread; it will send a message to the main thread of the process
  * where the Java finish call will take place.
  */
-void GameActivity_setWindowFlags(GameActivity* activity, uint32_t addFlags,
-                                 uint32_t removeFlags);
+void GameActivity_setWindowFlags(GameActivity* activity, uint32_t addFlags, uint32_t removeFlags);
 
 /**
  * Flags for GameActivity_showSoftInput; see the Java InputMethodManager
  * API for documentation.
  */
-enum GameActivityShowSoftInputFlags {
+enum GameActivityShowSoftInputFlags : uint8_t {
     /**
      * Implicit request to show the input window, not as the result
      * of a direct request by the user.
@@ -534,21 +552,26 @@ enum GameActivityShowSoftInputFlags {
 void GameActivity_showSoftInput(GameActivity* activity, uint32_t flags);
 
 /**
+ * Restarts the input method. Calls InputMethodManager.restartInput().
+ * Note that this method can be called from *any* thread; it will send a message
+ * to the main thread of the process where the Java call will take place.
+ */
+void GameActivity_restartInput(GameActivity* activity);
+
+/**
  * Set the text entry state (see documentation of the GameTextInputState struct
  * in the Game Text Input library reference).
  *
  * Ownership of the state is maintained by the caller.
  */
-void GameActivity_setTextInputState(GameActivity* activity,
-                                    const GameTextInputState* state);
+void GameActivity_setTextInputState(GameActivity* activity, const GameTextInputState* state);
 
 /**
  * Get the last-received text entry state (see documentation of the
  * GameTextInputState struct in the Game Text Input library reference).
  *
  */
-void GameActivity_getTextInputState(GameActivity* activity,
-                                    GameTextInputGetStateCallback callback,
+void GameActivity_getTextInputState(GameActivity* activity, GameTextInputGetStateCallback callback,
                                     void* context);
 
 /**
@@ -560,7 +583,7 @@ GameTextInput* GameActivity_getTextInput(const GameActivity* activity);
  * Flags for GameActivity_hideSoftInput; see the Java InputMethodManager
  * API for documentation.
  */
-enum GameActivityHideSoftInputFlags {
+enum GameActivityHideSoftInputFlags : uint16_t {
     /**
      * The soft input window should only be hidden if it was not
      * explicitly shown by the user.
@@ -587,8 +610,12 @@ void GameActivity_hideSoftInput(GameActivity* activity, uint32_t flags);
  * for more details.
  * You can use these insets to influence what you show on the screen.
  */
-void GameActivity_getWindowInsets(GameActivity* activity,
-                                  GameCommonInsetsType type, ARect* insets);
+void GameActivity_getWindowInsets(GameActivity* activity, GameCommonInsetsType type, ARect* insets);
+
+/**
+ * Tells whether the software keyboard is visible or not.
+ */
+bool GameActivity_isSoftwareKeyboardVisible(GameActivity* activity);
 
 /**
  * Set options on how the IME behaves when it is requested for text input.
@@ -596,12 +623,11 @@ void GameActivity_getWindowInsets(GameActivity* activity,
  * https://developer.android.com/reference/android/view/inputmethod/EditorInfo
  * for the meaning of inputType, actionId and imeOptions.
  *
- * Note that this function will attach the current thread to the JVM if it is
- * not already attached, so the caller must detach the thread from the JVM
- * before the thread is destroyed using DetachCurrentThread.
+ * <b>Note:</b> currently only TYPE_NULL AND TYPE_CLASS_NUMBER are supported.
  */
-void GameActivity_setImeEditorInfo(GameActivity* activity, int inputType,
-                                   int actionId, int imeOptions);
+void GameActivity_setImeEditorInfo(GameActivity* activity, enum GameTextInputType inputType,
+                                   enum GameTextInputActionType actionId,
+                                   enum GameTextInputImeOptions imeOptions);
 
 /**
  * These are getters for Configuration class members. They may be called from
@@ -615,6 +641,7 @@ int GameActivity_getFontWeightAdjustment(GameActivity* activity);
 int GameActivity_getHardKeyboardHidden(GameActivity* activity);
 int GameActivity_getKeyboard(GameActivity* activity);
 int GameActivity_getKeyboardHidden(GameActivity* activity);
+int GameActivity_getLocalesCount(GameActivity* activity);
 int GameActivity_getMcc(GameActivity* activity);
 int GameActivity_getMnc(GameActivity* activity);
 int GameActivity_getNavigation(GameActivity* activity);
@@ -627,10 +654,46 @@ int GameActivity_getSmallestScreenWidthDp(GameActivity* activity);
 int GameActivity_getTouchscreen(GameActivity* activity);
 int GameActivity_getUIMode(GameActivity* activity);
 
+/**
+ * The functions below return Java locale information.
+ *
+ * In simple cases there will be just one locale, but it's possible tha
+ * there are more than one locale objects. Users are encouraged to write code
+ * that handles all locales and not just the first one.
+ *
+ * The functions in the block below return string values in the provided buffer.
+ * Return value is zero if there were no errors, otherwise it's non-zero.
+ * If the return value is zero, `dst` will contain a null-terminated string:
+ * strlen(dst) <= dst_size - 1.
+ * If the return value is non-zero, the content of dst is undefined.
+ *
+ * Parameters:
+ *
+ * dst, dst_size: define a receiver buffer. Locale string can be something
+ * short like "EN/EN", but it may be longer. You should be safe with a buffer
+ * size of 256 bytes.
+ *
+ * If the buffer is too small, ENOBUFS is returned. Try allocating a larger
+ * buffer in this case.
+ *
+ * localeIdx must be between 0 and the value of GameActivity_getLocalesCount().
+ * If localeIdx is out of range, EINVAL is returned.
+ *
+ * Refer to Java documentation of locales for more information.
+ */
+int GameActivity_getLocaleLanguage(char* dst, size_t dst_size, GameActivity* activity,
+                                   size_t localeIdx);
+int GameActivity_getLocaleScript(char* dst, size_t dst_size, GameActivity* activity,
+                                 size_t localeIdx);
+int GameActivity_getLocaleCountry(char* dst, size_t dst_size, GameActivity* activity,
+                                  size_t localeIdx);
+int GameActivity_getLocaleVariant(char* dst, size_t dst_size, GameActivity* activity,
+                                  size_t localeIdx);
+
 #ifdef __cplusplus
 }
 #endif
 
 /** @} */
 
-#endif  // ANDROID_GAME_SDK_GAME_ACTIVITY_H
+#endif // ANDROID_GAME_SDK_GAME_ACTIVITY_H

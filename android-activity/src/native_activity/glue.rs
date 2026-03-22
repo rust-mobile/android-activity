@@ -9,11 +9,12 @@ use std::{
     sync::{Arc, Condvar, Mutex, Weak},
 };
 
+use jni::{objects::JObject, refs::Global, vm::AttachConfig};
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
 
 use crate::{
-    jni_utils::CloneJavaVM,
-    util::{abort_on_panic, forward_stdio_to_logcat, log_panic},
+    init::{init_android_main_thread, init_java_main_thread_on_create},
+    util::{abort_on_panic, log_panic},
     ConfigurationRef,
 };
 
@@ -75,18 +76,18 @@ pub enum State {
 
 #[derive(Debug)]
 pub struct WaitableNativeActivityState {
-    pub activity: *mut ndk_sys::ANativeActivity,
-
     pub mutex: Mutex<NativeActivityState>,
     pub cond: Condvar,
 }
+
+// SAFETY: ndk::NativeActivity is also SendSync.
+unsafe impl Send for WaitableNativeActivityState {}
+unsafe impl Sync for WaitableNativeActivityState {}
 
 #[derive(Debug, Clone)]
 pub struct NativeActivityGlue {
     pub inner: Arc<WaitableNativeActivityState>,
 }
-unsafe impl Send for NativeActivityGlue {}
-unsafe impl Sync for NativeActivityGlue {}
 
 impl Deref for NativeActivityGlue {
     type Target = WaitableNativeActivityState;
@@ -208,6 +209,29 @@ pub enum NativeThreadState {
 
 #[derive(Debug)]
 pub struct NativeActivityState {
+    /// Set as soon as the Java main thread notifies us of an `onDestroyed`
+    /// callback.
+    pub destroyed: bool,
+
+    /// The `ANativeActivity` associated with the NativeActivity instance
+    ///
+    /// # Safety
+    ///
+    /// This pointer will be reset to `null` when the NativeActivity is
+    /// destroyed.
+    ///
+    /// Keep in mind that `NativeActivityState` is ref-counted and can
+    /// potentially out-last an `onDestroy` callback where we may reset this to
+    /// be a null pointer!
+    ///
+    /// For example:
+    /// - An application could put an `AndroidApp` into a global `'static` and
+    ///   keep it alive beyond `android_main`
+    /// - An application could schedule a callback to run on the Java main
+    ///   thread with an `AndroidApp` clone and by the time it runs then the
+    ///   associated `ANativeActivity` could have been destroyed.
+    pub activity: *mut ndk_sys::ANativeActivity,
+
     pub msg_read: libc::c_int,
     pub msg_write: libc::c_int,
     pub config: ConfigurationRef,
@@ -220,10 +244,6 @@ pub struct NativeActivityState {
     pub thread_state: NativeThreadState,
     pub app_has_saved_state: bool,
 
-    /// Set as soon as the Java main thread notifies us of an
-    /// `onDestroyed` callback.
-    pub destroyed: bool,
-    pub redraw_needed: bool,
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
     pub pending_window: Option<NativeWindow>,
 }
@@ -309,7 +329,7 @@ impl NativeActivityState {
 
 impl Drop for WaitableNativeActivityState {
     fn drop(&mut self) {
-        log::debug!("WaitableNativeActivityState::drop!");
+        log::info!("WaitableNativeActivityState::drop!");
         unsafe {
             let mut guard = self.mutex.lock().unwrap();
             guard.detach_input_queue_from_looper();
@@ -356,8 +376,8 @@ impl WaitableNativeActivityState {
         };
 
         Self {
-            activity,
             mutex: Mutex::new(NativeActivityState {
+                activity,
                 msg_read: msgpipe[0],
                 msg_write: msgpipe[1],
                 config,
@@ -370,7 +390,6 @@ impl WaitableNativeActivityState {
                 thread_state: NativeThreadState::Init,
                 app_has_saved_state: false,
                 destroyed: false,
-                redraw_needed: false,
                 pending_input_queue: ptr::null_mut(),
                 pending_window: None,
             }),
@@ -392,6 +411,11 @@ impl WaitableNativeActivityState {
             guard.msg_read = -1;
             libc::close(guard.msg_write);
             guard.msg_write = -1;
+
+            // The last thing that `NativeActivity` `onDestroy` does is to call a
+            // native method (`unloadNativeCode`) which will `delete` the
+            // `ANativeActivity` instance.
+            guard.activity = ptr::null_mut();
         }
     }
 
@@ -447,7 +471,9 @@ impl WaitableNativeActivityState {
 
         guard.pending_input_queue = input_queue;
         guard.write_cmd(AppCmd::InputQueueChanged);
-        while guard.input_queue != guard.pending_input_queue {
+        while guard.thread_state == NativeThreadState::Running
+            && guard.input_queue != guard.pending_input_queue
+        {
             guard = self.cond.wait(guard).unwrap();
         }
         guard.pending_input_queue = ptr::null_mut();
@@ -468,7 +494,9 @@ impl WaitableNativeActivityState {
         if guard.pending_window.is_some() {
             guard.write_cmd(AppCmd::InitWindow);
         }
-        while guard.window != guard.pending_window {
+        while guard.thread_state == NativeThreadState::Running
+            && guard.window != guard.pending_window
+        {
             guard = self.cond.wait(guard).unwrap();
         }
         guard.pending_window = None;
@@ -492,7 +520,7 @@ impl WaitableNativeActivityState {
         };
         guard.write_cmd(cmd);
 
-        while guard.activity_state != state {
+        while guard.thread_state == NativeThreadState::Running && guard.activity_state != state {
             guard = self.cond.wait(guard).unwrap();
         }
     }
@@ -505,7 +533,7 @@ impl WaitableNativeActivityState {
         // this to be None
         debug_assert!(!guard.app_has_saved_state, "SaveState request clash");
         guard.write_cmd(AppCmd::SaveState);
-        while !guard.app_has_saved_state {
+        while guard.thread_state == NativeThreadState::Running && !guard.app_has_saved_state {
             guard = self.cond.wait(guard).unwrap();
         }
         guard.app_has_saved_state = false;
@@ -560,7 +588,9 @@ impl WaitableNativeActivityState {
     pub fn notify_main_thread_stopped_running(&self) {
         let mut guard = self.mutex.lock().unwrap();
         guard.thread_state = NativeThreadState::Stopped;
-        self.cond.notify_one();
+        // Notify all waiters to unblock any Android callbacks that would otherwise be waiting
+        // indefinitely for the now-stopped (!) main thread.
+        self.cond.notify_all();
     }
 
     pub unsafe fn pre_exec_cmd(
@@ -599,7 +629,7 @@ impl WaitableNativeActivityState {
             AppCmd::ConfigChanged => {
                 let guard = self.mutex.lock().unwrap();
                 let config = ndk_sys::AConfiguration_new();
-                ndk_sys::AConfiguration_fromAssetManager(config, (*self.activity).assetManager);
+                ndk_sys::AConfiguration_fromAssetManager(config, (*guard.activity).assetManager);
                 let config = Configuration::from_ptr(NonNull::new_unchecked(config));
                 guard.config.replace(config);
                 log::debug!("Config: {:#?}", guard.config);
@@ -641,12 +671,19 @@ unsafe fn try_with_waitable_activity_ref(
     assert!(!(*activity).instance.is_null());
     let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
     let weak_ref = Weak::from_raw(weak_ptr);
-    if let Some(waitable_activity) = weak_ref.upgrade() {
+    let maybe_upgraded = weak_ref.upgrade();
+
+    // Make sure we don't Drop the Weak reference (even if we failed to upgrade it
+    // and also considering the possibility that we unwind due to a panic in `closure()`)
+    // (The raw weak pointer associated with activity->instance must remain valid
+    //  until `on_destroy` is called).
+    let _ = weak_ref.into_raw();
+
+    if let Some(waitable_activity) = maybe_upgraded {
         closure(waitable_activity);
     } else {
         log::error!("Ignoring spurious JVM callback after last activity reference was dropped!")
     }
-    let _ = weak_ref.into_raw();
 }
 
 unsafe extern "C" fn on_destroy(activity: *mut ndk_sys::ANativeActivity) {
@@ -655,6 +692,16 @@ unsafe extern "C" fn on_destroy(activity: *mut ndk_sys::ANativeActivity) {
         try_with_waitable_activity_ref(activity, |waitable_activity| {
             waitable_activity.notify_destroyed()
         });
+
+        // Once we return from here the `ANativeActivity` will be deleted via an
+        // `unloadNativeCode` native method and so we can't get any more
+        // callbacks and we can release the `Weak<WaitableNativeActivityState>`
+        // reference we have associated with `activity->instance`
+
+        assert!(!(*activity).instance.is_null());
+        let weak_ptr: *const WaitableNativeActivityState = (*activity).instance.cast();
+        let _drop_weak_ref = Weak::from_raw(weak_ptr);
+        (*activity).instance = std::ptr::null_mut();
     })
 }
 
@@ -832,14 +879,22 @@ extern "C" fn ANativeActivity_onCreate(
     saved_state_size: libc::size_t,
 ) {
     abort_on_panic(|| {
-        let _join_log_forwarder = forward_stdio_to_logcat();
+        let main_looper =
+            ndk::looper::ForeignLooper::for_thread().expect("Failed to get Java main looper");
 
-        log::trace!(
-            "Creating: {:p}, saved_state = {:p}, save_state_size = {}",
-            activity,
-            saved_state,
-            saved_state_size
-        );
+        let (jvm, jni_activity) = unsafe {
+            let jvm: *mut jni::sys::JavaVM = (*activity).vm.cast();
+            let jni_activity: jni::sys::jobject = (*activity).clazz as _; // Completely bogus name; this is the _instance_ not class pointer
+            (jni::JavaVM::from_raw(jvm), jni_activity)
+        };
+        unsafe {
+            let saved_state = if !saved_state.is_null() && saved_state_size > 0 {
+                std::slice::from_raw_parts(saved_state.cast(), saved_state_size)
+            } else {
+                &[]
+            };
+            init_java_main_thread_on_create(jvm, jni_activity as _, saved_state);
+        };
 
         // Conceptually we associate a glue reference with the JVM main thread, and another
         // reference with the Rust main thread
@@ -852,60 +907,7 @@ extern "C" fn ANativeActivity_onCreate(
         // Note: we drop the thread handle which will detach the thread
         std::thread::spawn(move || {
             let activity: *mut ndk_sys::ANativeActivity = activity_ptr as *mut _;
-
-            let jvm = abort_on_panic(|| unsafe {
-                let na = activity;
-                let jvm: *mut jni_sys::JavaVM = (*na).vm;
-                let activity = (*na).clazz; // Completely bogus name; this is the _instance_ not class pointer
-                ndk_context::initialize_android_context(jvm.cast(), activity.cast());
-
-                let jvm = CloneJavaVM::from_raw(jvm).unwrap();
-                // Since this is a newly spawned thread then the JVM hasn't been attached
-                // to the thread yet. Attach before calling the applications main function
-                // so they can safely make JNI calls
-                jvm.attach_current_thread_permanently().unwrap();
-                jvm
-            });
-
-            let app = AndroidApp::new(rust_glue.clone(), jvm.clone());
-
-            rust_glue.notify_main_thread_running();
-
-            unsafe {
-                // Name thread - this needs to happen here after attaching to a JVM thread,
-                // since that changes the thread name to something like "Thread-2".
-                let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
-                libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
-
-                // We want to specifically catch any panic from the application's android_main
-                // so we can finish + destroy the Activity gracefully via the JVM
-                catch_unwind(|| {
-                    // XXX: If we were in control of the Java Activity subclass then
-                    // we could potentially run the android_main function via a Java native method
-                    // springboard (e.g. call an Activity subclass method that calls a jni native
-                    // method that then just calls android_main()) that would make sure there was
-                    // a Java frame at the base of our call stack which would then be recognised
-                    // when calling FindClass to lookup a suitable classLoader, instead of
-                    // defaulting to the system loader. Without this then it's difficult for native
-                    // code to look up non-standard Java classes.
-                    android_main(app);
-                })
-                .unwrap_or_else(log_panic);
-
-                // Let JVM know that our Activity can be destroyed before detaching from the JVM
-                //
-                // "Note that this method can be called from any thread; it will send a message
-                //  to the main thread of the process where the Java finish call will take place"
-                ndk_sys::ANativeActivity_finish(activity);
-
-                // This should detach automatically but lets detach explicitly to avoid depending
-                // on the TLS trickery in `jni-rs`
-                jvm.detach_current_thread();
-
-                ndk_context::release_android_context();
-            }
-
-            rust_glue.notify_main_thread_stopped_running();
+            rust_glue_entry(rust_glue, activity, main_looper);
         });
 
         // Wait for thread to start.
@@ -916,5 +918,86 @@ extern "C" fn ANativeActivity_onCreate(
         while guard.thread_state == NativeThreadState::Init {
             guard = jvm_glue.cond.wait(guard).unwrap();
         }
+    })
+}
+
+fn rust_glue_entry(
+    rust_glue: NativeActivityGlue,
+    activity: *mut ndk_sys::ANativeActivity,
+    main_looper: ndk::looper::ForeignLooper,
+) {
+    abort_on_panic(|| {
+        let (jvm, jni_activity) = unsafe {
+            let jvm: *mut jni::sys::JavaVM = (*activity).vm.cast();
+            let jni_activity: jni::sys::jobject = (*activity).clazz as _; // Completely bogus name; this is the _instance_ not class pointer
+            (jni::JavaVM::from_raw(jvm), jni_activity)
+        };
+        // Note: At this point we can assume jni::JavaVM::singleton is initialized
+
+        // Since this is a newly spawned thread then the JVM hasn't been attached to the
+        // thread yet.
+        //
+        // For compatibility we attach before calling the applications main function to
+        // allow it to assume the thread is attached before making JNI calls.
+        jvm.attach_current_thread_with_config(
+            || AttachConfig::new().thread_name(jni::jni_str!("android_main")),
+            Some(16),
+            |env| -> jni::errors::Result<()> {
+                // SAFETY: We know jni_activity is a valid JNI global ref to an Activity instance
+                // that will remain valid until `onDestroy` is handled (not possible until we start
+                // `android_main()`).
+                let jni_activity = unsafe { env.as_cast_raw::<Global<JObject>>(&jni_activity)? };
+
+                let (app_asset_manager, main_callbacks) =
+                    match init_android_main_thread(&jvm, &jni_activity, &main_looper) {
+                        Ok((asset_manager, callbacks)) => (asset_manager, callbacks),
+                        Err(err) => {
+                            eprintln!(
+                            "Failed to name Java thread and set thread context class loader: {err}"
+                        );
+                            return Err(err);
+                        }
+                    };
+
+                let app = AndroidApp::new(
+                    jvm.clone(),
+                    main_looper,
+                    main_callbacks,
+                    app_asset_manager,
+                    rust_glue.clone(),
+                    &jni_activity,
+                );
+
+                rust_glue.notify_main_thread_running();
+
+                unsafe {
+                    // We want to specifically catch any panic from the application's android_main
+                    // so we can finish + destroy the Activity gracefully via the JVM
+                    catch_unwind(|| {
+                        // XXX: If we were in control of the Java Activity subclass then
+                        // we could potentially run the android_main function via a Java native method
+                        // springboard (e.g. call an Activity subclass method that calls a jni native
+                        // method that then just calls android_main()) that would make sure there was
+                        // a Java frame at the base of our call stack which would then be recognised
+                        // when calling FindClass to lookup a suitable classLoader, instead of
+                        // defaulting to the system loader. Without this then it's difficult for native
+                        // code to look up non-standard Java classes.
+                        android_main(app);
+                    })
+                    .unwrap_or_else(log_panic);
+
+                    // Let JVM know that our Activity can be destroyed before detaching from the JVM
+                    //
+                    // "Note that this method can be called from any thread; it will send a message
+                    //  to the main thread of the process where the Java finish call will take place"
+                    ndk_sys::ANativeActivity_finish(activity);
+                }
+
+                rust_glue.notify_main_thread_stopped_running();
+
+                Ok(())
+            },
+        )
+        .expect("Failed to attach thread to JVM");
     })
 }
