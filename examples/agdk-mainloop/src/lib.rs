@@ -1,12 +1,142 @@
+use std::sync::OnceLock;
+
 use android_activity::{
     input::{InputEvent, KeyAction, KeyEvent, KeyMapChar, MotionAction},
-    AndroidApp, InputStatus, MainEvent, PollEvent,
+    ndk, ndk_sys, AndroidApp, InputStatus, MainEvent, OnCreateState, PollEvent,
 };
-use log::info;
+use jni::{
+    objects::{JObject, JString},
+    refs::Global,
+    vm::JavaVM,
+};
+use tracing::{error, info};
 
-#[no_mangle]
+jni::bind_java_type! { Context => "android.content.Context" }
+jni::bind_java_type! {
+    Activity => "android.app.Activity",
+    type_map {
+        Context => "android.content.Context",
+    },
+    is_instance_of {
+        context: Context
+    },
+}
+
+jni::bind_java_type! {
+    Toast => "android.widget.Toast",
+    type_map {
+        Context => "android.content.Context",
+    },
+    methods {
+        static fn make_text(context: Context, text: JCharSequence, duration: i32) -> Toast,
+        fn show(),
+    }
+}
+
+// Note: The jni bindings will actually initialize lazily but it can be helpful
+// to initialize explicitly to get an up-front error in case there is an issue
+// (such as a typo with a method name or incorrect signature) rather than having
+// an unpredictable error when using the binding.
+fn jni_init(env: &jni::Env) -> jni::errors::Result<()> {
+    let _ = ContextAPI::get(env, &Default::default())?;
+    let _ = ActivityAPI::get(env, &Default::default())?;
+    let _ = ToastAPI::get(env, &Default::default())?;
+    // .. call other `get` functions for other bindings here as needed ...
+    Ok(())
+}
+
+// Called while Activity.onCreate is running
+// May be called multiple times if the activity is destroyed and recreated.
+#[unsafe(no_mangle)]
+fn android_on_create(state: &OnCreateState) {
+    static ONCE: OnceLock<()> = OnceLock::new();
+    ONCE.get_or_init(|| {
+        use tracing_subscriber::prelude::*;
+
+        unsafe { std::env::set_var("RUST_BACKTRACE", "full") };
+
+        const DEFAULT_ENV_FILTER: &str = "debug,wgpu_hal=info,winit=info,naga=info";
+        let filter_layer = tracing_subscriber::EnvFilter::new(DEFAULT_ENV_FILTER);
+        let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
+            .with_ansi(false)
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+            .with_thread_names(true);
+        tracing_subscriber::registry()
+            .with(filter_layer)
+            .with(android_layer)
+            .init();
+    });
+
+    let vm = unsafe { JavaVM::from_raw(state.vm_as_ptr().cast()) };
+    // Note: from here on we can also rely on `JavaVM::singleton()` now that we know it's been initialized.
+
+    let activity = state.activity_as_ptr() as jni::sys::jobject;
+    if let Err(err) = vm.attach_current_thread(|env| -> jni::errors::Result<()> {
+        // Initialize JNI bindings
+        jni_init(env).expect("Failed to initialize JNI bindings");
+
+        // SAFETY:
+        // - The reference / pointer is at least valid until we return
+        // - By creating a `Cast` we ensure we can't accidentally delete the reference
+        let _activity = unsafe { env.as_cast_raw::<Global<JObject>>(&activity)? };
+        // Do something with the activity on the Java main thread, such as call a method or access a field
+        Ok(())
+    }) {
+        error!("Failed to interact with Android SDK on Java main thread: {err:?}");
+    }
+
+    eprintln!(
+        "android_on_create called on thread {:?}",
+        std::thread::current().id()
+    );
+    info!(
+        "android_on_create called on thread {:?}",
+        std::thread::current().id()
+    );
+}
+
+enum ToastDuration {
+    Short = 0,
+    Long = 1,
+}
+
+fn send_toast(outer_app: &AndroidApp, msg: impl AsRef<str>, duration: ToastDuration) {
+    let app = outer_app.clone();
+    let msg = msg.as_ref().to_string();
+    outer_app.run_on_java_main_thread(Box::new(move || {
+        // We initialize JavaVM::singleton at the start of `android_main`
+        let jvm = jni::JavaVM::singleton().expect("Failed to get singleton JavaVM instance");
+        // We use `with_top_local_frame` as a minor optimization because it's guaranteed by
+        // `run_on_java_main_thread` that we already have an underlying JNI attachment and local
+        // frame. It would also be perfectly reasonable to use `jvm.attach_current_thread()`.
+        if let Err(err) = jvm.with_top_local_frame(|env| -> jni::errors::Result<()> {
+            let activity: jni::sys::jobject = app.activity_as_ptr() as _;
+            let activity = unsafe { env.as_cast_raw::<Global<Activity>>(&activity)? };
+
+            let message = JString::new(env, &msg)?;
+            let toast = Toast::make_text(env, activity.as_ref(), &message, duration as i32)?;
+            info!("Showing Toast from Rust JNI callback: {msg}");
+            toast.show(env)?;
+
+            Ok(())
+        }) {
+            error!("Failed to execute callback on main thread: {err:?}");
+        }
+    }));
+}
+
+// Called on a dedicated Activity main loop thread, spawned after `android_on_create` returns
+// May be called multiple times if the activity is destroyed and recreated.
+#[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {
-    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Info));
+    eprintln!(
+        "android_main started on thread {:?}",
+        std::thread::current().id()
+    );
+    info!(
+        "android_main started on thread {:?}",
+        std::thread::current().id()
+    );
 
     let mut quit = false;
     let mut redraw_pending = true;
@@ -14,9 +144,11 @@ fn android_main(app: AndroidApp) {
 
     let mut combining_accent = None;
 
+    send_toast(&app, "Hello from Rust on Android!", ToastDuration::Long);
+
     while !quit {
         app.poll_events(
-            Some(std::time::Duration::from_secs(1)), /* timeout */
+            Some(std::time::Duration::from_secs(2)), /* timeout */
             |event| {
                 match event {
                     PollEvent::Wake => {
@@ -40,6 +172,7 @@ fn android_main(app: AndroidApp) {
                                         info!("Resumed with saved state = {uri:#?}");
                                     }
                                 }
+                                send_toast(&app, "Resumed!", ToastDuration::Short);
                             }
                             MainEvent::InitWindow { .. } => {
                                 native_window = app.native_window();
@@ -47,6 +180,7 @@ fn android_main(app: AndroidApp) {
                             }
                             MainEvent::TerminateWindow { .. } => {
                                 native_window = None;
+                                redraw_pending = false;
                             }
                             MainEvent::WindowResized { .. } => {
                                 redraw_pending = true;
@@ -59,8 +193,12 @@ fn android_main(app: AndroidApp) {
                             }
                             MainEvent::ConfigChanged { .. } => {
                                 info!("Config Changed: {:#?}", app.config());
+                                send_toast(&app, "Config Changed!", ToastDuration::Short);
                             }
-                            MainEvent::LowMemory => {}
+                            MainEvent::LowMemory => {
+                                info!("Low Memory Warning");
+                                send_toast(&app, "Low Memory!", ToastDuration::Short);
+                            }
 
                             MainEvent::Destroy => quit = true,
                             _ => { /* ... */ }
@@ -98,12 +236,53 @@ fn android_main(app: AndroidApp) {
                                                     let y = pointer.y();
 
                                                     println!("POINTER UP {x}, {y}");
-                                                    if x < 200.0 && y < 200.0 {
+
+                                                    if x < 500.0 && y < 500.0 {
                                                         println!("Requesting to show keyboard");
+                                                        send_toast(
+                                                            &app,
+                                                            "Requesting to show keyboard",
+                                                            ToastDuration::Short,
+                                                        );
                                                         app.show_soft_input(true);
+                                                    } else if x >= 500.0 && y < 500.0 {
+                                                        println!("Requesting to hide keyboard");
+                                                        send_toast(
+                                                            &app,
+                                                            "Requesting to hide keyboard",
+                                                            ToastDuration::Short,
+                                                        );
+                                                        app.hide_soft_input(false);
+                                                    } else {
+                                                        send_toast(
+                                                            &app,
+                                                            format!("POINTER UP {x}, {y}"),
+                                                            ToastDuration::Short,
+                                                        );
                                                     }
                                                 }
                                                 _ => {}
+                                            }
+                                            let num_pointers = motion_event.pointer_count();
+                                            for i in 0..num_pointers {
+                                                let pointer = motion_event.pointer_at_index(i);
+
+                                                println!(
+                                                    "Pointer[{i}]: id={}, time={}, x={}, y={}",
+                                                    pointer.pointer_id(),
+                                                    motion_event.event_time(),
+                                                    pointer.x(),
+                                                    pointer.y(),
+                                                );
+                                                for sample in pointer.history() {
+                                                    println!(
+                                                        "  History[{}]: x={}, y={}, time={:?}",
+                                                        sample.history_index(),
+                                                        sample.x(),
+                                                        sample.y(),
+                                                        sample.event_time()
+                                                    );
+                                                }
                                             }
                                         }
                                         InputEvent::TextEvent(state) => {
@@ -113,6 +292,16 @@ fn android_main(app: AndroidApp) {
                                     }
 
                                     info!("Input Event: {event:?}");
+                                    app.run_on_java_main_thread(Box::new(move || {
+                                        println!(
+                                            "Callback on main thread {:?}",
+                                            std::thread::current().id()
+                                        );
+                                        info!(
+                                            "Callback on main thread {:?}",
+                                            std::thread::current().id()
+                                        );
+                                    }));
                                     InputStatus::Unhandled
                                 }) {
                                     info!("No more input available");
@@ -120,7 +309,7 @@ fn android_main(app: AndroidApp) {
                                 }
                             },
                             Err(err) => {
-                                log::error!("Failed to get input events iterator: {err:?}");
+                                error!("Failed to get input events iterator: {err:?}");
                             }
                         }
 
@@ -148,7 +337,7 @@ fn character_map_and_combine_key(
     let key_map = match app.device_key_character_map(device_id) {
         Ok(key_map) => key_map,
         Err(err) => {
-            log::error!("Failed to look up `KeyCharacterMap` for device {device_id}: {err:?}");
+            error!("Failed to look up `KeyCharacterMap` for device {device_id}: {err:?}");
             return None;
         }
     };
@@ -160,12 +349,16 @@ fn character_map_and_combine_key(
                 let combined_unicode = if let Some(accent) = combining_accent {
                     match key_map.get_dead_char(*accent, unicode) {
                         Ok(Some(key)) => {
-                            info!("KeyEvent: Combined '{unicode}' with accent '{accent}' to give '{key}'");
+                            info!(
+                                "KeyEvent: Combined '{unicode}' with accent '{accent}' to give '{key}'"
+                            );
                             Some(key)
                         }
                         Ok(None) => None,
                         Err(err) => {
-                            log::error!("KeyEvent: Failed to combine 'dead key' accent '{accent}' with '{unicode}': {err:?}");
+                            error!(
+                                "KeyEvent: Failed to combine 'dead key' accent '{accent}' with '{unicode}': {err:?}"
+                            );
                             None
                         }
                     }
@@ -193,7 +386,7 @@ fn character_map_and_combine_key(
             None
         }
         Err(err) => {
-            log::error!("KeyEvent: Failed to get key map character: {err:?}");
+            error!("KeyEvent: Failed to get key map character: {err:?}");
             *combining_accent = None;
             None
         }

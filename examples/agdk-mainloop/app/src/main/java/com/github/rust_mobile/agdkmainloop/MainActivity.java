@@ -1,6 +1,5 @@
-package co.realfit.agdkmainloop;
+package com.github.rust_mobile.agdkmainloop;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -11,7 +10,6 @@ import android.os.Bundle;
 import android.content.pm.PackageManager;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
-import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
 
@@ -35,10 +33,8 @@ public class MainActivity extends GameActivity {
     private void hideSystemUI() {
         // This will put the game behind any cutouts and waterfalls on devices which have
         // them, so the corresponding insets will be non-zero.
-        if (VERSION.SDK_INT >= VERSION_CODES.P) {
-            getWindow().getAttributes().layoutInDisplayCutoutMode
-                    = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
-        }
+        getWindow().getAttributes().layoutInDisplayCutoutMode
+                = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
         // From API 30 onwards, this is the recommended way to hide the system UI, rather than
         // using View.setSystemUiVisibility.
         View decorView = getWindow().getDecorView();
