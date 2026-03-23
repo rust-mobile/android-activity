@@ -78,9 +78,9 @@ jni::bind_java_type! {
 }
 
 impl AKeyCharacterMap<'_> {
-    pub(crate) fn get<'local>(
+    pub(crate) fn get(
         &self,
-        env: &'local mut jni::Env,
+        env: &mut jni::Env,
         key_code: jint,
         meta_state: jint,
     ) -> Result<jint, InternalAppError> {
@@ -97,10 +97,7 @@ impl AKeyCharacterMap<'_> {
             .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))
     }
 
-    pub(crate) fn get_keyboard_type<'local>(
-        &self,
-        env: &'local mut jni::Env,
-    ) -> Result<jint, InternalAppError> {
+    pub(crate) fn get_keyboard_type(&self, env: &mut jni::Env) -> Result<jint, InternalAppError> {
         self._get_keyboard_type(env)
             .map_err(|err| jni_utils::clear_and_map_exception_to_err(env, err))
     }
@@ -183,7 +180,7 @@ impl KeyCharacterMap {
             }
         })
         .map_err(|err| {
-            let err: InternalAppError = err.into();
+            let err: InternalAppError = err;
             err.into()
         })
     }
@@ -217,7 +214,7 @@ impl KeyCharacterMap {
             })
         })
         .map_err(|err| {
-            let err: InternalAppError = err.into();
+            let err: InternalAppError = err;
             err.into()
         })
     }
@@ -239,7 +236,7 @@ impl KeyCharacterMap {
             Ok(keyboard_type.into())
         })
         .map_err(|err| {
-            let err: InternalAppError = err.into();
+            let err: InternalAppError = err;
             err.into()
         })
     }

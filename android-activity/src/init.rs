@@ -33,7 +33,7 @@ fn forward_stdio_to_logcat() -> std::thread::JoinHandle<std::io::Result<()>> {
     std::thread::Builder::new()
         .name("stdio-to-logcat".to_string())
         .spawn(move || -> std::io::Result<()> {
-            let tag = CStr::from_bytes_with_nul(b"RustStdoutStderr\0").unwrap();
+            let tag = c"RustStdoutStderr";
             let mut reader = BufReader::new(file);
             let mut buffer = String::new();
             loop {
@@ -258,7 +258,7 @@ fn try_init_current_thread(env: &mut jni::Env, activity: &JObject) -> jni::error
     // Also name native thread - this needs to happen here after attaching to a JVM thread,
     // since that changes the thread name to something like "Thread-2".
     unsafe {
-        let thread_name = std::ffi::CStr::from_bytes_with_nul(b"android_main\0").unwrap();
+        let thread_name = c"android_main";
         let _ = libc::pthread_setname_np(libc::pthread_self(), thread_name.as_ptr());
     }
     Ok(())

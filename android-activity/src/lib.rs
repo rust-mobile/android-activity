@@ -206,9 +206,9 @@
 //!
 //! Before `android_main()` is called:
 //! - A `JavaVM` and
-//!    [`android.content.Context`](https://developer.android.com/reference/android/content/Context)
-//!    instance will be associated with the [`ndk_context`] crate so that other,
-//!    independent, Rust crates are able to find a JavaVM for making JNI calls.
+//!   [`android.content.Context`](https://developer.android.com/reference/android/content/Context)
+//!   instance will be associated with the [`ndk_context`] crate so that other,
+//!   independent, Rust crates are able to find a JavaVM for making JNI calls.
 //! - The `JavaVM` will be attached to the native thread (for JNI)
 //! - A [Looper] is attached to the Rust native thread.
 //!
@@ -1358,7 +1358,7 @@ impl<'a> OnCreateState<'a> {
     /// - Don't wrap the reference in an `Auto` which would treat the reference
     ///   like a local reference and try to delete it when dropped.
     pub fn activity_as_ptr(&self) -> *mut c_void {
-        self.java_activity as *mut c_void
+        self.java_activity
     }
 
     /// Returns the saved state of the `Activity` as a byte slice, which may be
