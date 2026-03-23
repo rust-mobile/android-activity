@@ -351,7 +351,7 @@ impl AndroidAppInner {
             return;
         }
 
-        let na_mut = na as *mut ndk_sys::ANativeActivity;
+        let na_mut = na;
         unsafe {
             ndk_sys::ANativeActivity_setWindowFlags(
                 na_mut.cast(),

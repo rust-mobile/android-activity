@@ -32,7 +32,7 @@ pub(crate) fn android_log(level: Level, tag: &CStr, msg: &CStr) {
 }
 
 pub(crate) fn log_panic(panic: Box<dyn std::any::Any + Send>) {
-    let rust_panic = unsafe { CStr::from_bytes_with_nul_unchecked(b"RustPanic\0") };
+    let rust_panic = c"RustPanic";
 
     if let Some(panic) = panic.downcast_ref::<String>() {
         if let Ok(msg) = CString::new(panic.clone()) {
@@ -43,10 +43,7 @@ pub(crate) fn log_panic(panic: Box<dyn std::any::Any + Send>) {
             android_log(Level::Error, rust_panic, &msg);
         }
     } else {
-        let unknown_panic = unsafe { CStr::from_bytes_with_nul_unchecked(b"UnknownPanic\0") };
-        android_log(Level::Error, unknown_panic, unsafe {
-            CStr::from_bytes_with_nul_unchecked(b"\0")
-        });
+        android_log(Level::Error, rust_panic, c"UnknownPanic");
     }
 }
 

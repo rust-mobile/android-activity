@@ -174,19 +174,28 @@ impl AndroidApp {
     }
 }
 
+// Wrapper around the raw android_app pointer that can be safely sent across threads.
+// SAFETY: The android_app pointer is managed by the GameActivity glue code and protected
+// by a Mutex. Access is synchronized and the pointer is cleared on APP_CMD_DESTROY.
+// The Mutex wrapper provides Sync, so we only need to implement Send.
+#[derive(Debug)]
+struct SendAndroidApp(*mut ffi::android_app);
+
+unsafe impl Send for SendAndroidApp {}
+
 #[derive(Debug, Clone)]
 struct GameActivityGlue {
-    game_activity_app: Arc<Mutex<*mut ffi::android_app>>,
+    game_activity_app: Arc<Mutex<SendAndroidApp>>,
 }
 
 impl GameActivityGlue {
     fn new(game_activity_app: *mut ffi::android_app) -> Self {
         Self {
-            game_activity_app: Arc::new(Mutex::new(game_activity_app)),
+            game_activity_app: Arc::new(Mutex::new(SendAndroidApp(game_activity_app))),
         }
     }
 
-    fn locked_app(&self) -> std::sync::MutexGuard<'_, *mut ffi::android_app> {
+    fn locked_app(&self) -> std::sync::MutexGuard<'_, SendAndroidApp> {
         self.game_activity_app.lock().unwrap()
     }
 
@@ -203,7 +212,7 @@ impl GameActivityGlue {
         F: FnOnce(*mut ffi::android_app) -> R,
     {
         let app = self.locked_app();
-        f(*app)
+        f(app.0)
     }
 
     /// Called when handling the `APP_CMD_DESTROY` event to clear our retained
@@ -211,7 +220,7 @@ impl GameActivityGlue {
     /// accidentally access it after it's been freed.
     fn clear_app(&self) {
         let mut app = self.locked_app();
-        *app = ptr::null_mut();
+        app.0 = ptr::null_mut();
     }
 }
 
