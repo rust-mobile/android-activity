@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-03-30
+
 ### Added
 
 - input: `TextInputAction` enum representing action button types on soft keyboards. ([#216](https://github.com/rust-mobile/android-activity/pull/216))
@@ -57,6 +59,10 @@ fn android_on_create(state: &OnCreateState) {
 
 - rust-version bumped to 1.85.0 ([#193](https://github.com/rust-mobile/android-activity/pull/193), [#219](https://github.com/rust-mobile/android-activity/pull/219))
 - GameActivity updated to 4.4.0 ([#191](https://github.com/rust-mobile/android-activity/pull/191), [#240](https://github.com/rust-mobile/android-activity/pull/240))
+- `ndk-context` is initialized with an `Application` context instead of an `Activity` context ([#229](https://github.com/rust-mobile/android-activity/pull/229))
+
+
+#### GameActivity 4.4.0 Update
 
 **Important:** This release is no longer compatible with GameActivity 2.0.2
 
@@ -82,6 +88,30 @@ Note: there is no guarantee that later 4.x.x releases of GameActivity will be co
 `android-activity`, so please refer to the `android-activity` release notes for any future updates regarding
 GameActivity compatibility.
 
+#### Initializing `ndk-context` with an Application Context
+
+`ndk-context` is a separate, framework-independent crate that provides a way for library crates to access a Java VM pointer and an `android.content.Context` JNI reference without needing to depend on `android-activity` directly.
+
+`ndk-context` may be initialized by various framework crates, including `android-activity`, on behalf of library crates.
+
+Historically `android-activity` has initialized `ndk-context` with an `Activity` context since that was the simplest choice considering that the entrypoint for `android-activity` comes from an `Activity` `onCreate` callback.
+
+However, in retrospect it was realized that this was a short-sighted mistake when considering that:
+1. `ndk-context` only provides a single, global context reference for the entire application that can't be updated
+2. An Android application can have multiple `Activity` instances over its lifetime (and at times could have no `Activity` instances at all, e.g. if the app is running a background `Service`)
+3. Whatever is put into `ndk-context` needs to leak a corresponding global reference to ensure it remains valid to access safely. This is inappropriate for an `Activity` reference since it can be destroyed and recreated multiple times over the lifetime of the application.
+
+A far better choice, that aligns with the global nature of the `ndk-context` API is to initialize it with an `Application` context which is valid for the entire lifetime of the application.
+
+**Note:** Although the `ndk-context` API only promises to provide an `android.content.Context` _and_ specifically warns that user's should not assume the context is an `Activity`, there is still some risk that some users of `ndk-context` could be affected by the change made in [#229](https://github.com/rust-mobile/android-activity/pull/229).
+
+For example, until recently the `webbrowser` crate (for opening URLs) was assuming it could access an `Activity` context via `ndk-context`. In preparation for making this change, `webbrowser` was updated to ensure it is agnostic to the type of context provided by `ndk-context`, see: <https://github.com/amodm/webbrowser-rs/pull/111>
+
+Other notable library crates that support Android (such as `app_dirs2`) are expected to be unaffected by this, since they already operate in terms of the `android.content.Context` API, not the `Activity` API.
+
+_**Note:**: if some crate really needs an `Activity` reference then they should ideally be able to get one via the
+`AndroidApp::activity_as_ptr()` API. They may need to add some Android-specific initialization API, similar to how Winit has a dedicated `.with_android_app()` API. An Android-specific init API that could accept a JNI reference to an `Activity` could avoid needing to specifically depend on `android-activity`.
+
 ### Fixed
 
 - *Safety* `AndroidApp::asset_manager()` returns an `AssetManager` that has a safe `'static` lifetime that's not invalidated when `android_main()` returns ([#233](https://github.com/rust-mobile/android-activity/pull/233))
@@ -89,6 +119,8 @@ GameActivity compatibility.
 - *Safety* `AndroidApp::activity_as_ptr()` returns a pointer to a global reference that remains valid until `AndroidApp` is dropped, instead of the `ANativeActivity`'s `clazz` pointer which is only guaranteed to be valid until `onDestroy` returns (`native-activity` backend) ([#234](https://github.com/rust-mobile/android-activity/pull/234))
 - *Safety* The `game-activity` backend clears its `android_app` ptr after `onDestroy` and `AndroidApp` remains safe to access after `android_main()` returns ([#236](https://github.com/rust-mobile/android-activity/pull/236))
 - Support for `AndroidApp::show/hide_soft_input()` APIs in the `native-activity` backend ([#178](https://github.com/rust-mobile/android-activity/pull/178))
+
+Overall, some effort was made to ensure that `android-activity` can gracefully and safely handle cases where the `Activity` gets repeatedly created, destroyed and recreated (e.g due to configuration changes). Theoretically it should even be possible to run multiple `Activity` instances (although that's not really something that `NativeActivity` or `GameActivity` are designed for).
 
 ## [0.6.0] - 2024-04-26
 
@@ -303,7 +335,8 @@ GameActivity compatibility.
 ### Added
 - Initial release
 
-[unreleased]: https://github.com/rust-mobile/android-activity/compare/v0.6.0...HEAD
+[unreleased]: https://github.com/rust-mobile/android-activity/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/rust-mobile/android-activity/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/rust-mobile/android-activity/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/rust-mobile/android-activity/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/rust-mobile/android-activity/compare/v0.5.0...v0.5.1
