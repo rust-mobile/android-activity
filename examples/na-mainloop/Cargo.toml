@@ -1,21 +1,28 @@
 [package]
 name = "na-mainloop"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4"
-android_logger = "0.11.0"
-android-activity = { path="../../android-activity", features = [ "native-activity" ] }
-ndk-sys = "0.6.0"
-ndk = "0.9.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+    "fmt",
+    "env-filter",
+    "tracing-log",
+] }
+paranoid-android = "0.2"
+tracing-log = "0.2"
+
+android-activity = { path = "../../android-activity", features = [
+    "native-activity",
+] }
+jni = "0.22"
 
 [lib]
 #name="na_mainloop"
-crate_type=["cdylib"]
-
+crate-type = ["cdylib"]
 
 ####################
 # cargo apk config #
@@ -23,10 +30,10 @@ crate_type=["cdylib"]
 
 [package.metadata.android]
 # Specifies the package property of the manifest.
-package = "com.foo.bar"
+package = "com.github.rust_mobile.namainloop"
 
 # Specifies the array of targets to build for.
-build_targets = [ "aarch64-linux-android" ]
+build_targets = ["aarch64-linux-android"]
 
 # Path to your application's resources folder.
 # If not specified, resources will not be included in the APK.
@@ -49,9 +56,9 @@ build_targets = [ "aarch64-linux-android" ]
 #
 # Defaults to a `min_sdk_version` of 23 and `target_sdk_version` of 30 (or lower if the detected NDK doesn't support this).
 [package.metadata.android.sdk]
-min_sdk_version = 28
-target_sdk_version = 31
-#max_sdk_version = 31
+min_sdk_version = 31
+target_sdk_version = 35
+#max_sdk_version = 35
 
 # See https://developer.android.com/guide/topics/manifest/uses-feature-element
 #
@@ -109,7 +116,7 @@ version = 1
 # See https://developer.android.com/guide/topics/manifest/application-element#label
 #
 # Defaults to the compiled artifact's name.
-label = "Application Name"
+label = "NativeActivity Mainloop"
 
 # See https://developer.android.com/guide/topics/manifest/meta-data-element
 #

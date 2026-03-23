@@ -19,6 +19,12 @@ cargo ndk -t arm64-v8a -o app/src/main/jniLibs/  build
 ./gradlew installDebug
 ```
 
+Run with:
+
+```
+adb shell am start -n com.github.realfit_mobile.namainloop/android.app.NativeActivity
+```
+
 # Cargo APK Build
 ```
 export ANDROID_NDK_HOME="path/to/ndk"
