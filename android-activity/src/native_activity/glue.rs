@@ -440,21 +440,22 @@ impl WaitableNativeActivityState {
 
     pub fn notify_window_resized(&self, native_window: *mut ndk_sys::ANativeWindow) {
         let mut guard = self.mutex.lock().unwrap();
-        // set_window always syncs .pending_window back to .window before returning. This callback
-        // from Android can never arrive at an interim state, and validates that Android:
-        // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
-        // 2. Doesn't call it on a bogus window pointer that we don't know about.
-        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        // Android *should* only deliver this callback between onNativeWindowCreated and
+        // onNativeWindowDestroyed, but some platforms (e.g. Meta Quest 3 HorizonOS) call it
+        // outside that lifecycle. Drop the event rather than panicking across the FFI
+        // boundary, which would abort the process.
+        if guard.window.as_ref().map(|w| w.ptr().as_ptr()) != Some(native_window) {
+            return;
+        }
         guard.write_cmd(AppCmd::WindowResized);
     }
 
     pub fn notify_window_redraw_needed(&self, native_window: *mut ndk_sys::ANativeWindow) {
         let mut guard = self.mutex.lock().unwrap();
-        // set_window always syncs .pending_window back to .window before returning. This callback
-        // from Android can never arrive at an interim state, and validates that Android:
-        // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
-        // 2. Doesn't call it on a bogus window pointer that we don't know about.
-        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        // See `notify_window_resized` for why we tolerate an out-of-lifecycle callback.
+        if guard.window.as_ref().map(|w| w.ptr().as_ptr()) != Some(native_window) {
+            return;
+        }
         guard.write_cmd(AppCmd::WindowRedrawNeeded);
     }
 
