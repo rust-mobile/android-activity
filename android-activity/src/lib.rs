@@ -549,6 +549,7 @@ pub enum PollEvent<'a> {
     Wake,
     Timeout,
     Main(MainEvent<'a>),
+    Callback,
 }
 
 /// Indicates whether an application has handled or ignored an event

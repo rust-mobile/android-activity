@@ -502,9 +502,8 @@ impl AndroidAppInner {
                     callback(PollEvent::Wake);
                 }
                 ffi::ALOOPER_POLL_CALLBACK => {
-                    // ALooper_pollOnce is documented to handle all callback sources internally so it should
-                    // never return a _CALLBACK source id...
-                    error!("Spurious ALOOPER_POLL_CALLBACK from ALooper_pollOnce() (ignored)");
+                    trace!("ALooper_pollOnce returned POLL_CALLBACK");
+                    callback(PollEvent::Callback);
                 }
                 ffi::ALOOPER_POLL_TIMEOUT => {
                     trace!("ALooper_pollOnce returned POLL_TIMEOUT");
