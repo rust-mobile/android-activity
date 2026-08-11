@@ -1075,7 +1075,9 @@ impl InputIteratorInner<'_> {
                 return true;
             }
             if let Some(motion_event) = buffered.motion_iter.next(&buffered.buffer) {
-                let _ = callback(&InputEvent::MotionEvent(motion_event));
+                if motion_event.pointer_index() < motion_event.pointer_count() {
+                    let _ = callback(&InputEvent::MotionEvent(motion_event));
+                }
                 return true;
             }
             self.buffered = None;
