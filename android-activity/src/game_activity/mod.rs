@@ -713,8 +713,18 @@ impl AndroidAppInner {
         // Java uses a modified UTF-8 format, which is a modified cesu8 format
         let out_ptr: *mut TextInputState = context.cast();
         let text_modified_utf8: *const u8 = (*state).text_UTF8.cast();
-        let text_modified_utf8 =
-            std::slice::from_raw_parts(text_modified_utf8, (*state).text_length as usize);
+        // Before the IME has attached, GameTextInput hands us its initial
+        // state with a NULL text buffer (and length 0). `from_raw_parts`
+        // requires a non-null pointer even for empty slices, so feeding it
+        // NULL is UB — and under `debug_assertions` the standard library's
+        // precondition check turns it into an immediate abort (a
+        // non-unwinding panic inside an `extern "C"` callback) on the first
+        // frame of every debug build.
+        let text_modified_utf8 = if text_modified_utf8.is_null() {
+            &[]
+        } else {
+            std::slice::from_raw_parts(text_modified_utf8, (*state).text_length as usize)
+        };
         match simd_cesu8::mutf8::decode(text_modified_utf8) {
             Ok(str) => {
                 let len = str.len();
