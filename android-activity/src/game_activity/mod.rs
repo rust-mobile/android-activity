@@ -713,8 +713,13 @@ impl AndroidAppInner {
         // Java uses a modified UTF-8 format, which is a modified cesu8 format
         let out_ptr: *mut TextInputState = context.cast();
         let text_modified_utf8: *const u8 = (*state).text_UTF8.cast();
-        let text_modified_utf8 =
-            std::slice::from_raw_parts(text_modified_utf8, (*state).text_length as usize);
+        // GameTextInput has no text buffer until a state was first set (by the app or the IME):
+        // its text pointer is null then, which `from_raw_parts` must never get (even for 0 bytes).
+        let text_modified_utf8 = if text_modified_utf8.is_null() {
+            &[]
+        } else {
+            std::slice::from_raw_parts(text_modified_utf8, (*state).text_length as usize)
+        };
         match simd_cesu8::mutf8::decode(text_modified_utf8) {
             Ok(str) => {
                 let len = str.len();
