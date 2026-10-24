@@ -27,6 +27,7 @@ use crate::input::{
 };
 
 mod glue;
+pub use self::glue::set_nonblocking_callbacks;
 use self::glue::NativeActivityGlue;
 
 pub const LOOPER_ID_MAIN: libc::c_int = 1;
@@ -375,6 +376,23 @@ impl AndroidAppInner {
         let res = self
             .jvm
             .attach_current_thread(|env| -> jni::errors::Result<()> {
+                // SolidCraft: prefer the Activity's own IME host view when it provides one. A bare NativeActivity
+                // has no editable view, so showSoftInput() on the decor view is unreliable and never
+                // delivers text; the generated Activity focuses a real editable EditText instead.
+                // Activities that do not opt in fall through to the stock decor-view call.
+                if env
+                    .call_method(
+                        self.activity.as_ref(),
+                        jni::jni_str!("imeShow"),
+                        jni::jni_sig!("()V"),
+                        &[],
+                    )
+                    .is_ok()
+                {
+                    return Ok(());
+                }
+                let _ = env.exception_clear();
+
                 let activity = env.as_cast::<Activity>(self.activity.as_ref())?;
 
                 let ims = Context::INPUT_METHOD_SERVICE(env)?;
@@ -409,6 +427,22 @@ impl AndroidAppInner {
         let res = self
             .jvm
             .attach_current_thread(|env| -> jni::errors::Result<()> {
+                // Mirror `show_soft_input`: when the Activity owns an IME host view, dismiss the
+                // keyboard through it (and release its focus). Falls through to the decor view
+                // otherwise.
+                if env
+                    .call_method(
+                        self.activity.as_ref(),
+                        jni::jni_str!("imeHide"),
+                        jni::jni_sig!("()V"),
+                        &[],
+                    )
+                    .is_ok()
+                {
+                    return Ok(());
+                }
+                let _ = env.exception_clear();
+
                 let activity = env.as_cast::<Activity>(self.activity.as_ref())?;
 
                 let ims = Context::INPUT_METHOD_SERVICE(env)?;

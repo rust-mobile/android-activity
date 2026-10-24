@@ -6,8 +6,41 @@ use std::{
     ops::Deref,
     panic::catch_unwind,
     ptr::{self, NonNull},
-    sync::{Arc, Condvar, Mutex, Weak},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Condvar, Mutex, Weak,
+    },
+    time::Duration,
 };
+
+/// SolidCraft: while `true`, the JVM-thread lifecycle callbacks below (`set_input`, `set_window`,
+/// `set_activity_state`, `request_save_state`) must not block waiting for the Rust main
+/// thread to run `poll_events`.
+///
+/// The Rust main thread can be parked for a long time inside a modal (SAF) file picker;
+/// if a JVM callback blocks on the condition variable while it is parked, the Android
+/// system ANRs the app after ~5 seconds. With this flag set the callbacks deliver their
+/// state through the command pipe and return within a short bounded wait (or immediately),
+/// and the Rust main thread consumes the pending state once it resumes pumping events.
+///
+/// This is process-wide on purpose: it is toggled around a blocking pick no matter which
+/// thread initiated the pick, and restored as soon as the pick completes.
+static CALLBACKS_NONBLOCKING: AtomicBool = AtomicBool::new(false);
+
+/// SolidCraft: enables/disables the bounded (non-blocking) behavior of JVM-thread callbacks.
+///
+/// See [`CALLBACKS_NONBLOCKING`] for why this exists. Only toggle this around a modal
+/// operation that prevents the Rust main thread from pumping events (e.g. a blocking
+/// file picker), and restore it as soon as the operation completes.
+pub fn set_nonblocking_callbacks(nonblocking: bool) {
+    CALLBACKS_NONBLOCKING.store(nonblocking, Ordering::SeqCst);
+}
+
+/// Upper bound on how long a JVM callback may wait for the Rust main thread while
+/// [`CALLBACKS_NONBLOCKING`] is enabled. Short enough that Android never ANRs (input
+/// dispatch / lifecycle callbacks get multiple seconds), long enough that a main thread
+/// that *is* pumping events usually syncs within the same callback.
+const NONBLOCKING_WAIT: Duration = Duration::from_millis(100);
 
 use jni::{objects::JObject, refs::Global, vm::AttachConfig};
 use ndk::{configuration::Configuration, input_queue::InputQueue, native_window::NativeWindow};
@@ -246,6 +279,14 @@ pub struct NativeActivityState {
 
     pub pending_input_queue: *mut ndk_sys::AInputQueue,
     pub pending_window: Option<NativeWindow>,
+
+    /// True while an `InputQueueChanged` command sits in the command pipe that has not
+    /// been consumed by `pre_exec_cmd` yet. Used to avoid piling up duplicate commands
+    /// (and to keep the *latest* pending value authoritative) while callbacks run in
+    /// non-blocking mode and the main thread can't pump the pipe.
+    pub input_cmd_pending: bool,
+    /// Same as `input_cmd_pending`, but for the `InitWindow` command.
+    pub window_cmd_pending: bool,
 }
 
 impl NativeActivityState {
@@ -392,6 +433,8 @@ impl WaitableNativeActivityState {
                 destroyed: false,
                 pending_input_queue: ptr::null_mut(),
                 pending_window: None,
+                input_cmd_pending: false,
+                window_cmd_pending: false,
             }),
             cond: Condvar::new(),
         }
@@ -444,7 +487,12 @@ impl WaitableNativeActivityState {
         // from Android can never arrive at an interim state, and validates that Android:
         // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
         // 2. Doesn't call it on a bogus window pointer that we don't know about.
-        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        // In non-blocking mode (or while a window transition is still queued behind a parked
+        // main thread) `.window` may legitimately not reflect the new window yet, so only
+        // assert when the callback can't race a pending transition.
+        if !CALLBACKS_NONBLOCKING.load(Ordering::SeqCst) && guard.window.is_some() {
+            debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        }
         guard.write_cmd(AppCmd::WindowResized);
     }
 
@@ -454,52 +502,79 @@ impl WaitableNativeActivityState {
         // from Android can never arrive at an interim state, and validates that Android:
         // 1. Only provides resizes in between onNativeWindowCreated and onNativeWindowDestroyed;
         // 2. Doesn't call it on a bogus window pointer that we don't know about.
-        debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        // See `notify_window_resized` for why the assert is conditional.
+        if !CALLBACKS_NONBLOCKING.load(Ordering::SeqCst) && guard.window.is_some() {
+            debug_assert_eq!(guard.window.as_ref().unwrap().ptr().as_ptr(), native_window);
+        }
         guard.write_cmd(AppCmd::WindowRedrawNeeded);
     }
 
     unsafe fn set_input(&self, input_queue: *mut ndk_sys::AInputQueue) {
         let mut guard = self.mutex.lock().unwrap();
 
-        // The pending_input_queue state should only be set while in this method, and since
-        // it doesn't allow re-entrance and is cleared before returning then we expect
-        // this to be null
-        debug_assert!(
-            guard.pending_input_queue.is_null(),
-            "InputQueue update clash"
-        );
+        let nonblocking = CALLBACKS_NONBLOCKING.load(Ordering::SeqCst);
+        if !nonblocking {
+            // The pending_input_queue state should only be set while in this method, and since
+            // it doesn't allow re-entrance and is cleared before returning then we expect
+            // this to be null
+            debug_assert!(
+                guard.pending_input_queue.is_null(),
+                "InputQueue update clash"
+            );
+        }
 
+        // Track the value we're delivering locally: `pre_exec_cmd` owns clearing
+        // `pending_input_queue` (it reads the *latest* value written there), so the wait
+        // below must not depend on the pending field still holding our value.
+        let expected = input_queue;
         guard.pending_input_queue = input_queue;
-        guard.write_cmd(AppCmd::InputQueueChanged);
-        while guard.thread_state == NativeThreadState::Running
-            && guard.input_queue != guard.pending_input_queue
-        {
+        if !guard.input_cmd_pending {
+            guard.write_cmd(AppCmd::InputQueueChanged);
+            guard.input_cmd_pending = true;
+        }
+        while guard.thread_state == NativeThreadState::Running && guard.input_queue != expected {
+            if nonblocking {
+                // Main thread is (potentially) parked inside a modal picker: give it a
+                // short chance to pump the command pipe, then return so the JVM thread
+                // is never blocked for long (an ANR would follow ~5s of blocking).
+                let (g, _) = self.cond.wait_timeout(guard, NONBLOCKING_WAIT).unwrap();
+                drop(g);
+                break;
+            }
             guard = self.cond.wait(guard).unwrap();
         }
-        guard.pending_input_queue = ptr::null_mut();
     }
 
     unsafe fn set_window(&self, window: Option<NativeWindow>) {
         let mut guard = self.mutex.lock().unwrap();
 
-        // The pending_window state should only be set while in this method, and since
-        // it doesn't allow re-entrance and is cleared before returning then we expect
-        // this to be None
-        debug_assert!(guard.pending_window.is_none(), "NativeWindow update clash");
+        let nonblocking = CALLBACKS_NONBLOCKING.load(Ordering::SeqCst);
+        if !nonblocking {
+            // The pending_window state should only be set while in this method, and since
+            // it doesn't allow re-entrance and is cleared before returning then we expect
+            // this to be None
+            debug_assert!(guard.pending_window.is_none(), "NativeWindow update clash");
+        }
 
         if guard.window.is_some() {
             guard.write_cmd(AppCmd::TermWindow);
         }
+        // See `set_input`: the pending field may be re-written (or cleared by
+        // `pre_exec_cmd`) while we wait, so compare against our local expectation.
+        let expected = window.clone();
         guard.pending_window = window;
-        if guard.pending_window.is_some() {
+        if guard.pending_window.is_some() && !guard.window_cmd_pending {
             guard.write_cmd(AppCmd::InitWindow);
+            guard.window_cmd_pending = true;
         }
-        while guard.thread_state == NativeThreadState::Running
-            && guard.window != guard.pending_window
-        {
+        while guard.thread_state == NativeThreadState::Running && guard.window != expected {
+            if nonblocking {
+                let (g, _) = self.cond.wait_timeout(guard, NONBLOCKING_WAIT).unwrap();
+                drop(g);
+                break;
+            }
             guard = self.cond.wait(guard).unwrap();
         }
-        guard.pending_window = None;
     }
 
     unsafe fn set_content_rect(&self, rect: *const ndk_sys::ARect) {
@@ -521,12 +596,27 @@ impl WaitableNativeActivityState {
         guard.write_cmd(cmd);
 
         while guard.thread_state == NativeThreadState::Running && guard.activity_state != state {
+            if CALLBACKS_NONBLOCKING.load(Ordering::SeqCst) {
+                // Delivered through the command pipe; the state will be applied as soon
+                // as the (possibly parked) main thread resumes pumping events.
+                let (g, _) = self.cond.wait_timeout(guard, NONBLOCKING_WAIT).unwrap();
+                drop(g);
+                break;
+            }
             guard = self.cond.wait(guard).unwrap();
         }
     }
 
     fn request_save_state(&self) -> (*mut libc::c_void, libc::size_t) {
         let mut guard = self.mutex.lock().unwrap();
+
+        if CALLBACKS_NONBLOCKING.load(Ordering::SeqCst) {
+            // The main thread can't service a `SaveState` command while it's parked in a
+            // modal picker, and waiting here would stall the JVM thread (risking an ANR).
+            // Return whatever state was saved previously (normally none) right away.
+            drop(guard);
+            return (ptr::null_mut(), 0);
+        }
 
         // The state_saved flag should only be set while in this method, and since
         // it doesn't allow re-entrance and is cleared before returning then we expect
@@ -608,11 +698,19 @@ impl WaitableNativeActivityState {
                 if !guard.input_queue.is_null() {
                     guard.attach_input_queue_to_looper(looper, input_queue_ident);
                 }
+                // Own clearing the pending state here: in non-blocking mode the setter may
+                // have already returned without waiting, and it may even have dropped a
+                // newer value into `pending_*` after we consumed an earlier command. The
+                // setters wait on their own local expectation, so clearing is safe.
+                guard.pending_input_queue = ptr::null_mut();
+                guard.input_cmd_pending = false;
                 self.cond.notify_one();
             }
             AppCmd::InitWindow => {
                 let mut guard = self.mutex.lock().unwrap();
                 guard.window = guard.pending_window.clone();
+                guard.pending_window = None;
+                guard.window_cmd_pending = false;
                 self.cond.notify_one();
             }
             AppCmd::Resume | AppCmd::Start | AppCmd::Pause | AppCmd::Stop => {
