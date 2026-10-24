@@ -447,6 +447,8 @@ impl From<ndk_sys::ARect> for Rect {
     }
 }
 
+#[cfg(feature = "native-activity")]
+pub use activity_impl::set_nonblocking_callbacks;
 pub use activity_impl::StateLoader;
 pub use activity_impl::StateSaver;
 

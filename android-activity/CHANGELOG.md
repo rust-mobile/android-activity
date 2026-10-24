@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- native-activity: `set_nonblocking_callbacks()`, for apps that park the Rust main thread inside a
+  modal operation (a file picker, say). While enabled, the JVM-thread lifecycle callbacks deliver
+  their state and return within a bounded wait instead of blocking until the main thread pumps
+  events, which is what makes the system ANR the app after a few seconds.
+- native-activity: `show_soft_input()` / `hide_soft_input()` call the activity's `imeShow()` /
+  `imeHide()` when it provides them, so an activity that hosts a real editable view can own the
+  soft keyboard instead of the bare decor view.
+
 ## [0.6.1] - 2026-03-30
 
 ### Added
