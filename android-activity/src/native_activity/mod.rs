@@ -331,6 +331,10 @@ impl AndroidAppInner {
         self.native_activity.content_rect()
     }
 
+    pub fn window_insets(&self, _kind: crate::InsetType) -> Option<Rect> {
+        None
+    }
+
     pub fn asset_manager(&self) -> AssetManager {
         // Safety: While constructing the AndroidApp we do a OnceLock initialization
         // where we get the Application AssetManager and leak a single global JNI

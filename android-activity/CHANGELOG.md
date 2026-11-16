@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `AndroidApp::window_insets(InsetType)` queries the window's current insets of one kind (the soft keyboard with `InsetType::Ime`, system bars, display cutout...), so applications can follow `MainEvent::InsetsChanged`, also when their event loop consumes that event before them (winit). GameActivity only; `None` with NativeActivity.
+
 ## [0.6.1] - 2026-03-30
 
 ### Added

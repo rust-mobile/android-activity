@@ -404,6 +404,25 @@ mod main_callbacks;
 
 pub(crate) const ANDROID_ACTIVITY_TAG: &CStr = c"android-activity";
 
+/// A kind of window inset, as Android's `WindowInsetsCompat.Type` names them.
+///
+/// See [`AndroidApp::window_insets`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[non_exhaustive]
+pub enum InsetType {
+    CaptionBar,
+    DisplayCutout,
+    /// The soft keyboard (input method).
+    Ime,
+    MandatorySystemGestures,
+    NavigationBars,
+    StatusBars,
+    SystemBars,
+    SystemGestures,
+    TappableElement,
+    Waterfall,
+}
+
 /// A rectangle with integer edge coordinates. Used to represent window insets, for example.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Rect {
@@ -1003,6 +1022,18 @@ impl AndroidApp {
     /// window's content should be placed to be seen by the user.
     pub fn content_rect(&self) -> Rect {
         self.inner.read().unwrap().content_rect()
+    }
+
+    /// Queries the window's current insets of one kind, in pixels: how far each edge of the
+    /// window is covered (e.g. the soft keyboard's height in `bottom` for [`InsetType::Ime`]).
+    ///
+    /// The values change when the application receives [`MainEvent::InsetsChanged`]; read them
+    /// again there (or, when an event loop such as winit consumes that event, whenever it wakes).
+    ///
+    /// Returns `None` where insets are not available (NativeActivity, or before the activity
+    /// has a window).
+    pub fn window_insets(&self, kind: InsetType) -> Option<Rect> {
+        self.inner.read().unwrap().window_insets(kind)
     }
 
     /// Returns the `AssetManager` for the application's `Application` context.
