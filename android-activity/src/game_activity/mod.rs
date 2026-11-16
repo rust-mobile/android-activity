@@ -823,6 +823,51 @@ impl AndroidAppInner {
         })
     }
 
+    pub fn window_insets(&self, kind: crate::InsetType) -> Option<Rect> {
+        use crate::InsetType;
+        let kind = match kind {
+            InsetType::CaptionBar => ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_CAPTION_BAR,
+            InsetType::DisplayCutout => {
+                ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_DISPLAY_CUTOUT
+            }
+            InsetType::Ime => ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_IME,
+            InsetType::MandatorySystemGestures => {
+                ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_MANDATORY_SYSTEM_GESTURES
+            }
+            InsetType::NavigationBars => {
+                ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_NAVIGATION_BARS
+            }
+            InsetType::StatusBars => ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_STATUS_BARS,
+            InsetType::SystemBars => ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_SYSTEM_BARS,
+            InsetType::SystemGestures => {
+                ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_SYSTEM_GESTURES
+            }
+            InsetType::TappableElement => {
+                ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_TAPABLE_ELEMENT
+            }
+            InsetType::Waterfall => ffi::GameCommonInsetsType_GAMECOMMON_INSETS_TYPE_WATERFALL,
+        };
+        self.game_activity.with_locked_app(|app_ptr| {
+            if app_ptr.is_null() {
+                return None;
+            }
+            unsafe {
+                let mut rect: ndk_sys::ARect = std::mem::zeroed();
+                ffi::GameActivity_getWindowInsets(
+                    (*app_ptr).activity,
+                    kind,
+                    &mut rect as *mut _ as *mut _,
+                );
+                Some(Rect {
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                })
+            }
+        })
+    }
+
     pub fn asset_manager(&self) -> AssetManager {
         // Safety: While constructing the AndroidApp we do a OnceLock initialization
         // where we get the Application AssetManager and leak a single global JNI
